@@ -1,0 +1,83 @@
+version: "3"
+
+vars:
+  PROJECT_NAME: database-gateway
+  DEPS_COMPOSE_FILE: ./.cicd/local/docker-compose.yaml
+
+tasks:
+  deps:run:
+    desc: Run all deps
+    cmds:
+      - docker compose -p {{ .PROJECT_NAME }} -f {{ .DEPS_COMPOSE_FILE }} up -d
+
+  deps:logs:
+    desc: Show all deps logs
+    cmds:
+      - docker compose -p {{ .PROJECT_NAME }} -f {{ .DEPS_COMPOSE_FILE }} logs -f
+
+  deps:stop:
+    desc: Stop all deps
+    cmds:
+      - docker compose -p {{ .PROJECT_NAME }} -f {{ .DEPS_COMPOSE_FILE }} stop
+
+  deps:drop:
+    desc: Stop all deps, remove volumes and other resources
+    cmds:
+      - docker compose -p {{ .PROJECT_NAME }} -f {{ .DEPS_COMPOSE_FILE }} down -v -t 0
+      - docker volume list | grep {{ .PROJECT_NAME }} | awk '{print $2}' | xargs docker volume rm $1
+
+  tools:install:
+    cmds:
+      - echo '>>> Run install tools'
+      - toolset sync
+
+  lint:
+    desc: Run static analysis
+    cmds:
+      - echo '>>> Run lint'
+      - toolset run golangci-lint run --fix
+
+  fmt:
+    desc: Safe formatting codebase
+    cmds:
+      - echo ">>> Run Code Formatter"
+      - go fmt $(go list ./...)
+      - toolset run gofumpt -l -w .
+      - toolset run goimports -d -w $(find . -type f -name '*.go' -not -path './.cicd/*')
+
+  ci:lint:
+    desc: Run linter in CI tool
+    cmds:
+      - task: tools:install
+      - echo ">>> Run lint"
+      - toolset run golangci-lint run
+
+  generate:
+    desc: Generate code
+    cmds:
+      - task: "generate:go"
+      - task: "generate:templ"
+      - task: "fmt"
+
+  generate:go:
+    desc: Generate go
+    cmds:
+      - echo ">>> Go generate ./..."
+      - go generate ./...
+
+  generate:templ:
+    desc: Generate templ
+    dir: templates
+    cmds:
+      - echo ">>> Templ"
+      - templ generate
+
+  check:
+    desc: Run all project checks
+    cmds:
+      - task: "tools:install"
+      - task: "generate"
+      - task: "fmt"
+      - task: "lint"
+      - task: "test"
+
