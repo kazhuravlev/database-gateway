@@ -1,0 +1,115 @@
+{
+	"targets": [
+		{
+			"id": "local-1",
+			"type": "postgres",
+			"connection": {
+				"host": "127.0.0.1",
+				"port": 5432,
+				"user": "local_dbgw",
+				"password": "local_dbgw",
+				"db": "local_dbgw",
+				"use_ssl": false,
+				"max_pool_size": 4
+			},
+			"tables": [
+				{
+					"table": "clients",
+					"fields": [
+						"id",
+						"name",
+						"email"
+					],
+					"sensitive": [
+						"email"
+					]
+				}
+			]
+		},
+		{
+			"id": "local-2",
+			"type": "postgres",
+			"connection": {
+				"host": "127.0.0.1",
+				"port": 5433,
+				"user": "local_sample",
+				"password": "local_sample",
+				"db": "local_sample",
+				"use_ssl": false,
+				"max_pool_size": 4
+			},
+			"tables": [
+				{
+					"table": "clients",
+					"fields": [
+						"id",
+						"name",
+						"email"
+					],
+					"sensitive": [
+						"email"
+					]
+				}
+			]
+		},
+		{
+			"id": "local-3",
+			"type": "postgres",
+			"connection": {
+				"host": "127.0.0.1",
+				"port": 5434,
+				"user": "local_example",
+				"password": "local_example",
+				"db": "local_example",
+				"use_ssl": false,
+				"max_pool_size": 4
+			},
+			"tables": [
+				{
+					"table": "clients",
+					"fields": [
+						"id",
+						"name",
+						"email"
+					],
+					"sensitive": [
+						"email"
+					]
+				}
+			]
+		}
+	],
+	"acls": [
+		{
+			"id": "allow-all",
+			"target": "local-01",
+			"select": {
+				"allow": true,
+				"tables": [
+					"clients"
+				]
+			},
+			"update": {
+				"allow": true,
+				"tables": [
+					"clients"
+				]
+			},
+			"delete": {
+				"allow": false,
+				"tables": [
+					"clients"
+				]
+			}
+		}
+	],
+	"users": [
+		{
+			"username": "kazhuravlev",
+			"password": "example",
+			"acls": [
+				"allow-all"
+			]
+		}
+	]
+}
