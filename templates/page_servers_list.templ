@@ -1,11 +1,15 @@
 package templates
 
-import "github.com/kazhuravlev/database-gateway/internal/structs"
+import (
+	"fmt"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
+
+)
 
 templ listServers(servers []structs.Server) {
 	<ul>
 		for _, item := range servers {
-			<li>{ item.ID }</li>
+			<li><a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>{ item.ID }</a></li>
 		}
 	</ul>
 }
@@ -13,6 +17,7 @@ templ listServers(servers []structs.Server) {
 templ header(user structs.User) {
 	<div>
 		<div>User: { user.Username }</div>
+		<hr/>
 	</div>
 }
 

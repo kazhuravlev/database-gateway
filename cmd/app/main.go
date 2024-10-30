@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/kazhuravlev/database-gateway/internal/structs"
-	"github.com/kazhuravlev/database-gateway/templates"
 	"log/slog"
 	"net/http"
+
+	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/templates"
 
 	"github.com/a-h/templ"
 	"github.com/jackc/pgx/v5"
