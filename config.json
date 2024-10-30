@@ -6,9 +6,9 @@
 			"connection": {
 				"host": "127.0.0.1",
 				"port": 5432,
-				"user": "local_dbgw",
-				"password": "local_dbgw",
-				"db": "local_dbgw",
+				"user": "pg01",
+				"password": "pg01",
+				"db": "pg01",
 				"use_ssl": false,
 				"max_pool_size": 4
 			},
@@ -44,9 +44,9 @@
 			"connection": {
 				"host": "127.0.0.1",
 				"port": 5433,
-				"user": "local_sample",
-				"password": "local_sample",
-				"db": "local_sample",
+				"user": "pg02",
+				"password": "pg02",
+				"db": "pg02",
 				"use_ssl": false,
 				"max_pool_size": 4
 			},
@@ -70,9 +70,9 @@
 			"connection": {
 				"host": "127.0.0.1",
 				"port": 5434,
-				"user": "local_example",
-				"password": "local_example",
-				"db": "local_example",
+				"user": "pg03",
+				"password": "pg03",
+				"db": "pg03",
 				"use_ssl": false,
 				"max_pool_size": 4
 			},
