@@ -14,13 +14,16 @@ templ targetInfo(target config.Target) {
 			<table>
 				for _, tbl := range target.Tables {
 					<tr>
-						<th>{ tbl.Table }</th>
-					</tr>
-					for _, col := range tbl.Fields {
-						<tr>
+						<th rowspan="2">{ tbl.Table }</th>
+						for _, col := range tbl.Fields {
 							<td>{ col }</td>
-						</tr>
-					}
+						}
+					</tr>
+					<tr>
+						for _, col := range tbl.Sensitive {
+							<td>{ col }</td>
+						}
+					</tr>
 				}
 			</table>
 		</div>
