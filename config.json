@@ -23,6 +23,18 @@
 					"sensitive": [
 						"email"
 					]
+				},
+				{
+					"table": "another_table",
+					"fields": [
+						"name",
+						"surname",
+						"money"
+					],
+					"sensitive": [
+						"surname",
+						"money"
+					]
 				}
 			]
 		},

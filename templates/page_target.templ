@@ -11,9 +11,18 @@ templ targetInfo(target config.Target) {
 		<div>Type: { target.Type }</div>
 		<div>
 			<div>Tables:</div>
-			for _, tbl := range target.Tables {
-				<div>{ tbl.Table }</div>
-			}
+			<table>
+				for _, tbl := range target.Tables {
+					<tr>
+						<th>{ tbl.Table }</th>
+					</tr>
+					for _, col := range tbl.Fields {
+						<tr>
+							<td>{ col }</td>
+						</tr>
+					}
+				}
+			</table>
 		</div>
 	</div>
 }
