@@ -1,0 +1,17 @@
+package templates
+
+templ authForm(errMsg string) {
+	if errMsg != ""{
+	<div>{errMsg}</div>
+	}
+
+	<form action="/auth" method="POST">
+		<div><input name="login" type="text" placeholder="login"/></div>
+		<div><input name="password" type="password" placeholder="password"/></div>
+		<div><button type="submit">Login</button></div>
+	</form>
+}
+
+templ PageAuth(errMsg string) {
+	@authForm(errMsg)
+}

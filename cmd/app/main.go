@@ -3,17 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"net/http"
+
 	"github.com/a-h/templ"
 	"github.com/jackc/pgx/v5"
 	"github.com/k0kubun/pp/v3"
 	"github.com/kazhuravlev/database-gateway/internal/config"
-	"github.com/kazhuravlev/database-gateway/templates"
 	"github.com/kazhuravlev/just"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/lib/pq"
-	"log/slog"
-	"net/http"
 )
 
 func main() {
@@ -68,36 +68,38 @@ func runApp(ctx context.Context) error {
 		targets.id2client[target.Id] = conn
 	}
 
+	authUser := func(u, p string) (config.User, bool) {
+		for _, user := range cfg.Users {
+			if user.Username == u && user.Password == p {
+				return user, true
+			}
+		}
+
+		return config.User{}, false
+	}
+
 	e := echo.New()
 	e.HideBanner = true
-
-	e.GET("/", func(c echo.Context) error {
-		return c.Redirect(http.StatusTemporaryRedirect, "/auth")
-	})
-	e.GET("/auth", func(c echo.Context) error {
-		return Render(c, http.StatusOK, templates.Hello("asdasd"))
-	})
-
 	e.Use(middleware.BasicAuthWithConfig(middleware.BasicAuthConfig{
 		Skipper: func(c echo.Context) bool {
-			switch c.Path() {
-			case "/", "/auth":
-				return true
-			}
-
 			return false
 		},
 		Validator: func(username, password string, c echo.Context) (bool, error) {
-			for _, user := range cfg.Users {
-				if user.Username == username && user.Password == password {
-					return true, nil
-				}
+			if _, ok := authUser(username, password); ok {
+				return true, nil
 			}
 
 			return false, nil
 		},
 		Realm: "",
 	}))
+
+	e.GET("/", func(c echo.Context) error {
+		return c.Redirect(http.StatusTemporaryRedirect, "/app")
+	})
+	e.GET("/app", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello, World!")
+	})
 
 	e.Logger.Fatal(e.Start(":8080"))
 
