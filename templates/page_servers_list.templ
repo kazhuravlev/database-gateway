@@ -1,0 +1,22 @@
+package templates
+
+import "github.com/kazhuravlev/database-gateway/internal/structs"
+
+templ listServers(servers []structs.Server) {
+	<ul>
+		for _, item := range servers {
+			<li>{ item.ID }</li>
+		}
+	</ul>
+}
+
+templ header(user structs.User) {
+	<div>
+		<div>User: { user.Username }</div>
+	</div>
+}
+
+templ PageServersList(user structs.User, servers []structs.Server) {
+	@header(user)
+	@listServers(servers)
+}

@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/templates"
 	"log/slog"
 	"net/http"
 
@@ -15,6 +17,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/lib/pq"
 )
+
+var ctxUser = "k-user"
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -29,7 +33,6 @@ type Targets struct {
 	id2client map[string]*pgx.Conn
 }
 
-// This custom Render replaces Echo's echo.Context.Render() with templ's templ.Component.Render().
 func Render(ctx echo.Context, statusCode int, t templ.Component) error {
 	buf := templ.GetBuffer()
 	defer templ.ReleaseBuffer(buf)
@@ -86,6 +89,12 @@ func runApp(ctx context.Context) error {
 		},
 		Validator: func(username, password string, c echo.Context) (bool, error) {
 			if _, ok := authUser(username, password); ok {
+
+				user := structs.User{
+					Username: username,
+				}
+
+				c.Set(ctxUser, user)
 				return true, nil
 			}
 
@@ -95,13 +104,29 @@ func runApp(ctx context.Context) error {
 	}))
 
 	e.GET("/", func(c echo.Context) error {
-		return c.Redirect(http.StatusTemporaryRedirect, "/app")
+		return c.Redirect(http.StatusTemporaryRedirect, "/servers")
 	})
-	e.GET("/app", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
+	e.GET("/servers", func(c echo.Context) error {
+		user := c.Get(ctxUser).(structs.User)
+
+		servers := just.SliceMap(cfg.Targets, func(t config.Target) structs.Server {
+			return structs.Server{
+				ID:     t.Id,
+				Type:   t.Type,
+				Tables: t.Tables,
+			}
+		})
+
+		return Render(c, http.StatusOK, templates.PageServersList(user, servers))
 	})
 
-	e.Logger.Fatal(e.Start(":8080"))
+	{
+		e.GET("/*", func(c echo.Context) error {
+			return c.Redirect(http.StatusTemporaryRedirect, "/")
+		})
+
+		e.Logger.Fatal(e.Start(":8080"))
+	}
 
 	return nil
 }
