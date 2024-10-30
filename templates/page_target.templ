@@ -33,7 +33,7 @@ templ targetInfo(target config.Target) {
 templ sqlForm(query string) {
 	<div>
 		<form action="#" method="post">
-			<textarea name="sql" type="text" placeholder="select * from some_table limit 1" style="width: 1024px; height: 120px;">{ query }</textarea>
+			<textarea name="query" type="text" placeholder="select * from some_table limit 1" style="width: 1024px; height: 120px;">{ query }</textarea>
 			<br/>
 			<button type="submit">Run</button>
 		</form>

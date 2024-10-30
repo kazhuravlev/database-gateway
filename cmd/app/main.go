@@ -138,7 +138,24 @@ func runApp(ctx context.Context) error {
 			return c.Redirect(http.StatusTemporaryRedirect, "/")
 		}
 
-		query := `select * from clients;`
+		return Render(c, http.StatusOK, templates.PageTarget(user, srv, ``))
+	})
+	e.POST("/servers/:id", func(c echo.Context) error {
+		user := c.Get(ctxUser).(structs.User)
+
+		srv, _, ok := getTarget(c.Param("id"))
+		if !ok {
+			return c.Redirect(http.StatusTemporaryRedirect, "/")
+		}
+
+		params, err := c.FormParams()
+		if err != nil {
+			return c.Redirect(http.StatusTemporaryRedirect, "/")
+		}
+
+		query := params.Get("query")
+		fmt.Println(params)
+		fmt.Println(query)
 
 		return Render(c, http.StatusOK, templates.PageTarget(user, srv, query))
 	})

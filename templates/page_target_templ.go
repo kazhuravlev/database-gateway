@@ -158,14 +158,14 @@ func sqlForm(query string) templ.Component {
 			templ_7745c5c3_Var7 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div><form action=\"#\" method=\"post\"><textarea name=\"sql\" type=\"text\" placeholder=\"select * from some_table limit 1\" style=\"width: 1024px; height: 120px;\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div><form action=\"#\" method=\"post\"><textarea name=\"query\" type=\"text\" placeholder=\"select * from some_table limit 1\" style=\"width: 1024px; height: 120px;\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 36, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 36, Col: 130}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
