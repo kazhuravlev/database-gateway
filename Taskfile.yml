@@ -5,6 +5,10 @@ vars:
   DEPS_COMPOSE_FILE: ./.cicd/local/docker-compose.yaml
 
 tasks:
+  run:
+    cmds:
+      - go run ./cmd/app
+
   deps:run:
     desc: Run all deps
     cmds:
@@ -43,7 +47,7 @@ tasks:
       - echo ">>> Run Code Formatter"
       - go fmt $(go list ./...)
       - toolset run gofumpt -l -w .
-      - toolset run goimports -d -w $(find . -type f -name '*.go' -not -path './.cicd/*')
+#      - toolset run goimports -d -w $(find . -type f -name '*.go' -not -path './.cicd/*')
 
   ci:lint:
     desc: Run linter in CI tool

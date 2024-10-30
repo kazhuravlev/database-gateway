@@ -82,6 +82,16 @@ func runApp(ctx context.Context) error {
 		return config.User{}, false
 	}
 
+	getTarget := func(id string) (config.Target, *pgx.Conn, bool) {
+		for _, target := range cfg.Targets {
+			if target.Id == id {
+				return target, targets.id2client[id], true
+			}
+		}
+
+		return config.Target{}, nil, false
+	}
+
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(middleware.BasicAuthWithConfig(middleware.BasicAuthConfig{
@@ -119,6 +129,16 @@ func runApp(ctx context.Context) error {
 		})
 
 		return Render(c, http.StatusOK, templates.PageServersList(user, servers))
+	})
+	e.GET("/servers/:id", func(c echo.Context) error {
+		user := c.Get(ctxUser).(structs.User)
+
+		srv, _, ok := getTarget(c.Param("id"))
+		if !ok {
+			return c.Redirect(http.StatusTemporaryRedirect, "/")
+		}
+
+		return Render(c, http.StatusOK, templates.PageTarget(user, srv))
 	})
 
 	{

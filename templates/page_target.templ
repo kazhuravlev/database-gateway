@@ -1,0 +1,24 @@
+package templates
+
+import (
+	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
+)
+
+templ targetInfo(target config.Target) {
+	<div>
+		<div>ID: { target.Id }</div>
+		<div>Type: { target.Type }</div>
+		<div>
+			<div>Tables:</div>
+			for _, tbl := range target.Tables {
+				<div>{ tbl.Table }</div>
+			}
+		</div>
+	</div>
+}
+
+templ PageTarget(user structs.User, target config.Target) {
+	@header(user)
+	@targetInfo(target)
+}
