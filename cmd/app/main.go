@@ -138,7 +138,9 @@ func runApp(ctx context.Context) error {
 			return c.Redirect(http.StatusTemporaryRedirect, "/")
 		}
 
-		return Render(c, http.StatusOK, templates.PageTarget(user, srv))
+		query := `select * from clients;`
+
+		return Render(c, http.StatusOK, templates.PageTarget(user, srv, query))
 	})
 
 	{

@@ -30,7 +30,18 @@ templ targetInfo(target config.Target) {
 	</div>
 }
 
-templ PageTarget(user structs.User, target config.Target) {
+templ sqlForm(query string) {
+	<div>
+		<form action="#" method="post">
+			<textarea name="sql" type="text" placeholder="select * from some_table limit 1" style="width: 1024px; height: 120px;">{ query }</textarea>
+			<br/>
+			<button type="submit">Run</button>
+		</form>
+	</div>
+}
+
+templ PageTarget(user structs.User, target config.Target, query string) {
 	@header(user)
 	@targetInfo(target)
+	@sqlForm(query)
 }
