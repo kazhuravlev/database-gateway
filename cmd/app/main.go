@@ -154,9 +154,7 @@ func runApp(ctx context.Context) error {
 		}
 
 		query := params.Get("query")
-		fmt.Println(params)
-		fmt.Println(query)
-
+		
 		return Render(c, http.StatusOK, templates.PageTarget(user, srv, query))
 	})
 
