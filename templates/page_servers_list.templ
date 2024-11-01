@@ -15,6 +15,12 @@ templ listServers(servers []structs.Server) {
 }
 
 templ header(user structs.User) {
+	<style>
+		table, th, td {
+		  border: 1px solid;
+		}
+	</style>
+
 	<div>
 		<div>User: { user.Username }</div>
 		<hr/>

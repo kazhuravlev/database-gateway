@@ -11,3 +11,8 @@ type Server struct {
 type User struct {
 	Username string
 }
+
+type QTable struct {
+	Headers []string
+	Rows    [][]string
+}

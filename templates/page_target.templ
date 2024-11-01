@@ -40,8 +40,28 @@ templ sqlForm(query string) {
 	</div>
 }
 
-templ PageTarget(user structs.User, target config.Target, query string) {
+templ queryResult(tbl structs.QTable) {
+	<table style="width: 100%" border="1">
+		<tr>
+			for _, hdr := range tbl.Headers {
+				<th>{ hdr }</th>
+			}
+		</tr>
+		for _, row := range tbl.Rows {
+			<tr>
+				for _, cell := range row {
+					<td>{ cell }</td>
+				}
+			</tr>
+		}
+	</table>
+}
+
+templ PageTarget(user structs.User, target config.Target, query string, qTbl *structs.QTable) {
 	@header(user)
 	@targetInfo(target)
 	@sqlForm(query)
+	if qTbl != nil {
+		@queryResult(*qTbl)
+	}
 }
