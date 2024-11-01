@@ -101,12 +101,7 @@ func runApp(ctx context.Context) error {
 			return false
 		},
 		Validator: func(username, password string, c echo.Context) (bool, error) {
-			if _, ok := authUser(username, password); ok {
-
-				user := structs.User{
-					Username: username,
-				}
-
+			if user, ok := authUser(username, password); ok {
 				c.Set(ctxUser, user)
 				return true, nil
 			}
@@ -120,7 +115,7 @@ func runApp(ctx context.Context) error {
 		return c.Redirect(http.StatusTemporaryRedirect, "/servers")
 	})
 	e.GET("/servers", func(c echo.Context) error {
-		user := c.Get(ctxUser).(structs.User)
+		user := c.Get(ctxUser).(config.User)
 
 		servers := just.SliceMap(cfg.Targets, func(t config.Target) structs.Server {
 			return structs.Server{
@@ -133,7 +128,7 @@ func runApp(ctx context.Context) error {
 		return Render(c, http.StatusOK, templates.PageServersList(user, servers))
 	})
 	e.GET("/servers/:id", func(c echo.Context) error {
-		user := c.Get(ctxUser).(structs.User)
+		user := c.Get(ctxUser).(config.User)
 
 		srv, _, ok := getTarget(c.Param("id"))
 		if !ok {
@@ -143,7 +138,7 @@ func runApp(ctx context.Context) error {
 		return Render(c, http.StatusOK, templates.PageTarget(user, srv, ``, nil))
 	})
 	e.POST("/servers/:id", func(c echo.Context) error {
-		user := c.Get(ctxUser).(structs.User)
+		user := c.Get(ctxUser).(config.User)
 
 		srv, conn, ok := getTarget(c.Param("id"))
 		if !ok {
