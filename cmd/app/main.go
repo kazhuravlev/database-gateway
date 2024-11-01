@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/templates"
 
@@ -138,12 +140,12 @@ func runApp(ctx context.Context) error {
 			return c.Redirect(http.StatusTemporaryRedirect, "/")
 		}
 
-		return Render(c, http.StatusOK, templates.PageTarget(user, srv, ``))
+		return Render(c, http.StatusOK, templates.PageTarget(user, srv, ``, nil))
 	})
 	e.POST("/servers/:id", func(c echo.Context) error {
 		user := c.Get(ctxUser).(structs.User)
 
-		srv, _, ok := getTarget(c.Param("id"))
+		srv, conn, ok := getTarget(c.Param("id"))
 		if !ok {
 			return c.Redirect(http.StatusTemporaryRedirect, "/")
 		}
@@ -154,8 +156,34 @@ func runApp(ctx context.Context) error {
 		}
 
 		query := params.Get("query")
-		
-		return Render(c, http.StatusOK, templates.PageTarget(user, srv, query))
+
+		res, err := conn.Query(c.Request().Context(), query)
+		if err != nil {
+			return c.String(http.StatusOK, err.Error())
+		}
+
+		fmt.Println(res.FieldDescriptions())
+		rows, err := pgx.CollectRows(res, func(row pgx.CollectableRow) ([]any, error) {
+			return row.Values()
+		})
+		if err != nil {
+			return c.String(http.StatusOK, err.Error())
+		}
+
+		fmt.Println(rows)
+
+		qTbl := structs.QTable{
+			Headers: just.SliceMap(res.FieldDescriptions(), func(fd pgconn.FieldDescription) string {
+				return fd.Name
+			}),
+			Rows: just.SliceMap(rows, func(row []any) []string {
+				return just.SliceMap(row, func(v any) string {
+					return fmt.Sprint(v)
+				})
+			}),
+		}
+
+		return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, &qTbl))
 	})
 
 	{
