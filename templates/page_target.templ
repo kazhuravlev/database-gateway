@@ -57,7 +57,7 @@ templ queryResult(tbl structs.QTable) {
 	</table>
 }
 
-templ PageTarget(user structs.User, target config.Target, query string, qTbl *structs.QTable) {
+templ PageTarget(user config.User, target config.Target, query string, qTbl *structs.QTable) {
 	@header(user)
 	@targetInfo(target)
 	@sqlForm(query)

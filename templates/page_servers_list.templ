@@ -3,6 +3,7 @@ package templates
 import (
 	"fmt"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/internal/config"
 
 )
 
@@ -14,7 +15,7 @@ templ listServers(servers []structs.Server) {
 	</ul>
 }
 
-templ header(user structs.User) {
+templ header(user config.User) {
 	<style>
 		table, th, td {
 		  border: 1px solid;
@@ -27,7 +28,7 @@ templ header(user structs.User) {
 	</div>
 }
 
-templ PageServersList(user structs.User, servers []structs.Server) {
+templ PageServersList(user config.User, servers []structs.Server) {
 	@header(user)
 	@listServers(servers)
 }
