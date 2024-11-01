@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/kazhuravlev/database-gateway/internal/validator"
+
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/kazhuravlev/database-gateway/internal/structs"
@@ -135,7 +137,7 @@ func runApp(ctx context.Context) error {
 			return c.Redirect(http.StatusTemporaryRedirect, "/")
 		}
 
-		return Render(c, http.StatusOK, templates.PageTarget(user, srv, ``, nil))
+		return Render(c, http.StatusOK, templates.PageTarget(user, srv, ``, nil, nil))
 	})
 	e.POST("/servers/:id", func(c echo.Context) error {
 		user := c.Get(ctxUser).(config.User)
@@ -152,9 +154,13 @@ func runApp(ctx context.Context) error {
 
 		query := params.Get("query")
 
+		if err := validator.IsAllowed(srv, user, query); err != nil {
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
+		}
+
 		res, err := conn.Query(c.Request().Context(), query)
 		if err != nil {
-			return c.String(http.StatusOK, err.Error())
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
 
 		fmt.Println(res.FieldDescriptions())
@@ -162,7 +168,7 @@ func runApp(ctx context.Context) error {
 			return row.Values()
 		})
 		if err != nil {
-			return c.String(http.StatusOK, err.Error())
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
 
 		fmt.Println(rows)
@@ -178,7 +184,7 @@ func runApp(ctx context.Context) error {
 			}),
 		}
 
-		return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, &qTbl))
+		return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, &qTbl, nil))
 	})
 
 	{

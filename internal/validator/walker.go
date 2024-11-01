@@ -3,6 +3,7 @@ package validator
 import (
 	"errors"
 	"fmt"
+
 	"github.com/auxten/postgresql-parser/pkg/sql/parser"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 )

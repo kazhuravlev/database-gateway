@@ -1,10 +1,11 @@
 package validator_test
 
 import (
+	"testing"
+
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestValidator(t *testing.T) {

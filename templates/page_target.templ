@@ -57,10 +57,17 @@ templ queryResult(tbl structs.QTable) {
 	</table>
 }
 
-templ PageTarget(user config.User, target config.Target, query string, qTbl *structs.QTable) {
+templ queryError(err error) {
+	<div style="padding: 10px; border: 1px solid red;">{ err.Error() }</div>
+}
+
+templ PageTarget(user config.User, target config.Target, query string, qTbl *structs.QTable, err error) {
 	@header(user)
 	@targetInfo(target)
 	@sqlForm(query)
+	if err != nil {
+		@queryError(err)
+	}
 	if qTbl != nil {
 		@queryResult(*qTbl)
 	}
