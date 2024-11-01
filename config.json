@@ -91,36 +91,17 @@
 			]
 		}
 	],
-	"acls": [
-		{
-			"id": "allow-all",
-			"target": "local-01",
-			"select": {
-				"allow": true,
-				"tables": [
-					"clients"
-				]
-			},
-			"update": {
-				"allow": true,
-				"tables": [
-					"clients"
-				]
-			},
-			"delete": {
-				"allow": false,
-				"tables": [
-					"clients"
-				]
-			}
-		}
-	],
 	"users": [
 		{
 			"username": "kazhuravlev",
 			"password": "example",
 			"acls": [
-				"allow-all"
+				{
+					"op": "select",
+					"target": "local-1",
+					"tbl": "clients",
+					"allow": true
+				}
 			]
 		}
 	]

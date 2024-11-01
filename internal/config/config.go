@@ -1,5 +1,7 @@
 package config
 
+import "github.com/kazhuravlev/just"
+
 type TargetTable struct {
 	Table     string   `json:"table"`
 	Fields    []string `json:"fields"`
@@ -23,31 +25,30 @@ type Target struct {
 	Tables     []TargetTable `json:"tables"`
 }
 
+func (t *Target) HasField(tbl, field string) bool {
+	for _, f := range t.Tables {
+		if f.Table == tbl {
+			return just.SliceContainsElem(f.Fields, field)
+		}
+	}
+
+	return false
+}
+
 type ACL struct {
-	Id     string `json:"id"`
+	Op     string `json:"op"`
 	Target string `json:"target"`
-	Select struct {
-		Allow  bool     `json:"allow"`
-		Tables []string `json:"tables"`
-	} `json:"select"`
-	Update struct {
-		Allow  bool     `json:"allow"`
-		Tables []string `json:"tables"`
-	} `json:"update"`
-	Delete struct {
-		Allow  bool     `json:"allow"`
-		Tables []string `json:"tables"`
-	} `json:"delete"`
+	Tbl    string `json:"tbl"`
+	Allow  bool   `json:"allow"`
 }
 
 type User struct {
-	Username string   `json:"username"`
-	Password string   `json:"password"`
-	Acls     []string `json:"acls"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Acls     []ACL  `json:"acls"`
 }
 
 type Config struct {
 	Targets []Target `json:"targets"`
-	Acls    []ACL    `json:"acls"`
 	Users   []User   `json:"users"`
 }
