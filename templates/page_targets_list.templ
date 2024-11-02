@@ -7,12 +7,10 @@ import (
 )
 
 templ listServers(servers []structs.Server) {
-	@w_appline() {
-		<ul>
-			for _, item := range servers {
-				<li><a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>{ item.ID }</a></li>
-			}
-		</ul>
+	for _, item := range servers {
+		@w_appline() {
+			<a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>{ item.ID }</a>
+		}
 	}
 }
 

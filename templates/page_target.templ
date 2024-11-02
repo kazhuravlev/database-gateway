@@ -23,6 +23,14 @@ templ targetInfo(target config.Target) {
 	}
 }
 
+templ aclList(acls []config.ACL) {
+	@w_appline() {
+		for _, acl := range acls {
+			<div>{ acl.Target }</div>
+		}
+	}
+}
+
 templ sqlForm(query string) {
 	@w_appline() {
 		<div class="w-full">
@@ -78,10 +86,11 @@ templ queryError(err error) {
 	<div class="w-full border border-red-500 p-2">{ err.Error() }</div>
 }
 
-templ PageTarget(user config.User, target config.Target, query string, qTbl *structs.QTable, err error) {
+templ PageTarget(user config.User, target config.Target, acls []config.ACL, query string, qTbl *structs.QTable, err error) {
 	@l_app() {
 		@header(user)
 		@targetInfo(target)
+		@aclList(acls)
 		@sqlForm(query)
 		if err != nil {
 			@queryError(err)

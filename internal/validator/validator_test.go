@@ -15,37 +15,37 @@ func TestValidator(t *testing.T) {
 	t.Run("bad_requests", func(t *testing.T) {
 		t.Run("query_has_no_statements", func(t *testing.T) {
 			query := ``
-			err := validator.IsAllowed(config.Target{}, config.User{}, query)
+			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 
 		t.Run("not_a_query", func(t *testing.T) {
 			query := `what time is it?`
-			err := validator.IsAllowed(config.Target{}, config.User{}, query)
+			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 
 		t.Run("query_has_several_statements", func(t *testing.T) {
 			query := `select 1; select 1`
-			err := validator.IsAllowed(config.Target{}, config.User{}, query)
+			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 
 		t.Run("star_select", func(t *testing.T) {
 			query := `select * from table`
-			err := validator.IsAllowed(config.Target{}, config.User{}, query)
+			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 
 		t.Run("schema_changes", func(t *testing.T) {
 			query := `create table aaa(id text);`
-			err := validator.IsAllowed(config.Target{}, config.User{}, query)
+			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 
 		t.Run("alter_table", func(t *testing.T) {
 			query := `alter table aaa add column id text default '';`
-			err := validator.IsAllowed(config.Target{}, config.User{}, query)
+			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 	})
@@ -75,7 +75,7 @@ SELECT region,
 FROM orders
 WHERE region IN (SELECT region FROM top_regions)
 GROUP BY region, product;`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			err := validator.IsAllowed(target.Tables, acls, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 	})
@@ -100,7 +100,7 @@ GROUP BY region, product;`
 				Allow:  true,
 			}}
 			query := `select id, name from clients;`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			err := validator.IsAllowed(target.Tables, acls, query)
 			require.NoError(t, err)
 		})
 
@@ -112,7 +112,7 @@ GROUP BY region, product;`
 				Allow:  false,
 			}}
 			query := `select id, name from clients;`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			err := validator.IsAllowed(target.Tables, acls, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 
@@ -124,7 +124,7 @@ GROUP BY region, product;`
 				Allow:  true,
 			}}
 			query := `select id, name from (select id, name from clients)`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			err := validator.IsAllowed(target.Tables, acls, query)
 			// TODO: make it allowed. Actually this is legal query for this ACL.
 			require.ErrorIs(t, err, validator.ErrComplicatedQuery)
 		})
@@ -139,7 +139,7 @@ GROUP BY region, product;`
 				Allow:  true,
 			}}
 			query := `update clients set id=1 and name='john'`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			err := validator.IsAllowed(target.Tables, acls, query)
 			require.NoError(t, err)
 		})
 		t.Run("simple_denied", func(t *testing.T) {
@@ -150,7 +150,7 @@ GROUP BY region, product;`
 				Allow:  false,
 			}}
 			query := `update clients set id=1 and name='john'`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			err := validator.IsAllowed(target.Tables, acls, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 	})
@@ -164,7 +164,7 @@ GROUP BY region, product;`
 				Allow:  true,
 			}}
 			query := `delete from clients where id=42`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			err := validator.IsAllowed(target.Tables, acls, query)
 			require.NoError(t, err)
 		})
 		t.Run("simple_denied", func(t *testing.T) {
@@ -175,7 +175,7 @@ GROUP BY region, product;`
 				Allow:  false,
 			}}
 			query := `delete from clients where id=42`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			err := validator.IsAllowed(target.Tables, acls, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 	})
@@ -189,7 +189,7 @@ GROUP BY region, product;`
 				Allow:  true,
 			}}
 			query := `insert into clients(id) values (42)`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			err := validator.IsAllowed(target.Tables, acls, query)
 			require.NoError(t, err)
 		})
 
@@ -201,7 +201,7 @@ GROUP BY region, product;`
 				Allow:  false,
 			}}
 			query := `insert into clients(id) values (42)`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			err := validator.IsAllowed(target.Tables, acls, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 	})

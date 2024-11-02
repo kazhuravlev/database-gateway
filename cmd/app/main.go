@@ -147,7 +147,11 @@ func runApp(ctx context.Context) error {
 			return c.Redirect(http.StatusTemporaryRedirect, "/")
 		}
 
-		return Render(c, http.StatusOK, templates.PageTarget(user, srv, ``, nil, nil))
+		acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
+			return acl.Target == srv.Id
+		})
+
+		return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, ``, nil, nil))
 	})
 	e.POST("/servers/:id", func(c echo.Context) error {
 		user := c.Get(ctxUser).(config.User)
@@ -165,21 +169,25 @@ func runApp(ctx context.Context) error {
 		query := params.Get("query")
 		format := params.Get("format")
 
-		if err := validator.IsAllowed(srv, user, query); err != nil {
+		acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
+			return acl.Target == srv.Id
+		})
+
+		if err := validator.IsAllowed(srv.Tables, acls, query); err != nil {
 			log.Error("err", err.Error())
-			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, err))
 		}
 
 		res, err := conn.Query(c.Request().Context(), query)
 		if err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, err))
 		}
 
 		rows, err := pgx.CollectRows(res, func(row pgx.CollectableRow) ([]any, error) {
 			return row.Values()
 		})
 		if err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, err))
 		}
 
 		cols := just.SliceMap(res.FieldDescriptions(), func(fd pgconn.FieldDescription) string {
@@ -188,7 +196,7 @@ func runApp(ctx context.Context) error {
 
 		switch format {
 		default:
-			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, errors.New("unknown format")))
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, errors.New("unknown format")))
 		case "html":
 			qTbl := structs.QTable{
 				Headers: cols,
@@ -199,7 +207,7 @@ func runApp(ctx context.Context) error {
 				}),
 			}
 
-			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, &qTbl, nil))
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, &qTbl, nil))
 		case "json":
 			qTbl := just.SliceMap(rows, func(row []any) map[string]any {
 				m := make(map[string]any, len(cols))
@@ -211,7 +219,7 @@ func runApp(ctx context.Context) error {
 
 			bb, err := json.Marshal(qTbl)
 			if err != nil {
-				return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
+				return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, err))
 			}
 
 			c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json"))

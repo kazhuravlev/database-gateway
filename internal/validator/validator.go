@@ -23,10 +23,7 @@ type IVector interface {
 	Columns() []string
 }
 
-func IsAllowed(target config.Target, user config.User, query string) error {
-	acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
-		return acl.Target == target.Id
-	})
+func IsAllowed(tables []config.TargetTable, acls []config.ACL, query string) error {
 	if len(acls) == 0 {
 		return fmt.Errorf("user have no any acls: %w", ErrAccessDenied)
 	}
@@ -36,7 +33,7 @@ func IsAllowed(target config.Target, user config.User, query string) error {
 		return fmt.Errorf("make vectors from query: %w", err)
 	}
 
-	if err := validateSchema(vectors, target.Tables); err != nil {
+	if err := validateSchema(vectors, tables); err != nil {
 		return fmt.Errorf("validate schema: %w", err)
 	}
 
