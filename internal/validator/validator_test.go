@@ -48,19 +48,7 @@ func TestValidator(t *testing.T) {
 		})
 	})
 
-	t.Run("positive_cases", func(t *testing.T) {
-		t.Run("simple_select", func(t *testing.T) {
-			target := config.Target{Id: "t1"}
-			acls := []config.ACL{{
-				Op:     config.OpSelect,
-				Target: "t1",
-				Tbl:    "clients",
-				Allow:  true,
-			}}
-			query := `select id, name from clients;`
-			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
-			require.NoError(t, err)
-		})
+	t.Run("some_cases", func(t *testing.T) {
 		t.Run("complicated_query", func(t *testing.T) {
 			target := config.Target{Id: "t1"}
 			acls := []config.ACL{{
@@ -87,6 +75,62 @@ WHERE region IN (SELECT region FROM top_regions)
 GROUP BY region, product;`
 			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
+		})
+	})
+
+	t.Run("select", func(t *testing.T) {
+		t.Run("simple_allowed", func(t *testing.T) {
+			target := config.Target{Id: "t1"}
+			acls := []config.ACL{{
+				Op:     config.OpSelect,
+				Target: "t1",
+				Tbl:    "clients",
+				Allow:  true,
+			}}
+			query := `select id, name from clients;`
+			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			require.NoError(t, err)
+		})
+		t.Run("simple_denied", func(t *testing.T) {
+			target := config.Target{Id: "t1"}
+			acls := []config.ACL{{
+				Op:     config.OpSelect,
+				Target: "t1",
+				Tbl:    "clients",
+				Allow:  false,
+			}}
+			query := `select id, name from clients;`
+			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			require.ErrorIs(t, err, validator.ErrAccessDenied)
+		})
+
+		t.Run("select_from_allowed_select__is_not_allowed", func(t *testing.T) {
+			// TODO: make it allowed.
+			target := config.Target{Id: "t1"}
+			acls := []config.ACL{{
+				Op:     config.OpSelect,
+				Target: "t1",
+				Tbl:    "clients",
+				Allow:  true,
+			}}
+			query := `select id, name from (select id, name from clients)`
+			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			require.ErrorIs(t, err, validator.ErrAccessDenied)
+		})
+	})
+
+	t.Run("update", func(t *testing.T) {
+		t.Run("simple_allowed", func(t *testing.T) {
+			target := config.Target{Id: "t1"}
+			acls := []config.ACL{{
+				Op:     config.OpUpdate,
+				Target: "t1",
+				Tbl:    "clients",
+				Allow:  true,
+			}}
+			query := `update clients set id=1 and name='john'`
+			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			require.NoError(t, err)
 		})
 	})
 }
