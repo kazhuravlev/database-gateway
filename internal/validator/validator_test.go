@@ -145,6 +145,33 @@ GROUP BY region, product;`
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 	})
+
+	t.Run("delete", func(t *testing.T) {
+		t.Run("simple_allowed", func(t *testing.T) {
+			target := config.Target{Id: "t1"}
+			acls := []config.ACL{{
+				Op:     config.OpDelete,
+				Target: "t1",
+				Tbl:    "clients",
+				Allow:  true,
+			}}
+			query := `delete from clients where id=42`
+			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			require.NoError(t, err)
+		})
+		t.Run("simple_denied", func(t *testing.T) {
+			target := config.Target{Id: "t1"}
+			acls := []config.ACL{{
+				Op:     config.OpDelete,
+				Target: "t1",
+				Tbl:    "clients",
+				Allow:  false,
+			}}
+			query := `delete from clients where id=42`
+			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			require.ErrorIs(t, err, validator.ErrAccessDenied)
+		})
+	})
 }
 
 func TestVector(t *testing.T) {
