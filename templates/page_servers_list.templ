@@ -2,9 +2,8 @@ package templates
 
 import (
 	"fmt"
-	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/config"
-
+	"github.com/kazhuravlev/database-gateway/internal/structs"
 )
 
 templ listServers(servers []structs.Server) {
@@ -16,6 +15,11 @@ templ listServers(servers []structs.Server) {
 }
 
 templ PageServersList(user config.User, servers []structs.Server) {
-	@header(user)
-	@listServers(servers)
+	<html>
+		@htmlHeader()
+		<body class="bg-white dark:bg-slate-800 dark:text-white px-2">
+			@header(user)
+			@listServers(servers)
+		</body>
+	</html>
 }
