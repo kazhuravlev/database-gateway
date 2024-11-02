@@ -90,6 +90,10 @@ func (v vecInsert) Table() string {
 	return v.tblName
 }
 
+func (v vecInsert) Columns() []string {
+	return nil
+}
+
 func makeInsertVec(req *tree.Insert) (*vecInsert, error) {
 	tName, err := getTableName(req.Table)
 	if err != nil {
@@ -114,6 +118,10 @@ func (v VecSelect) String() string {
 
 func (v VecSelect) Table() string {
 	return v.Tbl
+}
+
+func (v VecSelect) Columns() []string {
+	return v.Cols
 }
 
 func MakeSelectVec(req *tree.Select) (*VecSelect, error) {
@@ -156,6 +164,10 @@ func (v vecUpdate) Table() string {
 	return v.tblName
 }
 
+func (v vecUpdate) Columns() []string {
+	return v.columns
+}
+
 func makeUpdateVec(req *tree.Update) (*vecUpdate, error) {
 	tName, err := getTableName(req.Table)
 	if err != nil {
@@ -188,6 +200,10 @@ func (v vecDelete) String() string {
 
 func (v vecDelete) Table() string {
 	return v.tblName
+}
+
+func (v vecDelete) Columns() []string {
+	return v.columns
 }
 
 func makeDeleteVec(req *tree.Delete) (*vecDelete, error) {
