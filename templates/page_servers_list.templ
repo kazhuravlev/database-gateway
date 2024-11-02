@@ -15,19 +15,6 @@ templ listServers(servers []structs.Server) {
 	</ul>
 }
 
-templ header(user config.User) {
-	<style>
-		table, th, td {
-		  border: 1px solid;
-		}
-	</style>
-
-	<div>
-		<div>User: { user.Username }</div>
-		<hr/>
-	</div>
-}
-
 templ PageServersList(user config.User, servers []structs.Server) {
 	@header(user)
 	@listServers(servers)

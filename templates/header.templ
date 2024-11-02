@@ -1,0 +1,17 @@
+package templates
+
+import "github.com/kazhuravlev/database-gateway/internal/config"
+
+templ header(user config.User) {
+	<style>
+		table, th, td {
+		  border: 1px solid;
+		}
+	</style>
+	<div>
+		<div><a href="/servers">All servers</a></div>
+		<div><a href="/logout">Logout</a></div>
+		<div>User: { user.Username }</div>
+		<hr/>
+	</div>
+}
