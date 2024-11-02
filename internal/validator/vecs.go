@@ -65,32 +65,10 @@ func MakeSelectVec(req *tree.Select) (*VecSelect, error) {
 		return nil, fmt.Errorf("get table name for select: %w", err)
 	}
 
-	cols := make([]string, 0)
-	//for _, col := range sel.Exprs {
-	//	name := col.Expr.String()
-	//	if name == "*" {
-	//		return nil, fmt.Errorf("unable to parse star notation: %w", ErrBadQuery)
-	//	}
-	//
-	//	cols = append(cols, name)
-	//}
-	err2 := Walk3(func(node tree.NodeFormatter) {
-		switch col := node.(type) {
-		case *tree.ColumnItem:
-			cols = append(cols, col.String())
-		}
-	}, req)
-	if err := err2; err != nil {
-		return nil, fmt.Errorf("walk seelct statement: %w", err)
+	cols, err := GetColumnNames(req)
+	if err != nil {
+		return nil, fmt.Errorf("get column names: %w", err)
 	}
-
-	for _, col := range cols {
-		if col == "*" {
-			return nil, fmt.Errorf("unable to parse star notation: %w", ErrBadQuery)
-		}
-	}
-
-	sort.Strings(cols)
 
 	return &VecSelect{Tbl: tName, Cols: cols}, nil
 }
