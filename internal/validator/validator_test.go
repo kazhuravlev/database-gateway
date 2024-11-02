@@ -1,6 +1,7 @@
 package validator_test
 
 import (
+	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"testing"
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
@@ -48,7 +49,7 @@ func TestValidator(t *testing.T) {
 	})
 
 	t.Run("positive_cases", func(t *testing.T) {
-		t.Run("asdasd", func(t *testing.T) {
+		t.Run("simple_select", func(t *testing.T) {
 			target := config.Target{Id: "t1"}
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
@@ -60,5 +61,135 @@ func TestValidator(t *testing.T) {
 			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
 			require.NoError(t, err)
 		})
+		t.Run("complicated_query", func(t *testing.T) {
+			target := config.Target{Id: "t1"}
+			acls := []config.ACL{{
+				Op:     config.OpSelect,
+				Target: "t1",
+				Tbl:    "clients",
+				Allow:  true,
+			}}
+			query := `WITH regional_sales AS (
+    SELECT region, SUM(amount) AS total_sales
+    FROM orders
+    GROUP BY region
+), top_regions AS (
+    SELECT region
+    FROM regional_sales
+    WHERE total_sales > (SELECT SUM(total_sales)/10 FROM regional_sales)
+)
+SELECT region,
+       product,
+       SUM(quantity) AS product_units,
+       SUM(amount) AS product_sales
+FROM orders
+WHERE region IN (SELECT region FROM top_regions)
+GROUP BY region, product;`
+			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			require.ErrorIs(t, err, validator.ErrAccessDenied)
+		})
 	})
+}
+
+func TestVector(t *testing.T) {
+	vec, err := validator.MakeSelectVec(&tree.Select{
+		With: nil,
+		Select: &tree.SelectClause{
+			Distinct: false,
+			DistinctOn: tree.DistinctOn{
+				&tree.ColumnItem{
+					ColumnName: "distinct_col",
+				},
+			},
+			Exprs: tree.SelectExprs{
+				{
+					Expr: &tree.ColumnItem{
+						ColumnName: "col_1",
+					},
+					As: "alias_1",
+				},
+				{
+					Expr: &tree.FuncExpr{
+						Func: tree.WrapFunction("sum"),
+						Type: 0,
+						Exprs: tree.Exprs{
+							&tree.ColumnItem{
+								ColumnName: "col_2",
+							},
+						},
+						Filter:    nil,
+						WindowDef: nil,
+						OrderBy:   nil,
+					},
+					As: "alias_2",
+				},
+			},
+			From: tree.From{
+				Tables: tree.TableExprs{
+					tree.NewTableName("", "clients"),
+				},
+				AsOf: tree.AsOfClause{},
+			},
+			Where: &tree.Where{
+				Expr: &tree.ColumnItem{
+					ColumnName: "where_1",
+				},
+			},
+			GroupBy: tree.GroupBy{
+				&tree.ColumnItem{
+					ColumnName: "group_1",
+				},
+			},
+			Having: &tree.Where{
+				Expr: &tree.ColumnItem{
+					ColumnName: "having_1",
+				},
+			},
+			Window: tree.Window{
+				{
+					Name:    "",
+					RefName: "",
+					Partitions: tree.Exprs{
+						&tree.ColumnItem{
+							ColumnName: "part_1",
+						},
+					},
+					OrderBy: tree.OrderBy{
+						{
+							Expr: &tree.ColumnItem{
+								ColumnName: "part_order_col",
+							},
+						},
+					},
+					Frame: nil,
+				},
+			},
+			TableSelect: false,
+		},
+		OrderBy: tree.OrderBy{
+			{
+				Expr: &tree.ColumnItem{
+					ColumnName: "order_col",
+				},
+			},
+		},
+		Limit:   nil,
+		Locking: nil,
+	})
+	require.NoError(t, err)
+	expVec := validator.VecSelect{
+		Tbl: "public.clients",
+		Cols: []string{
+			"col_1",
+			"col_2",
+			"distinct_col",
+			"group_1",
+			"having_1",
+			"order_col",
+			"part_1",
+			"part_order_col",
+			"where_1",
+		},
+	}
+	require.Equal(t, expVec, *vec)
 }
