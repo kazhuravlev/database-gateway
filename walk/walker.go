@@ -273,7 +273,7 @@ func isColumn(node interface{}) bool {
 // (variables = sub-expressions, placeholders, indexed vars, etc.)
 // Implementation limits:
 //  1. Table with AS is not normalized.
-//  2. Columns referred from outer query are not translated.
+//  2. Cols referred from outer query are not translated.
 func ColNamesInSelect(sql string) (referredCols ReferredCols, err error) {
 	referredCols = make(ReferredCols, 0)
 
