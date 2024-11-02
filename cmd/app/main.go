@@ -209,8 +209,8 @@ func runApp(ctx context.Context) error {
 			}
 
 			c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json"))
-
 			http.ServeContent(c.Response(), c.Request(), "response.json", time.Now(), bytes.NewReader(bb))
+
 			return nil
 		}
 	})
