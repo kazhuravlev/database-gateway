@@ -1,6 +1,7 @@
 package validator_test
 
 import (
+	"github.com/auxten/postgresql-parser/pkg/sql/parser"
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"testing"
 
@@ -91,6 +92,7 @@ GROUP BY region, product;`
 			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
 			require.NoError(t, err)
 		})
+
 		t.Run("simple_denied", func(t *testing.T) {
 			target := config.Target{Id: "t1"}
 			acls := []config.ACL{{
@@ -175,7 +177,7 @@ GROUP BY region, product;`
 }
 
 func TestVector(t *testing.T) {
-	vec, err := validator.MakeSelectVec(&tree.Select{
+	req := &tree.Select{
 		With: nil,
 		Select: &tree.SelectClause{
 			Distinct: false,
@@ -258,7 +260,8 @@ func TestVector(t *testing.T) {
 		},
 		Limit:   nil,
 		Locking: nil,
-	})
+	}
+	vec, err := validator.MakeSelectVec(req)
 	require.NoError(t, err)
 	expVec := validator.VecSelect{
 		Tbl: "public.clients",
@@ -275,4 +278,29 @@ func TestVector(t *testing.T) {
 		},
 	}
 	require.Equal(t, expVec, *vec)
+
+	res, err := validator.GetColumnNames(req)
+	require.NoError(t, err)
+	require.Equal(t, expVec.Cols, res)
+}
+
+func TestGetColumnNames(t *testing.T) {
+	t.Run("simple_select", func(t *testing.T) {
+		stmts, err := parser.Parse(`select id, name from clients`)
+		require.NoError(t, err)
+		require.Len(t, stmts, 1)
+
+		cols, err := validator.GetColumnNames(stmts[0].AST)
+		require.NoError(t, err)
+		require.Equal(t, []string{"id", "name"}, cols)
+	})
+
+	t.Run("star_select", func(t *testing.T) {
+		stmts, err := parser.Parse(`select * from clients`)
+		require.NoError(t, err)
+		require.Len(t, stmts, 1)
+
+		_, err2 := validator.GetColumnNames(stmts[0].AST)
+		require.ErrorIs(t, err2, validator.ErrAccessDenied)
+	})
 }
