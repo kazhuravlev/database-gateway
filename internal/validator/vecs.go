@@ -91,32 +91,20 @@ func (v vecUpdate) Table() string {
 }
 
 func makeUpdateVec(req *tree.Update) (*vecUpdate, error) {
-	return nil, nil
-	//sel, ok := req.Select.(*tree.SelectClause)
-	//if !ok {
-	//	return nil, fmt.Errorf("query have complicated select definition: %w", ErrComplicatedQuery)
-	//}
-	//
-	//if len(sel.From.Tables) != 1 {
-	//	return nil, fmt.Errorf("select have a several tables: %w", ErrComplicatedQuery)
-	//}
-	//
-	//tName, err := getTableName(sel.From.Tables[0])
-	//if err != nil {
-	//	return nil, fmt.Errorf("get table name for select: %w", err)
-	//}
-	//
-	//cols := make([]string, 0, len(sel.Exprs))
-	//for _, col := range sel.Exprs {
-	//	name := col.Expr.String()
-	//	if name == "*" {
-	//		return nil, fmt.Errorf("unable to parse star notation: %w", ErrBadQuery)
-	//	}
-	//
-	//	cols = append(cols, name)
-	//}
-	//
-	//return &vecUpdate{Tbl: tName, Cols: cols}, nil
+	tName, err := getTableName(req.Table)
+	if err != nil {
+		return nil, fmt.Errorf("get table name for update: %w", err)
+	}
+
+	cols, err := GetColumnNames(req)
+	if err != nil {
+		return nil, fmt.Errorf("get column names: %w", err)
+	}
+
+	return &vecUpdate{
+		tblName: tName,
+		columns: cols,
+	}, nil
 }
 
 type vecDelete struct {
