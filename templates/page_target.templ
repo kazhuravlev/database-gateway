@@ -6,42 +6,46 @@ import (
 )
 
 templ targetInfo(target config.Target) {
-	<div class="w-full border-l-2 border-orange-500 pl-2">
-		<div>{ target.Type } ({ target.Id })</div>
-		<div class="flex flex-col divide-orange-500">
-			for _, tbl := range target.Tables {
-				<div class="flex flex-row gap-1">
-					<div class="font-bold">{ tbl.Table }</div>
-					for _, col := range tbl.Fields {
-						<div>{ col }</div>
-					}
-				</div>
-			}
+	@w_appline() {
+		<div class="w-full">
+			<div>{ target.Type } ({ target.Id })</div>
+			<div class="flex flex-col divide-orange-500">
+				for _, tbl := range target.Tables {
+					<div class="flex flex-row gap-1">
+						<div class="font-bold">{ tbl.Table }</div>
+						for _, col := range tbl.Fields {
+							<div>{ col }</div>
+						}
+					</div>
+				}
+			</div>
 		</div>
-	</div>
+	}
 }
 
 templ sqlForm(query string) {
-	<div class="w-full border-l-2 border-orange-500 pl-2">
-		<form action="#" method="post" id="myForm" style="margin:0">
-			<div class="flex flex-col items-start gap-1">
-				<textarea id="textInput" name="query" type="text" placeholder="select * from some_table limit 1" class="w-full p-1 border border-2 border-orange-400 text-neutral-900"></textarea>
-				<button type="submit" id="submit" class="bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1">Run (Shift + Enter)</button>
-			</div>
-		</form>
-		<script type="text/javascript">
-		  (() => {
-				document.getElementById('textInput').addEventListener('keydown', function(event) {
-		      // Check if Shift + Enter keys are pressed
-		      if (event.key === 'Enter' && event.shiftKey) {
-		        event.preventDefault(); // Prevent new line in the textarea
+	@w_appline() {
+		<div class="w-full">
+			<form action="#" method="post" id="myForm" style="margin:0">
+				<div class="flex flex-col items-start gap-1">
+					<textarea id="textInput" name="query" type="text" placeholder="select * from some_table limit 1" class="w-full p-1 border border-2 border-orange-400 text-neutral-900"></textarea>
+					<button type="submit" id="submit" class="bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1">Run (Shift + Enter)</button>
+				</div>
+			</form>
+			<script type="text/javascript">
+  		  (() => {
+  				document.getElementById('textInput').addEventListener('keydown', function(event) {
+  		      // Check if Shift + Enter keys are pressed
+  		      if (event.key === 'Enter' && event.shiftKey) {
+  		        event.preventDefault(); // Prevent new line in the textarea
 
-						document.getElementById('submit').click()
-		      }
-		    });
-      })()
-    </script>
-	</div>
+  						document.getElementById('submit').click()
+  		      }
+  		    });
+        })()
+      </script>
+		</div>
+	}
 }
 
 templ queryResult(tbl structs.QTable) {
@@ -68,20 +72,15 @@ templ queryError(err error) {
 }
 
 templ PageTarget(user config.User, target config.Target, query string, qTbl *structs.QTable, err error) {
-	<html>
-		@htmlHeader()
-		<body class="bg-white dark:bg-neutral-900 dark:text-neutral-300 px-2 text-sm py-2">
-			<div class="flex flex-col items-start gap-5">
-				@header(user)
-				@targetInfo(target)
-				@sqlForm(query)
-				if err != nil {
-					@queryError(err)
-				}
-				if qTbl != nil {
-					@queryResult(*qTbl)
-				}
-			</div>
-		</body>
-	</html>
+	@l_app() {
+		@header(user)
+		@targetInfo(target)
+		@sqlForm(query)
+		if err != nil {
+			@queryError(err)
+		}
+		if qTbl != nil {
+			@queryResult(*qTbl)
+		}
+	}
 }

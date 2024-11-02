@@ -7,19 +7,18 @@ import (
 )
 
 templ listServers(servers []structs.Server) {
-	<ul>
-		for _, item := range servers {
-			<li><a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>{ item.ID }</a></li>
-		}
-	</ul>
+	@w_appline() {
+		<ul>
+			for _, item := range servers {
+				<li><a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>{ item.ID }</a></li>
+			}
+		</ul>
+	}
 }
 
 templ PageServersList(user config.User, servers []structs.Server) {
-	<html>
-		@htmlHeader()
-		<body class="bg-white dark:bg-slate-800 dark:text-white px-2">
-			@header(user)
-			@listServers(servers)
-		</body>
-	</html>
+	@l_app() {
+		@header(user)
+		@listServers(servers)
+	}
 }
