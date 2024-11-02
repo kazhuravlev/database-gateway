@@ -28,7 +28,7 @@ templ sqlForm(query string) {
 		<div class="w-full">
 			<form action="#" method="post" id="myForm" style="margin:0">
 				<div class="flex flex-col items-start gap-1">
-					<textarea id="textInput" name="query" type="text" placeholder="select * from some_table limit 1" class="w-full p-1 border border-2 border-orange-400 text-neutral-900"></textarea>
+					<textarea id="textInput" name="query" placeholder="select col1, col2 from some_table limit 1" class="w-full p-1 h-24 border border-2 border-orange-400 text-neutral-900"></textarea>
 					<button type="submit" id="submit" class="bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1">Run (Shift + Enter)</button>
 				</div>
 			</form>
