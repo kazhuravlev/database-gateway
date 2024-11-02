@@ -186,23 +186,33 @@ func runApp(ctx context.Context) error {
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
 
-		qTbl := structs.QTable{
-			Headers: just.SliceMap(res.FieldDescriptions(), func(fd pgconn.FieldDescription) string {
-				return fd.Name
-			}),
-			Rows: just.SliceMap(rows, func(row []any) []string {
-				return just.SliceMap(row, func(v any) string {
-					return fmt.Sprint(v)
-				})
-			}),
-		}
+		cols := just.SliceMap(res.FieldDescriptions(), func(fd pgconn.FieldDescription) string {
+			return fd.Name
+		})
 
 		switch format {
 		default:
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, errors.New("unknown format")))
 		case "html":
+			qTbl := structs.QTable{
+				Headers: cols,
+				Rows: just.SliceMap(rows, func(row []any) []string {
+					return just.SliceMap(row, func(v any) string {
+						return fmt.Sprint(v)
+					})
+				}),
+			}
+
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, &qTbl, nil))
 		case "json":
+			qTbl := just.SliceMap(rows, func(row []any) map[string]any {
+				m := make(map[string]any, len(cols))
+				for i := range cols {
+					m[cols[i]] = row[i]
+				}
+				return m
+			})
+
 			bb, err := json.Marshal(qTbl)
 			if err != nil {
 				return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
