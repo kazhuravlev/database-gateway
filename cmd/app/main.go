@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/labstack/gommon/log"
 
@@ -156,6 +159,7 @@ func runApp(ctx context.Context) error {
 		}
 
 		query := params.Get("query")
+		format := params.Get("format")
 
 		if err := validator.IsAllowed(srv, user, query); err != nil {
 			if errors.Is(err, validator.ErrAccessDenied) {
@@ -175,15 +179,12 @@ func runApp(ctx context.Context) error {
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
 
-		// fmt.Println(res.FieldDescriptions())
 		rows, err := pgx.CollectRows(res, func(row pgx.CollectableRow) ([]any, error) {
 			return row.Values()
 		})
 		if err != nil {
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
-
-		// fmt.Println(rows)
 
 		qTbl := structs.QTable{
 			Headers: just.SliceMap(res.FieldDescriptions(), func(fd pgconn.FieldDescription) string {
@@ -196,7 +197,22 @@ func runApp(ctx context.Context) error {
 			}),
 		}
 
-		return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, &qTbl, nil))
+		switch format {
+		default:
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, errors.New("unknown format")))
+		case "html":
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, &qTbl, nil))
+		case "json":
+			bb, err := json.Marshal(qTbl)
+			if err != nil {
+				return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
+			}
+
+			c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json"))
+
+			http.ServeContent(c.Response(), c.Request(), "response.json", time.Now(), bytes.NewReader(bb))
+			return nil
+		}
 	})
 
 	{

@@ -28,8 +28,15 @@ templ sqlForm(query string) {
 		<div class="w-full">
 			<form action="#" method="post" id="myForm" style="margin:0">
 				<div class="flex flex-col items-start gap-1">
-					<textarea id="textInput" name="query" placeholder="select col1, col2 from some_table limit 1" class="w-full p-1 h-24 border border-2 border-orange-400 text-neutral-900"></textarea>
-					<button type="submit" id="submit" class="bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1">Run (Shift + Enter)</button>
+					<textarea id="textInput" name="query" placeholder="select col1, col2 from some_table limit 1" class="w-full p-1 h-24 border border-2 border-orange-400 text-neutral-900">{ query }</textarea>
+					<div class="flex flex-row items-start gap-2">
+						<div>
+							<button type="submit" name="format" value="html" id="submit" class="bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1">Run (Shift + Enter)</button>
+						</div>
+						<div>
+							<button type="submit" name="format" value="json" class="bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1">Get JSON</button>
+						</div>
+					</div>
 				</div>
 			</form>
 			<script type="text/javascript">
@@ -50,16 +57,16 @@ templ sqlForm(query string) {
 
 templ queryResult(tbl structs.QTable) {
 	<div class="w-full">
-		<table class="border-collapse w-full border border-orange-500">
+		<table class="border-collapse w-full border border-orange-200">
 			<tr>
 				for _, hdr := range tbl.Headers {
-					<th class="border border-orange-500">{ hdr }</th>
+					<th class="border border-orange-200">{ hdr }</th>
 				}
 			</tr>
 			for _, row := range tbl.Rows {
 				<tr>
 					for _, cell := range row {
-						<td class="border border-orange-500">{ cell }</td>
+						<td class="border border-orange-200">{ cell }</td>
 					}
 				</tr>
 			}
