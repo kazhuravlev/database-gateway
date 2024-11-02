@@ -15,6 +15,7 @@ type IVector interface {
 	Op() config.Op
 	String() string
 	Table() string
+	Columns() []string
 }
 
 func IsAllowed(target config.Target, user config.User, query string) error {
@@ -30,8 +31,35 @@ func IsAllowed(target config.Target, user config.User, query string) error {
 		return fmt.Errorf("make vectors from query: %w", err)
 	}
 
+	if err := validateSchema(vectors, target.Tables); err != nil {
+		return fmt.Errorf("validate schema: %w", err)
+	}
+
 	if err := validateAccess(vectors, acls); err != nil {
 		return fmt.Errorf("validate access: %w", err)
+	}
+
+	return nil
+}
+
+// validateSchema will check that request contains only allowed columns.
+func validateSchema(vectors []IVector, tables []config.TargetTable) error {
+	tblMap := just.Slice2MapFn(tables, func(_ int, tbl config.TargetTable) (string, config.TargetTable) {
+		return tbl.Table, tbl
+	})
+	for _, vec := range vectors {
+		tbl, ok := tblMap[vec.Table()]
+		if !ok {
+			return fmt.Errorf("not known table: %w", ErrAccessDenied)
+		}
+
+		fMap := just.Slice2Map(tbl.Fields)
+
+		for _, col := range vec.Columns() {
+			if !just.MapContainsKey(fMap, col) {
+				return fmt.Errorf("unable to access column (%s.%s): %w", vec.Table(), col, ErrBadQuery)
+			}
+		}
 	}
 
 	return nil
