@@ -1,11 +1,78 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
+	"github.com/auxten/postgresql-parser/pkg/sql/parser"
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"strings"
 )
+
+func makeVectors(query string) ([]IVector, error) {
+	stmts, err := parser.Parse(query)
+	if err != nil {
+		return nil, fmt.Errorf("parse query: %w", err)
+	}
+
+	if len(stmts) != 1 {
+		return nil, fmt.Errorf("query must contains only one statement: %w", ErrBadQuery)
+	}
+
+	stmt := stmts[0]
+
+	if tree.CanModifySchema(stmt.AST) {
+		return nil, fmt.Errorf("unable to modify schema: %w", ErrBadQuery)
+	}
+
+	var vectors []IVector
+	var errs []error
+	collect := func(req tree.NodeFormatter) {
+		switch req := req.(type) {
+		case *tree.Insert:
+			vec, err := makeInsertVec(req)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("make insert vec: %w", err))
+			} else {
+				vectors = append(vectors, vec)
+			}
+		case *tree.Select:
+			vec, err := MakeSelectVec(req)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("make select vec: %w", err))
+			} else {
+				vectors = append(vectors, vec)
+			}
+		case *tree.Update:
+			vec, err := makeUpdateVec(req)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("make update vec: %w", err))
+			} else {
+				vectors = append(vectors, vec)
+			}
+		case *tree.Delete:
+			vec, err := makeDeleteVec(req)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("make delete vec: %w", err))
+			} else {
+				vectors = append(vectors, vec)
+			}
+		}
+	}
+	if err := Walk3(collect, stmt.AST); err != nil {
+		return nil, fmt.Errorf("walk statement ast: %w", err)
+	}
+
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("parse query: %w", errors.Join(errs...))
+	}
+
+	if len(vectors) == 0 {
+		return nil, fmt.Errorf("unsupported query: %w", ErrBadQuery)
+	}
+
+	return vectors, nil
+}
 
 type vecInsert struct {
 	tblName string
