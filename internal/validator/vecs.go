@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/database-gateway/internal/config"
-	"sort"
 	"strings"
 )
 
@@ -125,31 +124,18 @@ func (v vecDelete) Table() string {
 }
 
 func makeDeleteVec(req *tree.Delete) (*vecDelete, error) {
-	//sel, ok := req.Select.(*tree.SelectClause)
-	//if !ok {
-	//	return nil, fmt.Errorf("query have complicated select definition: %w", ErrComplicatedQuery)
-	//}
-	//
-	//if len(sel.From.Tables) != 1 {
-	//	return nil, fmt.Errorf("select have a several tables: %w", ErrComplicatedQuery)
-	//}
-	//
-	//tName, err := getTableName(sel.From.Tables[0])
-	//if err != nil {
-	//	return nil, fmt.Errorf("get table name for select: %w", err)
-	//}
-	//
-	//cols := make([]string, 0, len(sel.Exprs))
-	//for _, col := range sel.Exprs {
-	//	name := col.Expr.String()
-	//	if name == "*" {
-	//		return nil, fmt.Errorf("unable to parse star notation: %w", ErrBadQuery)
-	//	}
-	//
-	//	cols = append(cols, name)
-	//}
-	//
-	//return &vecDelete{Tbl: tName, Cols: cols}, nil
-	return nil, nil
+	tName, err := getTableName(req.Table)
+	if err != nil {
+		return nil, fmt.Errorf("get table name for delete: %w", err)
+	}
 
+	cols, err := GetColumnNames(req)
+	if err != nil {
+		return nil, fmt.Errorf("get column names: %w", err)
+	}
+
+	return &vecDelete{
+		tblName: tName,
+		columns: cols,
+	}, nil
 }
