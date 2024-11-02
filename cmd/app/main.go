@@ -64,6 +64,10 @@ func runApp(ctx context.Context) error {
 
 	pp.Println(cfg)
 
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("validate config: %w", err)
+	}
+
 	targets := &Targets{
 		id2client: make(map[string]*pgx.Conn),
 	}
@@ -133,7 +137,7 @@ func runApp(ctx context.Context) error {
 			}
 		})
 
-		return Render(c, http.StatusOK, templates.PageServersList(user, servers))
+		return Render(c, http.StatusOK, templates.PageTargetsList(user, servers))
 	})
 	e.GET("/servers/:id", func(c echo.Context) error {
 		user := c.Get(ctxUser).(config.User)
@@ -162,15 +166,7 @@ func runApp(ctx context.Context) error {
 		format := params.Get("format")
 
 		if err := validator.IsAllowed(srv, user, query); err != nil {
-			if errors.Is(err, validator.ErrAccessDenied) {
-				return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, validator.ErrAccessDenied))
-			}
-			if errors.Is(err, validator.ErrBadQuery) {
-				log.Error("err", err.Error())
-				err := fmt.Errorf("unsupported/complicated/bad query: %w", validator.ErrAccessDenied)
-				return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
-			}
-
+			log.Error("err", err.Error())
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
 

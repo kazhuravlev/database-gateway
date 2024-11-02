@@ -14,7 +14,7 @@
 			},
 			"tables": [
 				{
-					"table": "clients",
+					"table": "public.clients",
 					"fields": [
 						"id",
 						"name",
@@ -25,7 +25,7 @@
 					]
 				},
 				{
-					"table": "another_table",
+					"table": "public.another_table",
 					"fields": [
 						"name",
 						"surname",
@@ -52,7 +52,7 @@
 			},
 			"tables": [
 				{
-					"table": "clients",
+					"table": "public.clients",
 					"fields": [
 						"id",
 						"name",
@@ -78,7 +78,7 @@
 			},
 			"tables": [
 				{
-					"table": "clients",
+					"table": "public.clients",
 					"fields": [
 						"id",
 						"name",
@@ -99,7 +99,13 @@
 				{
 					"op": "select",
 					"target": "local-1",
-					"tbl": "clients",
+					"tbl": "public.clients",
+					"allow": true
+				},
+				{
+					"op": "insert",
+					"target": "local-1",
+					"tbl": "public.clients",
 					"allow": true
 				}
 			]
