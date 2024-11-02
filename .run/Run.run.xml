@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="database-gateway" />
+    <working_directory value="$PROJECT_DIR$" />
+    <kind value="PACKAGE" />
+    <package value="github.com/kazhuravlev/database-gateway/cmd/app" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/app/main.go" />
+    <method v="2" />
+  </configuration>
+</component>
