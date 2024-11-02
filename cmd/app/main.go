@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
 	"net/http"
 	"time"
@@ -41,7 +42,7 @@ func main() {
 }
 
 type Targets struct {
-	id2client map[string]*pgx.Conn
+	id2client map[string]*pgxpool.Pool
 }
 
 func Render(ctx echo.Context, statusCode int, t templ.Component) error {
@@ -69,21 +70,29 @@ func runApp(ctx context.Context) error {
 	}
 
 	targets := &Targets{
-		id2client: make(map[string]*pgx.Conn),
+		id2client: make(map[string]*pgxpool.Pool),
 	}
 
 	for _, target := range cfg.Targets {
 		slog.Info("connect to target", slog.String("target", target.Id))
 		c := target.Connection
-		urlExample := fmt.Sprintf("postgres://%s:%s@%s:%d/%s", c.User, c.Password, c.Host, c.Port, c.Db)
-		conn, err := pgx.Connect(ctx, urlExample)
+
+		urlExample := fmt.Sprintf(
+			"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+			c.User,
+			c.Password,
+			c.Host,
+			c.Port,
+			c.Db,
+			just.If(c.UseSSL, "enable", "disable"),
+		)
+		dbpool, err := pgxpool.New(ctx, urlExample)
 		if err != nil {
-			return fmt.Errorf("connect to (%s): %w", target.Id, err)
+			return fmt.Errorf("create db pool: %w", err)
 		}
+		defer dbpool.Close()
 
-		defer conn.Close(context.Background())
-
-		targets.id2client[target.Id] = conn
+		targets.id2client[target.Id] = dbpool
 	}
 
 	authUser := func(u, p string) (config.User, bool) {
@@ -96,7 +105,7 @@ func runApp(ctx context.Context) error {
 		return config.User{}, false
 	}
 
-	getTarget := func(id string) (config.Target, *pgx.Conn, bool) {
+	getTarget := func(id string) (config.Target, *pgxpool.Pool, bool) {
 		for _, target := range cfg.Targets {
 			if target.Id == id {
 				return target, targets.id2client[id], true
@@ -180,6 +189,11 @@ func runApp(ctx context.Context) error {
 
 		res, err := conn.Query(c.Request().Context(), query)
 		if err != nil {
+			var connErr *pgconn.ConnectError
+			if errors.As(err, &connErr) {
+				return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, errors.New("failed to connect: target not available")))
+			}
+
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, err))
 		}
 
