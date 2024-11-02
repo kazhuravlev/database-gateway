@@ -12,6 +12,8 @@ var (
 	ErrBadQuery         = errors.New("bad query")
 	ErrComplicatedQuery = errors.New("complicated query")
 	ErrAccessDenied     = errors.New("access denied")
+	ErrUnknownTable     = errors.New("unknown table")
+	ErrUnknownColumn    = errors.New("unknown column")
 )
 
 type IVector interface {
@@ -53,14 +55,14 @@ func validateSchema(vectors []IVector, tables []config.TargetTable) error {
 	for _, vec := range vectors {
 		tbl, ok := tblMap[vec.Table()]
 		if !ok {
-			return fmt.Errorf("not known table: %w", ErrAccessDenied)
+			return fmt.Errorf("not known table: %w", errors.Join(ErrUnknownTable, ErrAccessDenied))
 		}
 
 		fMap := just.Slice2Map(tbl.Fields)
 
 		for _, col := range vec.Columns() {
 			if !just.MapContainsKey(fMap, col) {
-				return fmt.Errorf("unable to access column (%s.%s): %w", vec.Table(), col, ErrAccessDenied)
+				return fmt.Errorf("unable to access column (%s.%s): %w", vec.Table(), col, errors.Join(ErrUnknownColumn, ErrAccessDenied))
 			}
 		}
 	}
