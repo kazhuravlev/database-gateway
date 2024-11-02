@@ -182,31 +182,16 @@ func TestVector(t *testing.T) {
 		Select: &tree.SelectClause{
 			Distinct: false,
 			DistinctOn: tree.DistinctOn{
-				&tree.ColumnItem{
-					ColumnName: "distinct_col",
-				},
+				tree.NewUnresolvedName("distinct_col"),
 			},
 			Exprs: tree.SelectExprs{
 				{
-					Expr: &tree.ColumnItem{
-						ColumnName: "col_1",
-					},
-					As: "alias_1",
+					Expr: tree.NewUnresolvedName("col_1"),
+					As:   "alias_1",
 				},
 				{
-					Expr: &tree.FuncExpr{
-						Func: tree.WrapFunction("sum"),
-						Type: 0,
-						Exprs: tree.Exprs{
-							&tree.ColumnItem{
-								ColumnName: "col_2",
-							},
-						},
-						Filter:    nil,
-						WindowDef: nil,
-						OrderBy:   nil,
-					},
-					As: "alias_2",
+					Expr: tree.NewUnresolvedName("col_2"),
+					As:   "alias_2",
 				},
 			},
 			From: tree.From{
@@ -216,34 +201,24 @@ func TestVector(t *testing.T) {
 				AsOf: tree.AsOfClause{},
 			},
 			Where: &tree.Where{
-				Expr: &tree.ColumnItem{
-					ColumnName: "where_1",
-				},
+				Expr: tree.NewUnresolvedName("where_1"),
 			},
 			GroupBy: tree.GroupBy{
-				&tree.ColumnItem{
-					ColumnName: "group_1",
-				},
+				tree.NewUnresolvedName("group_1"),
 			},
 			Having: &tree.Where{
-				Expr: &tree.ColumnItem{
-					ColumnName: "having_1",
-				},
+				Expr: tree.NewUnresolvedName("having_1"),
 			},
 			Window: tree.Window{
 				{
 					Name:    "",
 					RefName: "",
 					Partitions: tree.Exprs{
-						&tree.ColumnItem{
-							ColumnName: "part_1",
-						},
+						tree.NewUnresolvedName("part_1"),
 					},
 					OrderBy: tree.OrderBy{
 						{
-							Expr: &tree.ColumnItem{
-								ColumnName: "part_order_col",
-							},
+							Expr: tree.NewUnresolvedName("part_order_col"),
 						},
 					},
 					Frame: nil,
@@ -253,9 +228,7 @@ func TestVector(t *testing.T) {
 		},
 		OrderBy: tree.OrderBy{
 			{
-				Expr: &tree.ColumnItem{
-					ColumnName: "order_col",
-				},
+				Expr: tree.NewUnresolvedName("order_col"),
 			},
 		},
 		Limit:   nil,
@@ -295,7 +268,7 @@ func TestGetColumnNames(t *testing.T) {
 		require.Equal(t, []string{"id", "name"}, cols)
 	})
 
-	t.Run("star_select", func(t *testing.T) {
+	t.Run("star_select_is_not_ok", func(t *testing.T) {
 		stmts, err := parser.Parse(`select * from clients`)
 		require.NoError(t, err)
 		require.Len(t, stmts, 1)
