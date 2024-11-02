@@ -132,6 +132,18 @@ GROUP BY region, product;`
 			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
 			require.NoError(t, err)
 		})
+		t.Run("simple_denied", func(t *testing.T) {
+			target := config.Target{Id: "t1"}
+			acls := []config.ACL{{
+				Op:     config.OpUpdate,
+				Target: "t1",
+				Tbl:    "clients",
+				Allow:  false,
+			}}
+			query := `update clients set id=1 and name='john'`
+			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			require.ErrorIs(t, err, validator.ErrAccessDenied)
+		})
 	})
 }
 
