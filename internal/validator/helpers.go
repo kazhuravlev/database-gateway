@@ -34,12 +34,12 @@ func FilterType[T tree.NodeFormatter](req tree.NodeFormatter) ([]T, error) {
 }
 
 func GetColumnNames(req tree.NodeFormatter) ([]string, error) {
-	colItems, err := FilterType[*tree.ColumnItem](req)
+	colItems, err := FilterType[*tree.UnresolvedName](req)
 	if err != nil {
 		return nil, fmt.Errorf("filter columns: %w", err)
 	}
 
-	cols := just.SliceMap(colItems, func(col *tree.ColumnItem) string {
+	cols := just.SliceMap(colItems, func(col *tree.UnresolvedName) string {
 		return col.String()
 	})
 
