@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -155,6 +156,14 @@ func runApp(ctx context.Context) error {
 		query := params.Get("query")
 
 		if err := validator.IsAllowed(srv, user, query); err != nil {
+			if errors.Is(err, validator.ErrAccessDenied) {
+				return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, validator.ErrAccessDenied))
+			}
+			if errors.Is(err, validator.ErrBadQuery) {
+				err := fmt.Errorf("unsupported/complicated/bad query: %w", validator.ErrAccessDenied)
+				return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
+			}
+
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
 
