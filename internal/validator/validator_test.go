@@ -1,9 +1,10 @@
 package validator_test
 
 import (
+	"testing"
+
 	"github.com/auxten/postgresql-parser/pkg/sql/parser"
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
-	"testing"
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/validator"

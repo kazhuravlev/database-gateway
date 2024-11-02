@@ -3,10 +3,11 @@ package validator
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/auxten/postgresql-parser/pkg/sql/parser"
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/database-gateway/internal/config"
-	"strings"
 )
 
 func makeVectors(query string) ([]IVector, error) {

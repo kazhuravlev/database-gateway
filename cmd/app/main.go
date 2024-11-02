@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/labstack/gommon/log"
+
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -160,6 +162,7 @@ func runApp(ctx context.Context) error {
 				return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, validator.ErrAccessDenied))
 			}
 			if errors.Is(err, validator.ErrBadQuery) {
+				log.Error("err", err.Error())
 				err := fmt.Errorf("unsupported/complicated/bad query: %w", validator.ErrAccessDenied)
 				return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 			}
@@ -172,7 +175,7 @@ func runApp(ctx context.Context) error {
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
 
-		//fmt.Println(res.FieldDescriptions())
+		// fmt.Println(res.FieldDescriptions())
 		rows, err := pgx.CollectRows(res, func(row pgx.CollectableRow) ([]any, error) {
 			return row.Values()
 		})
@@ -180,7 +183,7 @@ func runApp(ctx context.Context) error {
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
 
-		//fmt.Println(rows)
+		// fmt.Println(rows)
 
 		qTbl := structs.QTable{
 			Headers: just.SliceMap(res.FieldDescriptions(), func(fd pgconn.FieldDescription) string {

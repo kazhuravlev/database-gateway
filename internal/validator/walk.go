@@ -2,9 +2,10 @@ package validator
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/just"
-	"reflect"
 )
 
 func Walk(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFormatter) error {
@@ -209,13 +210,14 @@ func Walk(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFor
 			next = append(next, just.SliceMap(*node, func(t tree.Name) tree.NodeFormatter {
 				return &t
 			})...)
-		//case *tree.ColumnTableDef:
-		//case *tree.DBool:
-		//case *tree.FamilyTableDef:
-		//case *tree.IndexTableDef:
-		//case *tree.UniqueConstraintTableDef:
+		// case *tree.ColumnTableDef:
+		// case *tree.DBool:
+		// case *tree.FamilyTableDef:
+		// case *tree.IndexTableDef:
+		// case *tree.UniqueConstraintTableDef:
 		case *tree.IndexFlags:
 			next = append(next, &node.Index)
+
 		case tree.UnqualifiedStar:
 		case *tree.NoReturningClause:
 		case *tree.Name:

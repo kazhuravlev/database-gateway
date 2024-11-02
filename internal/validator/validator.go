@@ -3,13 +3,16 @@ package validator
 import (
 	"errors"
 	"fmt"
+
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/just"
 )
 
-var ErrBadQuery = errors.New("bad query")
-var ErrComplicatedQuery = errors.New("complicated query")
-var ErrAccessDenied = errors.New("access denied")
+var (
+	ErrBadQuery         = errors.New("bad query")
+	ErrComplicatedQuery = errors.New("complicated query")
+	ErrAccessDenied     = errors.New("access denied")
+)
 
 type IVector interface {
 	Op() config.Op
@@ -57,7 +60,7 @@ func validateSchema(vectors []IVector, tables []config.TargetTable) error {
 
 		for _, col := range vec.Columns() {
 			if !just.MapContainsKey(fMap, col) {
-				return fmt.Errorf("unable to access column (%s.%s): %w", vec.Table(), col, ErrBadQuery)
+				return fmt.Errorf("unable to access column (%s.%s): %w", vec.Table(), col, ErrAccessDenied)
 			}
 		}
 	}
