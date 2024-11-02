@@ -80,9 +80,19 @@ GROUP BY region, product;`
 		})
 	})
 
+	target := config.Target{
+		Id: "t1",
+		Tables: []config.TargetTable{
+			{
+				Table:     "clients",
+				Fields:    []string{"id", "name", "email"},
+				Sensitive: nil,
+			},
+		},
+	}
+
 	t.Run("select", func(t *testing.T) {
 		t.Run("simple_allowed", func(t *testing.T) {
-			target := config.Target{Id: "t1"}
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
@@ -95,7 +105,6 @@ GROUP BY region, product;`
 		})
 
 		t.Run("simple_denied", func(t *testing.T) {
-			target := config.Target{Id: "t1"}
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
@@ -109,7 +118,6 @@ GROUP BY region, product;`
 
 		t.Run("select_from_allowed_select__is_not_allowed", func(t *testing.T) {
 			// TODO: make it allowed.
-			target := config.Target{Id: "t1"}
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
@@ -124,7 +132,6 @@ GROUP BY region, product;`
 
 	t.Run("update", func(t *testing.T) {
 		t.Run("simple_allowed", func(t *testing.T) {
-			target := config.Target{Id: "t1"}
 			acls := []config.ACL{{
 				Op:     config.OpUpdate,
 				Target: "t1",
@@ -136,7 +143,6 @@ GROUP BY region, product;`
 			require.NoError(t, err)
 		})
 		t.Run("simple_denied", func(t *testing.T) {
-			target := config.Target{Id: "t1"}
 			acls := []config.ACL{{
 				Op:     config.OpUpdate,
 				Target: "t1",
@@ -151,7 +157,6 @@ GROUP BY region, product;`
 
 	t.Run("delete", func(t *testing.T) {
 		t.Run("simple_allowed", func(t *testing.T) {
-			target := config.Target{Id: "t1"}
 			acls := []config.ACL{{
 				Op:     config.OpDelete,
 				Target: "t1",
@@ -163,7 +168,6 @@ GROUP BY region, product;`
 			require.NoError(t, err)
 		})
 		t.Run("simple_denied", func(t *testing.T) {
-			target := config.Target{Id: "t1"}
 			acls := []config.ACL{{
 				Op:     config.OpDelete,
 				Target: "t1",
