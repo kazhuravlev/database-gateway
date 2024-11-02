@@ -59,7 +59,7 @@ func makeVectors(query string) ([]IVector, error) {
 			}
 		}
 	}
-	if err := Walk3(collect, stmt.AST); err != nil {
+	if err := Walk(collect, stmt.AST); err != nil {
 		return nil, fmt.Errorf("walk statement ast: %w", err)
 	}
 

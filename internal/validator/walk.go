@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-func Walk3(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFormatter) error {
+func Walk(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFormatter) error {
 	for _, stmt := range statements {
 		if stmt == nil {
 			continue
@@ -228,7 +228,7 @@ func Walk3(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFo
 			return fmt.Errorf("unknown node (%T): %w", stmt, ErrBadQuery)
 		}
 
-		if err := Walk3(collect, next...); err != nil {
+		if err := Walk(collect, next...); err != nil {
 			return err
 		}
 	}

@@ -18,9 +18,10 @@ func getTableName(t tree.TableExpr) (string, error) {
 	}
 }
 
+// FilterType will filter objects with specified type.
 func FilterType[T tree.NodeFormatter](req tree.NodeFormatter) ([]T, error) {
 	var res []T
-	err := Walk3(func(node tree.NodeFormatter) {
+	err := Walk(func(node tree.NodeFormatter) {
 		switch n := node.(type) {
 		case T:
 			res = append(res, n)
@@ -33,6 +34,8 @@ func FilterType[T tree.NodeFormatter](req tree.NodeFormatter) ([]T, error) {
 	return res, nil
 }
 
+// GetColumnNames will return all mentioned columns from query.
+// Note: It will have unexpected behaviour for queries that have a subquery.
 func GetColumnNames(req tree.NodeFormatter) ([]string, error) {
 	colItems, err := FilterType[*tree.UnresolvedName](req)
 	if err != nil {
