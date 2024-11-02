@@ -35,8 +35,17 @@ func (t *Target) HasField(tbl, field string) bool {
 	return false
 }
 
+type Op string
+
+const (
+	OpSelect Op = "select"
+	OpInsert Op = "insert"
+	OpUpdate Op = "update"
+	OpDelete Op = "delete"
+)
+
 type ACL struct {
-	Op     string `json:"op"`
+	Op     Op     `json:"op"`
 	Target string `json:"target"`
 	Tbl    string `json:"tbl"`
 	Allow  bool   `json:"allow"`
