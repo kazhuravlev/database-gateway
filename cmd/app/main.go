@@ -163,7 +163,7 @@ func runApp(ctx context.Context) error {
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
 
-		fmt.Println(res.FieldDescriptions())
+		//fmt.Println(res.FieldDescriptions())
 		rows, err := pgx.CollectRows(res, func(row pgx.CollectableRow) ([]any, error) {
 			return row.Values()
 		})
@@ -171,7 +171,7 @@ func runApp(ctx context.Context) error {
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, query, nil, err))
 		}
 
-		fmt.Println(rows)
+		//fmt.Println(rows)
 
 		qTbl := structs.QTable{
 			Headers: just.SliceMap(res.FieldDescriptions(), func(fd pgconn.FieldDescription) string {
