@@ -56,7 +56,7 @@ func TestValidator(t *testing.T) {
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
-				Tbl:    "clients",
+				Tbl:    "public.clients",
 				Allow:  true,
 			}}
 			query := `WITH regional_sales AS (
@@ -84,7 +84,7 @@ GROUP BY region, product;`
 		Id: "t1",
 		Tables: []config.TargetTable{
 			{
-				Table:     "clients",
+				Table:     "public.clients",
 				Fields:    []string{"id", "name", "email"},
 				Sensitive: nil,
 			},
@@ -96,7 +96,7 @@ GROUP BY region, product;`
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
-				Tbl:    "clients",
+				Tbl:    "public.clients",
 				Allow:  true,
 			}}
 			query := `select id, name from clients;`
@@ -108,7 +108,7 @@ GROUP BY region, product;`
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
-				Tbl:    "clients",
+				Tbl:    "public.clients",
 				Allow:  false,
 			}}
 			query := `select id, name from clients;`
@@ -117,16 +117,16 @@ GROUP BY region, product;`
 		})
 
 		t.Run("select_from_allowed_select__is_not_allowed", func(t *testing.T) {
-			// TODO: make it allowed.
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
-				Tbl:    "clients",
+				Tbl:    "public.clients",
 				Allow:  true,
 			}}
 			query := `select id, name from (select id, name from clients)`
 			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
-			require.ErrorIs(t, err, validator.ErrAccessDenied)
+			// TODO: make it allowed. Actually this is legal query for this ACL.
+			require.ErrorIs(t, err, validator.ErrComplicatedQuery)
 		})
 	})
 
@@ -135,7 +135,7 @@ GROUP BY region, product;`
 			acls := []config.ACL{{
 				Op:     config.OpUpdate,
 				Target: "t1",
-				Tbl:    "clients",
+				Tbl:    "public.clients",
 				Allow:  true,
 			}}
 			query := `update clients set id=1 and name='john'`
@@ -146,7 +146,7 @@ GROUP BY region, product;`
 			acls := []config.ACL{{
 				Op:     config.OpUpdate,
 				Target: "t1",
-				Tbl:    "clients",
+				Tbl:    "public.clients",
 				Allow:  false,
 			}}
 			query := `update clients set id=1 and name='john'`
@@ -160,7 +160,7 @@ GROUP BY region, product;`
 			acls := []config.ACL{{
 				Op:     config.OpDelete,
 				Target: "t1",
-				Tbl:    "clients",
+				Tbl:    "public.clients",
 				Allow:  true,
 			}}
 			query := `delete from clients where id=42`
@@ -171,10 +171,36 @@ GROUP BY region, product;`
 			acls := []config.ACL{{
 				Op:     config.OpDelete,
 				Target: "t1",
-				Tbl:    "clients",
+				Tbl:    "public.clients",
 				Allow:  false,
 			}}
 			query := `delete from clients where id=42`
+			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			require.ErrorIs(t, err, validator.ErrAccessDenied)
+		})
+	})
+
+	t.Run("insert", func(t *testing.T) {
+		t.Run("simple_allowed", func(t *testing.T) {
+			acls := []config.ACL{{
+				Op:     config.OpInsert,
+				Target: "t1",
+				Tbl:    "public.clients",
+				Allow:  true,
+			}}
+			query := `insert into clients(id) values (42)`
+			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
+			require.NoError(t, err)
+		})
+
+		t.Run("simple_denied", func(t *testing.T) {
+			acls := []config.ACL{{
+				Op:     config.OpInsert,
+				Target: "t1",
+				Tbl:    "public.clients",
+				Allow:  false,
+			}}
+			query := `insert into clients(id) values (42)`
 			err := validator.IsAllowed(target, config.User{Acls: acls}, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})

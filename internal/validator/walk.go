@@ -178,7 +178,7 @@ func Walk(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFor
 				node.With,
 				node.Table,
 				&node.Columns,
-				node.Rows,
+				node.Rows.Select,
 				node.Returning,
 			)
 			if node.OnConflict != nil {

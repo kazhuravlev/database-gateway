@@ -13,9 +13,13 @@ func getTableName(t tree.TableExpr) (string, error) {
 	default:
 		return "", fmt.Errorf("query have complicated table name definition (%T): %w", t, ErrComplicatedQuery)
 	case *tree.TableName:
-		return t.SchemaName.String() + "." + t.TableName.String(), nil
+		if t.SchemaName != "" {
+			return t.SchemaName.String() + "." + t.TableName.String(), nil
+		}
+
+		return "public." + t.TableName.String(), nil
 	case *tree.AliasedTableExpr:
-		return t.String(), nil
+		return getTableName(t.Expr)
 	}
 }
 
