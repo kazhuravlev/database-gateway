@@ -43,10 +43,9 @@ func GetColumnNames(req tree.NodeFormatter) ([]string, error) {
 		return col.String()
 	})
 
-	for _, col := range cols {
-		if col == "*" {
-			return nil, fmt.Errorf("unable to parse star notation: %w", ErrBadQuery)
-		}
+	if len(cols) == 0 {
+		// FIXME: actually this is not about empty list. This is about Star notation.
+		return nil, fmt.Errorf("empty column list: %w", ErrAccessDenied)
 	}
 
 	sort.Strings(cols)
