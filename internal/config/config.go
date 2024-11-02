@@ -1,6 +1,11 @@
 package config
 
-import "github.com/kazhuravlev/just"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/kazhuravlev/just"
+)
 
 type TargetTable struct {
 	Table     string   `json:"table"`
@@ -60,4 +65,40 @@ type User struct {
 type Config struct {
 	Targets []Target `json:"targets"`
 	Users   []User   `json:"users"`
+}
+
+type hTable struct {
+	target string
+	table  string
+}
+
+func (c Config) Validate() error {
+	idx := make(map[hTable]struct{}, len(c.Targets)*2)
+	for _, t := range c.Targets {
+		for _, table := range t.Tables {
+			if !strings.Contains(table.Table, ".") {
+				return fmt.Errorf("use table notation with leading schema. Like 'public.%s'", table.Table)
+			}
+
+			key := hTable{
+				target: t.Id,
+				table:  table.Table,
+			}
+			idx[key] = struct{}{}
+		}
+	}
+
+	for _, u := range c.Users {
+		for _, acl := range u.Acls {
+			key := hTable{
+				target: acl.Target,
+				table:  acl.Tbl,
+			}
+			if _, ok := idx[key]; !ok {
+				return fmt.Errorf("ACL (%#v) references for not existent table", acl)
+			}
+		}
+	}
+
+	return nil
 }
