@@ -32,11 +32,23 @@ templ targetInfo(target config.Target) {
 
 templ sqlForm(query string) {
 	<div>
-		<form action="#" method="post">
-			<textarea name="query" type="text" placeholder="select * from some_table limit 1" style="width: 1024px; height: 120px;">{ query }</textarea>
+		<form action="#" method="post" id="myForm">
+			<textarea id="textInput"  name="query" type="text" placeholder="select * from some_table limit 1" style="width: 1024px; height: 120px;">{ query }</textarea>
 			<br/>
-			<button type="submit">Run</button>
+			<button type="submit" id="submit">Run (Shift + Enter)</button>
 		</form>
+		<script type="text/javascript">
+		  (() => {
+				document.getElementById('textInput').addEventListener('keydown', function(event) {
+		      // Check if Shift + Enter keys are pressed
+		      if (event.key === 'Enter' && event.shiftKey) {
+		        event.preventDefault(); // Prevent new line in the textarea
+
+						document.getElementById('submit').click()
+		      }
+		    });
+      })()
+    </script>
 	</div>
 }
 

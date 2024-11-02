@@ -158,20 +158,20 @@ func sqlForm(query string) templ.Component {
 			templ_7745c5c3_Var7 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div><form action=\"#\" method=\"post\"><textarea name=\"query\" type=\"text\" placeholder=\"select * from some_table limit 1\" style=\"width: 1024px; height: 120px;\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div><form action=\"#\" method=\"post\" id=\"myForm\"><textarea id=\"textInput\" name=\"query\" type=\"text\" placeholder=\"select * from some_table limit 1\" style=\"width: 1024px; height: 120px;\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 36, Col: 130}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 36, Col: 146}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</textarea><br><button type=\"submit\">Run</button></form></div>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</textarea><br><button type=\"submit\" id=\"submit\">Run (Shift + Enter)</button></form><script type=\"text/javascript\">\n\t\t  (() => {\n\t\t\t\tdocument.getElementById('textInput').addEventListener('keydown', function(event) {\n\t\t      // Check if Shift + Enter keys are pressed\n\t\t      if (event.key === 'Enter' && event.shiftKey) {\n\t\t        event.preventDefault(); // Prevent new line in the textarea\n\n\t\t\t\t\t\tdocument.getElementById('submit').click()\n\t\t      }\n\t\t    });\n      })()\n    </script></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -212,7 +212,7 @@ func queryResult(tbl structs.QTable) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(hdr)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 47, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 59, Col: 13}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -240,7 +240,7 @@ func queryResult(tbl structs.QTable) templ.Component {
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(cell)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 53, Col: 15}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 65, Col: 15}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 				if templ_7745c5c3_Err != nil {
@@ -292,7 +292,7 @@ func queryError(err error) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(err.Error())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 61, Col: 65}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 73, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
