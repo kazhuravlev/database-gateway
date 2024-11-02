@@ -164,6 +164,30 @@ func Walk3(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFo
 				node.Limit,
 				node.Returning,
 			)
+		case *tree.Delete:
+			next = append(next,
+				node.With,
+				node.Table,
+				node.Where,
+				&node.OrderBy,
+				node.Limit,
+				node.Returning,
+			)
+		case *tree.Insert:
+			next = append(next,
+				node.With,
+				node.Table,
+				&node.Columns,
+				node.Rows,
+				node.Returning,
+			)
+			if node.OnConflict != nil {
+				next = append(next,
+					&node.OnConflict.Columns,
+					&node.OnConflict.Exprs,
+					node.OnConflict.Where,
+				)
+			}
 		case *tree.DistinctOn:
 			next = append(next, just.SliceMap(*node, func(t tree.Expr) tree.NodeFormatter {
 				return t
@@ -176,12 +200,24 @@ func Walk3(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFo
 			})...)
 		case *tree.ColumnItem:
 			next = append(next, node.TableName)
+		case *tree.UpdateExprs:
+			next = append(next, just.SliceMap(*node, func(t *tree.UpdateExpr) tree.NodeFormatter {
+				return t
+			})...)
+		case *tree.UpdateExpr:
+			next = append(next, &node.Names, node.Expr)
+		case *tree.NameList:
+			next = append(next, just.SliceMap(*node, func(t tree.Name) tree.NodeFormatter {
+				return &t
+			})...)
 		//case *tree.ColumnTableDef:
 		//case *tree.DBool:
 		//case *tree.FamilyTableDef:
 		//case *tree.IndexTableDef:
 		//case *tree.UniqueConstraintTableDef:
 		//case *tree.UnqualifiedStar:
+		case *tree.NoReturningClause:
+		case *tree.Name:
 		case *tree.NumVal:
 		case *tree.StrVal:
 		case *tree.TableName:
