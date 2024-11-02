@@ -31,7 +31,6 @@ func Walk3(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFo
 				return cte.Stmt
 			})...)
 		case *tree.Select:
-			//tree.Window
 			next = append(next, node.With, node.Select, &node.OrderBy, node.Limit, &node.Locking)
 		case *tree.AliasedTableExpr:
 			next = append(next, node.Expr, node.IndexFlags)
@@ -215,7 +214,9 @@ func Walk3(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFo
 		//case *tree.FamilyTableDef:
 		//case *tree.IndexTableDef:
 		//case *tree.UniqueConstraintTableDef:
-		//case *tree.UnqualifiedStar:
+		case *tree.IndexFlags:
+			next = append(next, &node.Index)
+		case tree.UnqualifiedStar:
 		case *tree.NoReturningClause:
 		case *tree.Name:
 		case *tree.NumVal:
