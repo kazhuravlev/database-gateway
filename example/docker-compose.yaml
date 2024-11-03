@@ -15,10 +15,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 services:
-  postgres-1:
-    image: postgres:16
+  dbgw:
+    image: kazhuravlev/database-gateway:latest
     ports:
-      - '127.0.0.1:5432:5432'
+      - '127.0.0.1:8080:8080'
+    volumes:
+      - './config.json:/app/config.json'
+
+  postgres1:
+    image: postgres:16
     environment:
       POSTGRES_DB: pg01
       POSTGRES_USER: pg01
@@ -26,10 +31,8 @@ services:
     volumes:
       - './init-01.sql:/docker-entrypoint-initdb.d/init.sql'
 
-  postgres-2:
+  postgres2:
     image: postgres:16
-    ports:
-      - '127.0.0.1:5433:5432'
     environment:
       POSTGRES_DB: pg02
       POSTGRES_USER: pg02
@@ -37,10 +40,8 @@ services:
     volumes:
       - './init-02.sql:/docker-entrypoint-initdb.d/init.sql'
 
-  postgres-3:
+  postgres3:
     image: postgres:16
-    ports:
-      - '127.0.0.1:5434:5432'
     environment:
       POSTGRES_DB: pg03
       POSTGRES_USER: pg03

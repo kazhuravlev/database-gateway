@@ -1,0 +1,101 @@
+{
+	"targets": [
+		{
+			"id": "local-1",
+			"type": "postgres",
+			"connection": {
+				"host": "postgres1",
+				"port": 5432,
+				"user": "pg01",
+				"password": "pg01",
+				"db": "pg01",
+				"use_ssl": false,
+				"max_pool_size": 4
+			},
+			"tables": [
+				{
+					"table": "public.clients",
+					"fields": [
+						"id",
+						"name",
+						"email"
+					]
+				},
+				{
+					"table": "public.another_table",
+					"fields": [
+						"name",
+						"surname",
+						"money"
+					]
+				}
+			]
+		},
+		{
+			"id": "local-2",
+			"type": "postgres",
+			"connection": {
+				"host": "postgres2",
+				"port": 5432,
+				"user": "pg02",
+				"password": "pg02",
+				"db": "pg02",
+				"use_ssl": false,
+				"max_pool_size": 4
+			},
+			"tables": [
+				{
+					"table": "public.clients",
+					"fields": [
+						"id",
+						"name",
+						"email"
+					]
+				}
+			]
+		},
+		{
+			"id": "local-3",
+			"type": "postgres",
+			"connection": {
+				"host": "postgres3",
+				"port": 5432,
+				"user": "pg03",
+				"password": "pg03",
+				"db": "pg03",
+				"use_ssl": false,
+				"max_pool_size": 4
+			},
+			"tables": [
+				{
+					"table": "public.clients",
+					"fields": [
+						"id",
+						"name",
+						"email"
+					]
+				}
+			]
+		}
+	],
+	"users": [
+		{
+			"username": "user",
+			"password": "password",
+			"acls": [
+				{
+					"op": "select",
+					"target": "local-1",
+					"tbl": "public.clients",
+					"allow": true
+				},
+				{
+					"op": "insert",
+					"target": "local-1",
+					"tbl": "public.clients",
+					"allow": true
+				}
+			]
+		}
+	]
+}
