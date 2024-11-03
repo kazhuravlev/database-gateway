@@ -8,9 +8,8 @@ import (
 )
 
 type TargetTable struct {
-	Table     string   `json:"table"`
-	Fields    []string `json:"fields"`
-	Sensitive []string `json:"sensitive"`
+	Table  string   `json:"table"`
+	Fields []string `json:"fields"`
 }
 
 type Connection struct {

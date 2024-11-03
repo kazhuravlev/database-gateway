@@ -19,19 +19,12 @@
 						"id",
 						"name",
 						"email"
-					],
-					"sensitive": [
-						"email"
 					]
 				},
 				{
 					"table": "public.another_table",
 					"fields": [
 						"name",
-						"surname",
-						"money"
-					],
-					"sensitive": [
 						"surname",
 						"money"
 					]
@@ -57,9 +50,6 @@
 						"id",
 						"name",
 						"email"
-					],
-					"sensitive": [
-						"email"
 					]
 				}
 			]
@@ -82,9 +72,6 @@
 					"fields": [
 						"id",
 						"name",
-						"email"
-					],
-					"sensitive": [
 						"email"
 					]
 				}

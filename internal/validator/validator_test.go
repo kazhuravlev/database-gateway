@@ -18,9 +18,8 @@ func TestValidator(t *testing.T) {
 		Connection: config.Connection{}, //nolint:exhaustruct
 		Tables: []config.TargetTable{
 			{
-				Table:     "public.clients",
-				Fields:    []string{"id", "name", "email"},
-				Sensitive: nil,
+				Table:  "public.clients",
+				Fields: []string{"id", "name", "email"},
 			},
 		},
 	}

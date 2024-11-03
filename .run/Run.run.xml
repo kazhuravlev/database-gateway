@@ -3,9 +3,9 @@
     <module name="database-gateway" />
     <working_directory value="$PROJECT_DIR$" />
     <kind value="PACKAGE" />
-    <package value="github.com/kazhuravlev/database-gateway/cmd/app" />
+    <package value="github.com/kazhuravlev/database-gateway/cmd/gateway" />
     <directory value="$PROJECT_DIR$" />
-    <filePath value="$PROJECT_DIR$/cmd/app/main.go" />
+    <filePath value="$PROJECT_DIR$/cmd/gateway/main.go" />
     <method v="2" />
   </configuration>
 </component>
