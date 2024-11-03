@@ -7,12 +7,12 @@ RUN go mod download
 
 COPY . .
 
-RUN env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/app ./cmd/app
+RUN env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/gateway ./cmd/gateway
 
 FROM alpine:3.20
 
 WORKDIR /app
 
-COPY --from=builder /app/app /app/app
+COPY --from=builder /app/gateway /app/gateway
 
-CMD ["/app/app"]
+CMD ["/app/gateway"]
