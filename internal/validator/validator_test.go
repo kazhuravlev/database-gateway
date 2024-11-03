@@ -15,7 +15,7 @@ func TestValidator(t *testing.T) {
 	target := config.Target{
 		ID:         "t1",
 		Type:       "postgres",
-		Connection: config.Connection{},
+		Connection: config.Connection{}, //nolint:exhaustruct
 		Tables: []config.TargetTable{
 			{
 				Table:     "public.clients",
@@ -24,7 +24,7 @@ func TestValidator(t *testing.T) {
 			},
 		},
 	}
-	
+
 	t.Run("bad_requests", func(t *testing.T) {
 		t.Parallel()
 		t.Run("query_has_no_statements", func(t *testing.T) {

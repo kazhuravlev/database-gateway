@@ -77,7 +77,7 @@ func (c Config) Validate() error {
 	for _, t := range c.Targets {
 		for _, table := range t.Tables {
 			if !strings.Contains(table.Table, ".") {
-				return fmt.Errorf("use table notation with leading schema. Like 'public.%s'", table.Table)
+				return fmt.Errorf("use table notation with leading schema. Like 'public.%s'", table.Table) //nolint:eer113
 			}
 
 			key := hTable{
@@ -95,7 +95,7 @@ func (c Config) Validate() error {
 				table:  acl.Tbl,
 			}
 			if _, ok := idx[key]; !ok {
-				return fmt.Errorf("ACL (%#v) references for not existent table", acl)
+				return fmt.Errorf("ACL (%#v) references for not existent table", acl) //nolint:eer113
 			}
 		}
 	}

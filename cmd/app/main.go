@@ -108,7 +108,7 @@ func runApp(ctx context.Context) error {
 			}
 		}
 
-		return config.Target{}, nil, false
+		return config.Target{}, nil, false //nolint:exhaustruct
 	}
 
 	echoInst := echo.New()
@@ -208,7 +208,7 @@ func runApp(ctx context.Context) error {
 
 		switch format {
 		default:
-			return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, errors.New("unknown format")))
+			return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, errors.New("unknown format"))) //nolint:err113
 		case "html":
 			qTbl := structs.QTable{
 				Headers: cols,

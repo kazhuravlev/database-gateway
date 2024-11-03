@@ -10,7 +10,7 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/config"
 )
 
-func makeVectors(query string) ([]IVector, error) {
+func makeVectors(query string) ([]IVector, error) { //nolint:cyclop
 	stmts, err := parser.Parse(query)
 	if err != nil {
 		return nil, fmt.Errorf("parse query: %w", err)
