@@ -1,0 +1,114 @@
+package templates
+
+import (
+	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
+)
+
+templ targetInfo(target config.Target) {
+	@w_appline() {
+		<div class="w-full">
+			<div>{ target.Type } ({ target.Id })</div>
+			<div class="flex flex-col divide-orange-500">
+				for _, tbl := range target.Tables {
+					<div class="flex flex-row gap-1">
+						<div class="font-bold">{ tbl.Table }</div>
+						for _, col := range tbl.Fields {
+							<div>{ col }</div>
+						}
+					</div>
+				}
+			</div>
+		</div>
+	}
+}
+
+templ aclList(acls []config.ACL) {
+	@w_appline() {
+		if len(acls) == 0 {
+			<div>Have no any access to this server</div>
+		} else {
+			for _, acl := range acls {
+				<div class="flex flex-row gap-1">
+					<div>{ string(acl.Op) }</div>
+					<div>{ string(acl.Tbl) }</div>
+					if acl.Allow {
+						<div>allow</div>
+					} else {
+						<div>denied</div>
+					}
+				</div>
+			}
+		}
+	}
+}
+
+templ sqlForm(query string) {
+	@w_appline() {
+		<div class="w-full">
+			<form action="#" method="post" id="myForm" style="margin:0">
+				<div class="flex flex-col items-start gap-1">
+					<textarea id="textInput" name="query" placeholder="select col1, col2 from some_table limit 1" class="w-full p-1 h-24 border border-2 border-orange-400 text-neutral-900">{ query }</textarea>
+					<div class="flex flex-row items-start gap-2">
+						<div>
+							<button type="submit" name="format" value="html" id="submit" class="bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1">Run (Shift + Enter)</button>
+						</div>
+						<div>
+							<button type="submit" name="format" value="json" class="bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1">Get JSON</button>
+						</div>
+					</div>
+				</div>
+			</form>
+			<script type="text/javascript">
+  		  (() => {
+  				document.getElementById('textInput').addEventListener('keydown', function(event) {
+  		      // Check if Shift + Enter keys are pressed
+  		      if (event.key === 'Enter' && event.shiftKey) {
+  		        event.preventDefault(); // Prevent new line in the textarea
+
+  						document.getElementById('submit').click()
+  		      }
+  		    });
+        })()
+      </script>
+		</div>
+	}
+}
+
+templ queryResult(tbl structs.QTable) {
+	<div class="w-full">
+		<table class="border-collapse w-full border border-orange-200">
+			<tr>
+				for _, hdr := range tbl.Headers {
+					<th class="border border-orange-200">{ hdr }</th>
+				}
+			</tr>
+			for _, row := range tbl.Rows {
+				<tr>
+					for _, cell := range row {
+						<td class="border border-orange-200">{ cell }</td>
+					}
+				</tr>
+			}
+		</table>
+	</div>
+}
+
+templ queryError(err error) {
+	<div class="w-full border border-red-500 p-2">{ err.Error() }</div>
+}
+
+templ PageTarget(user config.User, target config.Target, acls []config.ACL, query string, qTbl *structs.QTable, err error) {
+	@l_app() {
+		@header(user)
+		@targetInfo(target)
+		@aclList(acls)
+		@sqlForm(query)
+		if err != nil {
+			@queryError(err)
+		}
+		if qTbl != nil {
+			@queryResult(*qTbl)
+		}
+	}
+}

@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Test" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="database-gateway" />
+    <working_directory value="$PROJECT_DIR$/internal/validator" />
+    <root_directory value="$PROJECT_DIR$" />
+    <kind value="PACKAGE" />
+    <package value="github.com/kazhuravlev/database-gateway/internal/validator" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$" />
+    <framework value="gotest" />
+    <method v="2" />
+  </configuration>
+</component>

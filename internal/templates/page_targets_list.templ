@@ -1,0 +1,22 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
+)
+
+templ listServers(servers []structs.Server) {
+	for _, item := range servers {
+		@w_appline() {
+			<a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>{ item.ID }</a>
+		}
+	}
+}
+
+templ PageTargetsList(user config.User, servers []structs.Server) {
+	@l_app() {
+		@header(user)
+		@listServers(servers)
+	}
+}
