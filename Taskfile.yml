@@ -74,7 +74,7 @@ tasks:
 
   generate:templ:
     desc: Generate templ
-    dir: templates
+    dir: './internal/templates'
     cmds:
       - echo ">>> Templ"
       - templ generate

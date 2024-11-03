@@ -19,7 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/kazhuravlev/database-gateway/internal/structs"
-	"github.com/kazhuravlev/database-gateway/templates"
+	"github.com/kazhuravlev/database-gateway/internal/templates"
 
 	"github.com/a-h/templ"
 	"github.com/jackc/pgx/v5"
