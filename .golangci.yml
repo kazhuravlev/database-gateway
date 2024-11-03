@@ -17,6 +17,7 @@ linters:
   # We intentionally use a limited set of linters.
   # See the comment on top of this file.
   disable:
+    - godox
     - wsl
     - wrapcheck
     - gomnd
@@ -24,8 +25,12 @@ linters:
     - nosprintfhostport
     - nolintlint
     - govet
+    - execinquery
 
 linters-settings:
+  varnamelen:
+    ignore-decls:
+      - 'c echo.Context'
   tagliatelle:
     case:
       rules:
