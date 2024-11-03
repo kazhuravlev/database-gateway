@@ -8,7 +8,7 @@ import (
 	"github.com/kazhuravlev/just"
 )
 
-func Walk(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFormatter) error {
+func Walk(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFormatter) error { //nolint:funlen,gocyclo,cyclop,maintidx
 	for _, stmt := range statements {
 		if stmt == nil {
 			continue
@@ -67,11 +67,7 @@ func Walk(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFor
 			next = append(next, just.SliceMap(node.Defs, func(t tree.TableDef) tree.NodeFormatter {
 				return t
 			})...)
-			next = append(next, node.AsSource)
-			next = append(next, &node.StorageParams)
-			next = append(next, node.PartitionBy)
-			next = append(next, node.Interleave)
-			next = append(next, &node.Table)
+			next = append(next, node.AsSource, &node.StorageParams, node.PartitionBy, node.Interleave, &node.Table)
 		case *tree.Exprs:
 			next = append(next, just.SliceMap(*node, func(n tree.Expr) tree.NodeFormatter {
 				return n

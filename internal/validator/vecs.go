@@ -91,7 +91,7 @@ func (v vecInsert) Table() string {
 	return v.tblName
 }
 
-func (v vecInsert) Columns() []string {
+func (vecInsert) Columns() []string {
 	return nil
 }
 

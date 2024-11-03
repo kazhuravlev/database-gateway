@@ -74,14 +74,15 @@ type hTable struct {
 
 func (c Config) Validate() error {
 	idx := make(map[hTable]struct{}, len(c.Targets)*2)
-	for _, t := range c.Targets {
-		for _, table := range t.Tables {
+	for i := range c.Targets {
+		target := c.Targets[i]
+		for _, table := range target.Tables {
 			if !strings.Contains(table.Table, ".") {
-				return fmt.Errorf("use table notation with leading schema. Like 'public.%s'", table.Table) //nolint:eer113
+				return fmt.Errorf("use table notation with leading schema. Like 'public.%s'", table.Table) //nolint:err113
 			}
 
 			key := hTable{
-				target: t.ID,
+				target: target.ID,
 				table:  table.Table,
 			}
 			idx[key] = struct{}{}
@@ -95,7 +96,7 @@ func (c Config) Validate() error {
 				table:  acl.Tbl,
 			}
 			if _, ok := idx[key]; !ok {
-				return fmt.Errorf("ACL (%#v) references for not existent table", acl) //nolint:eer113
+				return fmt.Errorf("ACL (%#v) references for not existent table", acl) //nolint:err113
 			}
 		}
 	}

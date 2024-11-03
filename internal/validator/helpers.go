@@ -27,8 +27,7 @@ func getTableName(tbl tree.TableExpr) (string, error) {
 func FilterType[T tree.NodeFormatter](req tree.NodeFormatter) ([]T, error) {
 	var res []T
 	err := Walk(func(node tree.NodeFormatter) {
-		switch n := node.(type) {
-		case T:
+		if n, ok := node.(T); ok {
 			res = append(res, n)
 		}
 	}, req)

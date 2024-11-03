@@ -52,7 +52,7 @@ func Render(ctx echo.Context, statusCode int, t templ.Component) error {
 	return ctx.HTML(statusCode, buf.String())
 }
 
-func runApp(ctx context.Context) error {
+func runApp(ctx context.Context) error { //nolint:gocognit,gocyclo,cyclop,maintidx
 	const configFilename = "config.json"
 	cfg, err := just.JsonParseTypeF[config.Config](configFilename)
 	if err != nil {
@@ -69,7 +69,8 @@ func runApp(ctx context.Context) error {
 		id2client: make(map[string]*pgxpool.Pool),
 	}
 
-	for _, target := range cfg.Targets {
+	for i := range cfg.Targets {
+		target := &cfg.Targets[i]
 		slog.Info("connect to target", slog.String("target", target.ID))
 		pgCfg := target.Connection
 
@@ -86,7 +87,7 @@ func runApp(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("create db pool: %w", err)
 		}
-		defer dbpool.Close()
+		defer dbpool.Close() //nolint:gocritic // this is ok
 
 		targets.id2client[target.ID] = dbpool
 	}
@@ -98,11 +99,12 @@ func runApp(ctx context.Context) error {
 			}
 		}
 
-		return config.User{}, false
+		return config.User{}, false //nolint:exhaustruct
 	}
 
 	getTarget := func(id string) (config.Target, *pgxpool.Pool, bool) {
-		for _, target := range cfg.Targets {
+		for i := range cfg.Targets {
+			target := cfg.Targets[i]
 			if target.ID == id {
 				return target, targets.id2client[id], true
 			}
@@ -114,7 +116,7 @@ func runApp(ctx context.Context) error {
 	echoInst := echo.New()
 	echoInst.HideBanner = true
 	echoInst.Use(middleware.BasicAuthWithConfig(middleware.BasicAuthConfig{
-		Skipper: func(c echo.Context) bool {
+		Skipper: func(_ echo.Context) bool {
 			return false
 		},
 		Validator: func(username, password string, c echo.Context) (bool, error) {
@@ -132,7 +134,7 @@ func runApp(ctx context.Context) error {
 	echoInst.GET("/", func(c echo.Context) error {
 		return c.Redirect(http.StatusTemporaryRedirect, "/servers")
 	})
-	echoInst.GET("/servers", func(c echo.Context) error {
+	echoInst.GET("/servers", func(c echo.Context) error { //nolint:contextcheck
 		user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
 
 		servers := just.SliceMap(cfg.Targets, func(t config.Target) structs.Server {
@@ -145,7 +147,7 @@ func runApp(ctx context.Context) error {
 
 		return Render(c, http.StatusOK, templates.PageTargetsList(user, servers))
 	})
-	echoInst.GET("/servers/:id", func(c echo.Context) error {
+	echoInst.GET("/servers/:id", func(c echo.Context) error { //nolint:contextcheck
 		user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
 
 		srv, _, ok := getTarget(c.Param("id"))
@@ -159,7 +161,7 @@ func runApp(ctx context.Context) error {
 
 		return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, ``, nil, nil))
 	})
-	echoInst.POST("/servers/:id", func(c echo.Context) error {
+	echoInst.POST("/servers/:id", func(c echo.Context) error { //nolint:contextcheck
 		user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
 
 		srv, conn, ok := getTarget(c.Param("id"))
@@ -189,7 +191,9 @@ func runApp(ctx context.Context) error {
 		if err != nil {
 			var connErr *pgconn.ConnectError
 			if errors.As(err, &connErr) {
-				return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, errors.New("failed to connect: target not available")))
+				err2 := errors.New("failed to connect: target not available") //nolint:err113
+
+				return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, err2))
 			}
 
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, err))
@@ -235,14 +239,14 @@ func runApp(ctx context.Context) error {
 				return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, err))
 			}
 
-			c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json"))
+			c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%q; filename="%q"`, "attachment", "response.json"))
 			http.ServeContent(c.Response(), c.Request(), "response.json", time.Now(), bytes.NewReader(resBuf))
 
 			return nil
 		}
 	})
 
-	{
+	{ //nolint:gocritic
 		echoInst.GET("/*", func(c echo.Context) error {
 			return c.Redirect(http.StatusTemporaryRedirect, "/")
 		})
