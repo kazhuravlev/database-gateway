@@ -64,7 +64,12 @@ tasks:
     cmds:
       - task: "generate:go"
       - task: "generate:templ"
+      - task: "generate:license"
       - task: "fmt"
+  
+  generate:license:
+    cmds:
+      - toolset run addlicense -f LICENSE_gplv3_header.txt .
 
   generate:go:
     desc: Generate go
