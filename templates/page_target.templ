@@ -29,7 +29,15 @@ templ aclList(acls []config.ACL) {
 			<div>Have no any access to this server</div>
 		} else {
 			for _, acl := range acls {
-				<div>{ acl.Target }</div>
+				<div class="flex flex-row gap-1">
+					<div>{ string(acl.Op) }</div>
+					<div>{ string(acl.Tbl) }</div>
+					if acl.Allow {
+						<div>allow</div>
+					} else {
+						<div>denied</div>
+					}
+				</div>
 			}
 		}
 	}
