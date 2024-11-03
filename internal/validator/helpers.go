@@ -8,18 +8,18 @@ import (
 	"github.com/kazhuravlev/just"
 )
 
-func getTableName(t tree.TableExpr) (string, error) {
-	switch t := t.(type) {
+func getTableName(tbl tree.TableExpr) (string, error) {
+	switch tbl := tbl.(type) {
 	default:
-		return "", fmt.Errorf("query have complicated table name definition (%T): %w", t, ErrComplicatedQuery)
+		return "", fmt.Errorf("query have complicated table name definition (%T): %w", tbl, ErrComplicatedQuery)
 	case *tree.TableName:
-		if t.SchemaName != "" {
-			return t.SchemaName.String() + "." + t.TableName.String(), nil
+		if tbl.SchemaName != "" {
+			return tbl.SchemaName.String() + "." + tbl.TableName.String(), nil
 		}
 
-		return "public." + t.TableName.String(), nil
+		return "public." + tbl.TableName.String(), nil
 	case *tree.AliasedTableExpr:
-		return getTableName(t.Expr)
+		return getTableName(tbl.Expr)
 	}
 }
 
@@ -40,7 +40,7 @@ func FilterType[T tree.NodeFormatter](req tree.NodeFormatter) ([]T, error) {
 }
 
 // GetColumnNames will return all mentioned columns from query.
-// Note: It will have unexpected behaviour for queries that have a subquery.
+// Note: It will have unexpected behavior for queries that have a subquery.
 func GetColumnNames(req tree.NodeFormatter) ([]string, error) {
 	colItems, err := FilterType[*tree.UnresolvedName](req)
 	if err != nil {

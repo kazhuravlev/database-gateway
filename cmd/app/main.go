@@ -10,28 +10,23 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/labstack/gommon/log"
-
-	"github.com/kazhuravlev/database-gateway/internal/validator"
-
-	"github.com/jackc/pgx/v5/pgconn"
-
-	"github.com/kazhuravlev/database-gateway/internal/structs"
-	"github.com/kazhuravlev/database-gateway/internal/templates"
-
 	"github.com/a-h/templ"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/k0kubun/pp/v3"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/internal/templates"
+	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/kazhuravlev/just"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/log"
 	_ "github.com/lib/pq"
 )
 
-var ctxUser = "k-user"
+const ctxUser = "k-user"
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -75,17 +70,17 @@ func runApp(ctx context.Context) error {
 	}
 
 	for _, target := range cfg.Targets {
-		slog.Info("connect to target", slog.String("target", target.Id))
-		c := target.Connection
+		slog.Info("connect to target", slog.String("target", target.ID))
+		pgCfg := target.Connection
 
 		urlExample := fmt.Sprintf(
 			"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-			c.User,
-			c.Password,
-			c.Host,
-			c.Port,
-			c.Db,
-			just.If(c.UseSSL, "enable", "disable"),
+			pgCfg.User,
+			pgCfg.Password,
+			pgCfg.Host,
+			pgCfg.Port,
+			pgCfg.DB,
+			just.If(pgCfg.UseSSL, "enable", "disable"),
 		)
 		dbpool, err := pgxpool.New(ctx, urlExample)
 		if err != nil {
@@ -93,7 +88,7 @@ func runApp(ctx context.Context) error {
 		}
 		defer dbpool.Close()
 
-		targets.id2client[target.Id] = dbpool
+		targets.id2client[target.ID] = dbpool
 	}
 
 	authUser := func(u, p string) (config.User, bool) {
@@ -108,7 +103,7 @@ func runApp(ctx context.Context) error {
 
 	getTarget := func(id string) (config.Target, *pgxpool.Pool, bool) {
 		for _, target := range cfg.Targets {
-			if target.Id == id {
+			if target.ID == id {
 				return target, targets.id2client[id], true
 			}
 		}
@@ -116,15 +111,16 @@ func runApp(ctx context.Context) error {
 		return config.Target{}, nil, false
 	}
 
-	e := echo.New()
-	e.HideBanner = true
-	e.Use(middleware.BasicAuthWithConfig(middleware.BasicAuthConfig{
+	echoInst := echo.New()
+	echoInst.HideBanner = true
+	echoInst.Use(middleware.BasicAuthWithConfig(middleware.BasicAuthConfig{
 		Skipper: func(c echo.Context) bool {
 			return false
 		},
 		Validator: func(username, password string, c echo.Context) (bool, error) {
 			if user, ok := authUser(username, password); ok {
 				c.Set(ctxUser, user)
+
 				return true, nil
 			}
 
@@ -133,15 +129,15 @@ func runApp(ctx context.Context) error {
 		Realm: "",
 	}))
 
-	e.GET("/", func(c echo.Context) error {
+	echoInst.GET("/", func(c echo.Context) error {
 		return c.Redirect(http.StatusTemporaryRedirect, "/servers")
 	})
-	e.GET("/servers", func(c echo.Context) error {
-		user := c.Get(ctxUser).(config.User)
+	echoInst.GET("/servers", func(c echo.Context) error {
+		user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
 
 		servers := just.SliceMap(cfg.Targets, func(t config.Target) structs.Server {
 			return structs.Server{
-				ID:     t.Id,
+				ID:     t.ID,
 				Type:   t.Type,
 				Tables: t.Tables,
 			}
@@ -149,8 +145,8 @@ func runApp(ctx context.Context) error {
 
 		return Render(c, http.StatusOK, templates.PageTargetsList(user, servers))
 	})
-	e.GET("/servers/:id", func(c echo.Context) error {
-		user := c.Get(ctxUser).(config.User)
+	echoInst.GET("/servers/:id", func(c echo.Context) error {
+		user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
 
 		srv, _, ok := getTarget(c.Param("id"))
 		if !ok {
@@ -158,13 +154,13 @@ func runApp(ctx context.Context) error {
 		}
 
 		acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
-			return acl.Target == srv.Id
+			return acl.Target == srv.ID
 		})
 
 		return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, ``, nil, nil))
 	})
-	e.POST("/servers/:id", func(c echo.Context) error {
-		user := c.Get(ctxUser).(config.User)
+	echoInst.POST("/servers/:id", func(c echo.Context) error {
+		user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
 
 		srv, conn, ok := getTarget(c.Param("id"))
 		if !ok {
@@ -180,11 +176,12 @@ func runApp(ctx context.Context) error {
 		format := params.Get("format")
 
 		acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
-			return acl.Target == srv.Id
+			return acl.Target == srv.ID
 		})
 
 		if err := validator.IsAllowed(srv.Tables, acls, query); err != nil {
 			log.Error("err", err.Error())
+
 			return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, err))
 		}
 
@@ -229,27 +226,28 @@ func runApp(ctx context.Context) error {
 				for i := range cols {
 					m[cols[i]] = row[i]
 				}
+
 				return m
 			})
 
-			bb, err := json.Marshal(qTbl)
+			resBuf, err := json.Marshal(qTbl)
 			if err != nil {
 				return Render(c, http.StatusOK, templates.PageTarget(user, srv, acls, query, nil, err))
 			}
 
 			c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json"))
-			http.ServeContent(c.Response(), c.Request(), "response.json", time.Now(), bytes.NewReader(bb))
+			http.ServeContent(c.Response(), c.Request(), "response.json", time.Now(), bytes.NewReader(resBuf))
 
 			return nil
 		}
 	})
 
 	{
-		e.GET("/*", func(c echo.Context) error {
+		echoInst.GET("/*", func(c echo.Context) error {
 			return c.Redirect(http.StatusTemporaryRedirect, "/")
 		})
 
-		e.Logger.Fatal(e.Start(":8080"))
+		echoInst.Logger.Fatal(echoInst.Start(":8080"))
 	}
 
 	return nil

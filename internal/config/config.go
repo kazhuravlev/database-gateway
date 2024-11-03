@@ -18,13 +18,13 @@ type Connection struct {
 	Port        int    `json:"port"`
 	User        string `json:"user"`
 	Password    string `json:"password"`
-	Db          string `json:"db"`
+	DB          string `json:"db"`
 	UseSSL      bool   `json:"use_ssl"`
 	MaxPoolSize int    `json:"max_pool_size"`
 }
 
 type Target struct {
-	Id         string        `json:"id"`
+	ID         string        `json:"id"`
 	Type       string        `json:"type"`
 	Connection Connection    `json:"connection"`
 	Tables     []TargetTable `json:"tables"`
@@ -81,7 +81,7 @@ func (c Config) Validate() error {
 			}
 
 			key := hTable{
-				target: t.Id,
+				target: t.ID,
 				table:  table.Table,
 			}
 			idx[key] = struct{}{}

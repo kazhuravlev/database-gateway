@@ -5,45 +5,65 @@ import (
 
 	"github.com/auxten/postgresql-parser/pkg/sql/parser"
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
-
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/stretchr/testify/require"
 )
 
 func TestValidator(t *testing.T) {
+	t.Parallel()
+	target := config.Target{
+		ID:         "t1",
+		Type:       "postgres",
+		Connection: config.Connection{},
+		Tables: []config.TargetTable{
+			{
+				Table:     "public.clients",
+				Fields:    []string{"id", "name", "email"},
+				Sensitive: nil,
+			},
+		},
+	}
+	
 	t.Run("bad_requests", func(t *testing.T) {
+		t.Parallel()
 		t.Run("query_has_no_statements", func(t *testing.T) {
+			t.Parallel()
 			query := ``
 			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 
 		t.Run("not_a_query", func(t *testing.T) {
+			t.Parallel()
 			query := `what time is it?`
 			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 
 		t.Run("query_has_several_statements", func(t *testing.T) {
+			t.Parallel()
 			query := `select 1; select 1`
 			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 
 		t.Run("star_select", func(t *testing.T) {
+			t.Parallel()
 			query := `select * from table`
 			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 
 		t.Run("schema_changes", func(t *testing.T) {
+			t.Parallel()
 			query := `create table aaa(id text);`
 			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})
 
 		t.Run("alter_table", func(t *testing.T) {
+			t.Parallel()
 			query := `alter table aaa add column id text default '';`
 			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
@@ -51,8 +71,9 @@ func TestValidator(t *testing.T) {
 	})
 
 	t.Run("some_cases", func(t *testing.T) {
+		t.Parallel()
 		t.Run("complicated_query", func(t *testing.T) {
-			target := config.Target{Id: "t1"}
+			t.Parallel()
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
@@ -80,19 +101,10 @@ GROUP BY region, product;`
 		})
 	})
 
-	target := config.Target{
-		Id: "t1",
-		Tables: []config.TargetTable{
-			{
-				Table:     "public.clients",
-				Fields:    []string{"id", "name", "email"},
-				Sensitive: nil,
-			},
-		},
-	}
-
 	t.Run("select", func(t *testing.T) {
+		t.Parallel()
 		t.Run("simple_allowed", func(t *testing.T) {
+			t.Parallel()
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
@@ -105,6 +117,7 @@ GROUP BY region, product;`
 		})
 
 		t.Run("simple_denied", func(t *testing.T) {
+			t.Parallel()
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
@@ -117,6 +130,7 @@ GROUP BY region, product;`
 		})
 
 		t.Run("select_from_allowed_select__is_not_allowed", func(t *testing.T) {
+			t.Parallel()
 			acls := []config.ACL{{
 				Op:     config.OpSelect,
 				Target: "t1",
@@ -131,7 +145,9 @@ GROUP BY region, product;`
 	})
 
 	t.Run("update", func(t *testing.T) {
+		t.Parallel()
 		t.Run("simple_allowed", func(t *testing.T) {
+			t.Parallel()
 			acls := []config.ACL{{
 				Op:     config.OpUpdate,
 				Target: "t1",
@@ -143,6 +159,7 @@ GROUP BY region, product;`
 			require.NoError(t, err)
 		})
 		t.Run("simple_denied", func(t *testing.T) {
+			t.Parallel()
 			acls := []config.ACL{{
 				Op:     config.OpUpdate,
 				Target: "t1",
@@ -156,7 +173,9 @@ GROUP BY region, product;`
 	})
 
 	t.Run("delete", func(t *testing.T) {
+		t.Parallel()
 		t.Run("simple_allowed", func(t *testing.T) {
+			t.Parallel()
 			acls := []config.ACL{{
 				Op:     config.OpDelete,
 				Target: "t1",
@@ -168,6 +187,7 @@ GROUP BY region, product;`
 			require.NoError(t, err)
 		})
 		t.Run("simple_denied", func(t *testing.T) {
+			t.Parallel()
 			acls := []config.ACL{{
 				Op:     config.OpDelete,
 				Target: "t1",
@@ -181,7 +201,9 @@ GROUP BY region, product;`
 	})
 
 	t.Run("insert", func(t *testing.T) {
+		t.Parallel()
 		t.Run("simple_allowed", func(t *testing.T) {
+			t.Parallel()
 			acls := []config.ACL{{
 				Op:     config.OpInsert,
 				Target: "t1",
@@ -194,6 +216,7 @@ GROUP BY region, product;`
 		})
 
 		t.Run("simple_denied", func(t *testing.T) {
+			t.Parallel()
 			acls := []config.ACL{{
 				Op:     config.OpInsert,
 				Target: "t1",
@@ -208,6 +231,7 @@ GROUP BY region, product;`
 }
 
 func TestVector(t *testing.T) {
+	t.Parallel()
 	req := &tree.Select{
 		With: nil,
 		Select: &tree.SelectClause{
@@ -229,15 +253,19 @@ func TestVector(t *testing.T) {
 				Tables: tree.TableExprs{
 					tree.NewTableName("", "clients"),
 				},
-				AsOf: tree.AsOfClause{},
+				AsOf: tree.AsOfClause{
+					Expr: nil,
+				},
 			},
 			Where: &tree.Where{
+				Type: "",
 				Expr: tree.NewUnresolvedName("where_1"),
 			},
 			GroupBy: tree.GroupBy{
 				tree.NewUnresolvedName("group_1"),
 			},
 			Having: &tree.Where{
+				Type: "",
 				Expr: tree.NewUnresolvedName("having_1"),
 			},
 			Window: tree.Window{
@@ -289,7 +317,9 @@ func TestVector(t *testing.T) {
 }
 
 func TestGetColumnNames(t *testing.T) {
+	t.Parallel()
 	t.Run("simple_select", func(t *testing.T) {
+		t.Parallel()
 		stmts, err := parser.Parse(`select id, name from clients`)
 		require.NoError(t, err)
 		require.Len(t, stmts, 1)
@@ -300,6 +330,7 @@ func TestGetColumnNames(t *testing.T) {
 	})
 
 	t.Run("star_select_is_not_ok", func(t *testing.T) {
+		t.Parallel()
 		stmts, err := parser.Parse(`select * from clients`)
 		require.NoError(t, err)
 		require.Len(t, stmts, 1)

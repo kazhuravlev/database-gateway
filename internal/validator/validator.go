@@ -81,6 +81,7 @@ func validateAccess(vectors []IVector, acls []config.ACL) error {
 			}
 
 			isAllowed = acl.Allow
+
 			break
 		}
 
