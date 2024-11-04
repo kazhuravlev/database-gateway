@@ -93,6 +93,7 @@ func makeVectors(query string) ([]IVector, error) { //nolint:cyclop
 
 type vecInsert struct {
 	tblName string
+	columns []string
 }
 
 func (vecInsert) Op() config.Op {
@@ -107,8 +108,8 @@ func (v vecInsert) Table() string {
 	return v.tblName
 }
 
-func (vecInsert) Columns() []string {
-	return nil
+func (v vecInsert) Columns() []string {
+	return v.columns
 }
 
 func makeInsertVec(req *tree.Insert) (*vecInsert, error) {
@@ -117,7 +118,12 @@ func makeInsertVec(req *tree.Insert) (*vecInsert, error) {
 		return nil, fmt.Errorf("get table name for insert: %w", err)
 	}
 
-	return &vecInsert{tblName: tName}, nil
+	cols, err := GetColumnNames(req)
+	if err != nil {
+		return nil, fmt.Errorf("get column names: %w", err)
+	}
+
+	return &vecInsert{tblName: tName, columns: cols}, nil
 }
 
 type VecSelect struct {
