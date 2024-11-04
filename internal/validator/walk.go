@@ -18,10 +18,9 @@ package validator
 
 import (
 	"fmt"
-	"reflect"
-
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/just"
+	"reflect"
 )
 
 type ICollect func(tree.NodeFormatter)
@@ -54,6 +53,8 @@ func CollectType[T tree.NodeFormatter]() *TypeCollector[T] {
 
 func Walk(collect ICollect, statements ...tree.NodeFormatter) error { //nolint:funlen,gocyclo,cyclop,maintidx
 	for _, stmt := range statements {
+		collect(stmt)
+
 		if stmt == nil {
 			continue
 		}
@@ -61,8 +62,6 @@ func Walk(collect ICollect, statements ...tree.NodeFormatter) error { //nolint:f
 		if val := reflect.ValueOf(stmt); val.IsZero() {
 			continue
 		}
-
-		collect(stmt)
 
 		var next []tree.NodeFormatter
 
