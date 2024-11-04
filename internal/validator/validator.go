@@ -46,7 +46,7 @@ func IsAllowed(tables []config.TargetTable, acls []config.ACL, query string) err
 
 	vectors, err := makeVectors(query)
 	if err != nil {
-		return fmt.Errorf("make vectors from query: %w", err)
+		return fmt.Errorf("make vectors: %w", err)
 	}
 
 	if err := validateSchema(vectors, tables); err != nil {
