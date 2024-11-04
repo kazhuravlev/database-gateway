@@ -52,13 +52,13 @@ func GetColumnNames(req tree.NodeFormatter) ([]string, error) {
 		return nil, fmt.Errorf("collect types: %w", err)
 	}
 
-	var hasStar bool
+	var starExp bool
 	if len(colStars.Res()) != 0 || len(colTupleStars.Res()) != 0 {
-		hasStar = true
+		starExp = true
 	}
 
 	cols := just.SliceMap(colItems.Res(), func(col *tree.UnresolvedName) string {
-		hasStar = hasStar || col.Star
+		starExp = starExp || col.Star
 		return col.String()
 	})
 
@@ -66,7 +66,7 @@ func GetColumnNames(req tree.NodeFormatter) ([]string, error) {
 		return col.String()
 	})...)
 
-	if hasStar {
+	if starExp {
 		return nil, fmt.Errorf("star expressions is restricted: %w", ErrComplicatedQuery)
 	}
 
