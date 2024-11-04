@@ -52,6 +52,24 @@ func TestGetColumnNames(t *testing.T) {
 			expCols: nil,
 			expErr:  validator.ErrComplicatedQuery,
 		},
+		{
+			name:    `update`,
+			sql:     `update clients set id=1`,
+			expCols: []string{"id"},
+			expErr:  nil,
+		},
+		{
+			name:    `update_with_repeated_columns`,
+			sql:     `update clients set id=1 where id=2`,
+			expCols: []string{"id"},
+			expErr:  nil,
+		},
+		{
+			name:    `update_when_filter_inversed`,
+			sql:     `update clients set name=1 where 2=id`,
+			expCols: []string{"id", "name"},
+			expErr:  nil,
+		},
 	}
 
 	for _, row := range table {

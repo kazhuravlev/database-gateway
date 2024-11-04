@@ -18,10 +18,9 @@ package validator
 
 import (
 	"fmt"
-	"sort"
-
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/just"
+	"sort"
 )
 
 func getTableName(tbl tree.TableExpr) (string, error) {
@@ -75,6 +74,7 @@ func GetColumnNames(req tree.NodeFormatter) ([]string, error) {
 		return nil, fmt.Errorf("empty column list: %w", ErrAccessDenied)
 	}
 
+	cols = just.SliceUniq(cols)
 	sort.Strings(cols)
 
 	return cols, nil
