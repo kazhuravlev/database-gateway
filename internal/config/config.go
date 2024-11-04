@@ -19,8 +19,6 @@ package config
 import (
 	"fmt"
 	"strings"
-
-	"github.com/kazhuravlev/just"
 )
 
 type TargetTable struct {
@@ -43,16 +41,6 @@ type Target struct {
 	Type       string        `json:"type"`
 	Connection Connection    `json:"connection"`
 	Tables     []TargetTable `json:"tables"`
-}
-
-func (t *Target) HasField(tbl, field string) bool {
-	for _, f := range t.Tables {
-		if f.Table == tbl {
-			return just.SliceContainsElem(f.Fields, field)
-		}
-	}
-
-	return false
 }
 
 type Op string

@@ -18,9 +18,10 @@ package validator
 
 import (
 	"fmt"
+	"sort"
+
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/just"
-	"sort"
 )
 
 func getTableName(tbl tree.TableExpr) (string, error) {

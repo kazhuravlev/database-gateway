@@ -18,9 +18,10 @@ package validator
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/just"
-	"reflect"
 )
 
 type ICollect func(tree.NodeFormatter)
