@@ -5,7 +5,7 @@
 Run commands to get a local dbgw instance with 3 postgres.
 
 ```shell
-git clone git@github.com:kazhuravlev/database-gateway.git
+git clone https://github.com/kazhuravlev/database-gateway.git
 cd database-gateway/example
 docker compose up -d
 open 'http://user:password@127.0.0.1:8080'
