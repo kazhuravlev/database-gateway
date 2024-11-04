@@ -32,13 +32,6 @@ var (
 	ErrUnknownColumn    = errors.New("unknown column")
 )
 
-type IVector interface {
-	Op() config.Op
-	String() string
-	Table() string
-	Columns() []string
-}
-
 func IsAllowed(tables []config.TargetTable, acls []config.ACL, query string) error {
 	if len(acls) == 0 {
 		return fmt.Errorf("user have no any acls: %w", ErrAccessDenied)
@@ -61,21 +54,21 @@ func IsAllowed(tables []config.TargetTable, acls []config.ACL, query string) err
 }
 
 // validateSchema will check that request contains only allowed columns.
-func validateSchema(vectors []IVector, tables []config.TargetTable) error {
+func validateSchema(vectors []Vec, tables []config.TargetTable) error {
 	tblMap := just.Slice2MapFn(tables, func(_ int, tbl config.TargetTable) (string, config.TargetTable) {
 		return tbl.Table, tbl
 	})
 	for _, vec := range vectors {
-		tbl, ok := tblMap[vec.Table()]
+		tbl, ok := tblMap[vec.Tbl]
 		if !ok {
 			return fmt.Errorf("not known table: %w", errors.Join(ErrUnknownTable, ErrAccessDenied))
 		}
 
 		fMap := just.Slice2Map(tbl.Fields)
 
-		for _, col := range vec.Columns() {
+		for _, col := range vec.Cols {
 			if !just.MapContainsKey(fMap, col) {
-				return fmt.Errorf("unable to access column (%s.%s): %w", vec.Table(), col, errors.Join(ErrUnknownColumn, ErrAccessDenied))
+				return fmt.Errorf("unable to access column (%s.%s): %w", vec.Tbl, col, errors.Join(ErrUnknownColumn, ErrAccessDenied))
 			}
 		}
 	}
@@ -83,16 +76,16 @@ func validateSchema(vectors []IVector, tables []config.TargetTable) error {
 	return nil
 }
 
-func validateAccess(vectors []IVector, acls []config.ACL) error {
+func validateAccess(vectors []Vec, acls []config.ACL) error {
 	// Find acl for each vector.
 	for _, vec := range vectors {
 		isAllowed := false
 		for _, acl := range acls {
-			if acl.Op != vec.Op() {
+			if acl.Op != vec.Op {
 				continue
 			}
 
-			if acl.Tbl != vec.Table() {
+			if acl.Tbl != vec.Tbl {
 				continue
 			}
 

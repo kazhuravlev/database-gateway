@@ -322,7 +322,8 @@ func TestVector(t *testing.T) {
 	}
 	vec, err := validator.MakeSelectVec(req)
 	require.NoError(t, err)
-	expVec := validator.VecSelect{
+	expVec := validator.Vec{
+		Op:  config.OpSelect,
 		Tbl: "public.clients",
 		Cols: []string{
 			"col_1",
