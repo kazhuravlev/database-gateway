@@ -19,7 +19,6 @@ package validator_test
 import (
 	"testing"
 
-	"github.com/auxten/postgresql-parser/pkg/sql/parser"
 	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
@@ -342,28 +341,4 @@ func TestVector(t *testing.T) {
 	res, err := validator.GetColumnNames(req)
 	require.NoError(t, err)
 	require.Equal(t, expVec.Cols, res)
-}
-
-func TestGetColumnNames(t *testing.T) {
-	t.Parallel()
-	t.Run("simple_select", func(t *testing.T) {
-		t.Parallel()
-		stmts, err := parser.Parse(`select id, name from clients`)
-		require.NoError(t, err)
-		require.Len(t, stmts, 1)
-
-		cols, err := validator.GetColumnNames(stmts[0].AST)
-		require.NoError(t, err)
-		require.Equal(t, []string{"id", "name"}, cols)
-	})
-
-	t.Run("star_select_is_not_ok", func(t *testing.T) {
-		t.Parallel()
-		stmts, err := parser.Parse(`select * from clients`)
-		require.NoError(t, err)
-		require.Len(t, stmts, 1)
-
-		_, err2 := validator.GetColumnNames(stmts[0].AST)
-		require.ErrorIs(t, err2, validator.ErrAccessDenied)
-	})
 }
