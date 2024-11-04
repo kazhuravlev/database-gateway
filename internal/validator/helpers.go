@@ -44,19 +44,31 @@ func getTableName(tbl tree.TableExpr) (string, error) {
 func GetColumnNames(req tree.NodeFormatter) ([]string, error) {
 	colItems := CollectType[*tree.UnresolvedName]()
 	colNames := CollectType[*tree.Name]()
+	colTupleStars := CollectType[*tree.TupleStar]()
+	colStars := CollectType[tree.UnqualifiedStar]()
 
-	err := Walk(CollectAll(colItems.Collect, colNames.Collect), req)
+	err := Walk(CollectAll(colItems.Collect, colNames.Collect, colTupleStars.Collect, colStars.Collect), req)
 	if err := err; err != nil {
 		return nil, fmt.Errorf("collect types: %w", err)
 	}
 
+	var hasStar bool
+	if len(colStars.Res()) != 0 || len(colTupleStars.Res()) != 0 {
+		hasStar = true
+	}
+
 	cols := just.SliceMap(colItems.Res(), func(col *tree.UnresolvedName) string {
+		hasStar = hasStar || col.Star
 		return col.String()
 	})
 
 	cols = append(cols, just.SliceMap(colNames.Res(), func(col *tree.Name) string {
 		return col.String()
 	})...)
+
+	if hasStar {
+		return nil, fmt.Errorf("star expressions is restricted: %w", ErrComplicatedQuery)
+	}
 
 	if len(cols) == 0 {
 		// FIXME: actually this is not about empty list. This is about Star notation.
