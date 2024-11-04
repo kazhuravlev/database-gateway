@@ -3,19 +3,19 @@
 	"tools": [
 		{
 			"runtime": "go",
-			"module": "github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.3",
+			"module": "github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0",
 			"alias": null,
 			"tags": null
 		},
 		{
 			"runtime": "go",
-			"module": "golang.org/x/tools/cmd/stringer@v0.24.0",
+			"module": "golang.org/x/tools/cmd/stringer@v0.26.0",
 			"alias": null,
 			"tags": null
 		},
 		{
 			"runtime": "go",
-			"module": "golang.org/x/tools/cmd/goimports@v0.24.0",
+			"module": "golang.org/x/tools/cmd/goimports@v0.26.0",
 			"alias": null,
 			"tags": null
 		},
@@ -27,7 +27,7 @@
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.33.0",
+			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.33.1",
 			"alias": null,
 			"tags": null
 		},
