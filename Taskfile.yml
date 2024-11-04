@@ -98,7 +98,7 @@ tasks:
     dir: './internal/templates'
     cmds:
       - echo ">>> Templ"
-      - templ generate
+      - toolset run templ generate
 
   check:
     desc: Run all project checks
