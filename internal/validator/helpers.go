@@ -39,32 +39,24 @@ func getTableName(tbl tree.TableExpr) (string, error) {
 	}
 }
 
-// FilterType will filter objects with specified type.
-func FilterType[T tree.NodeFormatter](req tree.NodeFormatter) ([]T, error) {
-	var res []T
-	err := Walk(func(node tree.NodeFormatter) {
-		if n, ok := node.(T); ok {
-			res = append(res, n)
-		}
-	}, req)
-	if err := err; err != nil {
-		return nil, fmt.Errorf("filter statement: %w", err)
-	}
-
-	return res, nil
-}
-
 // GetColumnNames will return all mentioned columns from query.
 // Note: It will have unexpected behavior for queries that have a subquery.
 func GetColumnNames(req tree.NodeFormatter) ([]string, error) {
-	colItems, err := FilterType[*tree.UnresolvedName](req)
-	if err != nil {
-		return nil, fmt.Errorf("filter columns: %w", err)
+	colItems := CollectType[*tree.UnresolvedName]()
+	colNames := CollectType[*tree.Name]()
+
+	err := Walk(CollectAll(colItems.Collect, colNames.Collect), req)
+	if err := err; err != nil {
+		return nil, fmt.Errorf("collect types: %w", err)
 	}
 
-	cols := just.SliceMap(colItems, func(col *tree.UnresolvedName) string {
+	cols := just.SliceMap(colItems.Res(), func(col *tree.UnresolvedName) string {
 		return col.String()
 	})
+
+	cols = append(cols, just.SliceMap(colNames.Res(), func(col *tree.Name) string {
+		return col.String()
+	})...)
 
 	if len(cols) == 0 {
 		// FIXME: actually this is not about empty list. This is about Star notation.
