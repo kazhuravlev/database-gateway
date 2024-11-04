@@ -24,7 +24,35 @@ import (
 	"github.com/kazhuravlev/just"
 )
 
-func Walk(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFormatter) error { //nolint:funlen,gocyclo,cyclop,maintidx
+type ICollect func(tree.NodeFormatter)
+
+func CollectAll(funcs ...ICollect) ICollect {
+	return func(node tree.NodeFormatter) {
+		for i := range funcs {
+			funcs[i](node)
+		}
+	}
+}
+
+type TypeCollector[T tree.NodeFormatter] struct {
+	list []T
+}
+
+func (c *TypeCollector[T]) Collect(node tree.NodeFormatter) {
+	if n, ok := node.(T); ok {
+		c.list = append(c.list, n)
+	}
+}
+
+func (c *TypeCollector[T]) Res() []T {
+	return c.list
+}
+
+func CollectType[T tree.NodeFormatter]() *TypeCollector[T] {
+	return new(TypeCollector[T])
+}
+
+func Walk(collect ICollect, statements ...tree.NodeFormatter) error { //nolint:funlen,gocyclo,cyclop,maintidx
 	for _, stmt := range statements {
 		if stmt == nil {
 			continue
