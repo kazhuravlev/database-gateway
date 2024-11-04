@@ -229,7 +229,7 @@ func Walk(collect func(formatter tree.NodeFormatter), statements ...tree.NodeFor
 		// case *tree.UniqueConstraintTableDef:
 		case *tree.IndexFlags:
 			next = append(next, &node.Index)
-
+		case *tree.ReturningExprs:
 		case tree.UnqualifiedStar:
 		case *tree.NoReturningClause:
 		case *tree.Name:
