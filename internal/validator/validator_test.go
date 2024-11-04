@@ -242,6 +242,19 @@ GROUP BY region, product;`
 			err := validator.IsAllowed(target.Tables, acls, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
+
+		t.Run("allowed_2", func(t *testing.T) {
+			t.Parallel()
+			acls := []config.ACL{{
+				Op:     config.OpInsert,
+				Target: "t1",
+				Tbl:    "public.clients",
+				Allow:  true,
+			}}
+			query := `insert into clients(id, name, email) values('11', '22', '33')`
+			err := validator.IsAllowed(target.Tables, acls, query)
+			require.NoError(t, err)
+		})
 	})
 }
 
