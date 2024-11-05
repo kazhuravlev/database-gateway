@@ -26,10 +26,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/kazhuravlev/database-gateway/internal/facade/static"
+
 	"github.com/a-h/templ"
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
-	"github.com/kazhuravlev/database-gateway/internal/templates"
+	"github.com/kazhuravlev/database-gateway/internal/facade/templates"
 	"github.com/kazhuravlev/just"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -75,6 +77,8 @@ func (s *Service) Run(ctx context.Context) error {
 		},
 		Realm: "",
 	}))
+
+	echoInst.StaticFS("/static", static.Files)
 
 	echoInst.GET("/", func(c echo.Context) error {
 		return c.Redirect(http.StatusTemporaryRedirect, "/servers")
@@ -135,14 +139,14 @@ func (s *Service) runQuery(c echo.Context) error {
 	query := params.Get("query")
 	format := params.Get("format")
 
-	qTbl, err := s.opts.app.RunQuery(c.Request().Context(), user.Username, srv.ID, query)
-	if err != nil {
-		return fmt.Errorf("run query: %w", err)
-	}
-
 	acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
 		return acl.Target == srv.ID
 	})
+
+	qTbl, err := s.opts.app.RunQuery(c.Request().Context(), user.Username, srv.ID, query)
+	if err != nil {
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, query, nil, errors.New("unknown format"))) //nolint:err113
+	}
 
 	switch format {
 	default:
