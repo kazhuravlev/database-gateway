@@ -1,0 +1,23 @@
+issuer: http://localhost:5556
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+staticClients:
+  - id: example-app
+    redirectURIs:
+      - http://localhost:8080/auth/callback
+    name: "Example App"
+    secret: example-app-secret
+
+# Connectors (no authentication, only for testing)
+enablePasswordDB: true
+staticPasswords:
+  - email: "test@example.com"
+    hash: "$2a$10$FOx1sBhDA4w0iDDHU.s7yeVcOCY/Di13tYyF8rWDM5TsmOq9b/k6a" # bcrypt hash of "password"
+    username: "test"
+    userID: "1"
+
+# http://localhost:5556/auth?client_id=example-app&redirect_uri=http://localhost:5555/callback&response_type=code&scope=openid+profile+email
