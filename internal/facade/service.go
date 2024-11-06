@@ -100,7 +100,7 @@ func (s *Service) Run(ctx context.Context) error {
 	echoInst.StaticFS("/static", static.Files)
 
 	echoInst.GET("/", func(c echo.Context) error {
-		return c.Redirect(http.StatusTemporaryRedirect, "/servers")
+		return c.Redirect(http.StatusSeeOther, "/servers")
 	})
 	echoInst.GET("/servers", s.getServers)
 	echoInst.GET("/servers/:id", s.getServer)
@@ -109,7 +109,7 @@ func (s *Service) Run(ctx context.Context) error {
 	echoInst.GET("/auth", s.getAuth)
 
 	echoInst.GET("/*", func(c echo.Context) error {
-		return c.Redirect(http.StatusTemporaryRedirect, "/")
+		return c.Redirect(http.StatusSeeOther, "/")
 	})
 
 	echoInst.Logger.Fatal(echoInst.Start(":8080"))
@@ -156,7 +156,7 @@ func (s *Service) getAuth(c echo.Context) error {
 }
 
 func (s *Service) runQuery(c echo.Context) error {
-	user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
 	tID := config.TargetID(c.Param("id"))
 	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), tID)
@@ -166,7 +166,7 @@ func (s *Service) runQuery(c echo.Context) error {
 
 	params, err := c.FormParams()
 	if err != nil {
-		return c.Redirect(http.StatusTemporaryRedirect, "/")
+		return c.Redirect(http.StatusSeeOther, "/")
 	}
 
 	query := params.Get("query")
