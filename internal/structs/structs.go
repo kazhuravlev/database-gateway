@@ -28,3 +28,8 @@ type QTable struct {
 	Headers []string
 	Rows    [][]string
 }
+
+type User struct {
+	ID       config.UserID
+	Username string
+}
