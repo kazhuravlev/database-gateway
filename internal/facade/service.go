@@ -88,10 +88,17 @@ func (s *Service) Run(ctx context.Context) error {
 				return fmt.Errorf("have no session: %w", err)
 			}
 
-			if _, ok := sess.Values[keyUserID]; !ok {
-				return c.Redirect(http.StatusTemporaryRedirect, "/auth")
+			user, ok := sess.Values[keyUserID]
+			if !ok {
+				return c.Redirect(http.StatusSeeOther, "/auth")
 			}
 
+			strUser, ok := user.(structs.User)
+			if !ok {
+				return c.Redirect(http.StatusSeeOther, "/logout")
+			}
+
+			c.Set(ctxUser, strUser)
 
 			return next(c)
 		}
