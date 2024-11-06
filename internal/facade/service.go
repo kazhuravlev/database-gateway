@@ -125,7 +125,7 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func (s *Service) getServers(c echo.Context) error {
-	user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
 	servers, err := s.opts.app.GetTargets(c.Request().Context())
 	if err != nil {
@@ -137,7 +137,7 @@ func (s *Service) getServers(c echo.Context) error {
 }
 
 func (s *Service) getServer(c echo.Context) error {
-	user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
 	tID := config.TargetID(c.Param("id"))
 	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), tID)
@@ -155,7 +155,7 @@ func (s *Service) getAuth(c echo.Context) error {
 	default:
 		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType())
 	case config.AuthTypeConfig:
-		return Render(c, http.StatusOK, templates.PageAuth(io.EOF))
+		return Render(c, http.StatusOK, templates.PageAuth(nil))
 	case config.AuthTypeOIDC:
 		panic("implement me")
 		return nil
