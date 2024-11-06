@@ -103,7 +103,7 @@ func (u *UsersConfig) UnmarshalJSON(data []byte) error {
 
 	switch AuthType(cfg.Provider) {
 	default:
-		return errors.New("unknown users provider")
+		return errors.New("unknown users provider") //nolint:err113
 	case AuthTypeConfig:
 		var res struct {
 			Configuration UsersProviderConfig `json:"configuration"`
@@ -180,7 +180,7 @@ type Config struct {
 	Facade  FacadeConfig `json:"facade"`
 }
 
-func (c Config) Validate() error {
+func (c *Config) Validate() error {
 	type hTable struct {
 		target TargetID
 		table  string
@@ -222,7 +222,7 @@ func (c Config) Validate() error {
 
 		for _, acl := range c.ACLs {
 			if !just.MapContainsKey(userMap, acl.User) {
-				return fmt.Errorf("ACL (%#v) targets to unknown user", acl)
+				return fmt.Errorf("ACL (%#v) targets to unknown user", acl) //nolint:err113
 			}
 		}
 	}

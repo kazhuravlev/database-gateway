@@ -42,14 +42,14 @@ type Service struct {
 	conns   map[config.TargetID]*pgxpool.Pool
 }
 
-func New(opts Options) (*Service, error) {
+func New(opts Options) (*Service, error) { //nolint:gocritic
 	return &Service{opts: opts, connsMu: new(sync.RWMutex), conns: make(map[config.TargetID]*pgxpool.Pool)}, nil
 }
 
 func (s *Service) findUser(fn func(user config.User) bool) (*config.User, error) {
 	users, ok := s.opts.cfg.Users.Provider.(config.UsersProviderConfig)
 	if !ok {
-		return nil, errors.New("not implemented")
+		return nil, errors.New("not implemented") //nolint:err113
 	}
 
 	user := just.SliceFindFirst(users, func(_ int, user config.User) bool {
@@ -63,7 +63,7 @@ func (s *Service) findUser(fn func(user config.User) bool) (*config.User, error)
 	return nil, fmt.Errorf("user not exists: %w", ErrNotFound)
 }
 
-func (s *Service) AuthUser(ctx context.Context, username, password string) (*structs.User, error) {
+func (s *Service) AuthUser(_ context.Context, username, password string) (*structs.User, error) {
 	user, err := s.findUser(func(user config.User) bool {
 		return user.Username == username && user.Password == password
 	})
@@ -77,7 +77,7 @@ func (s *Service) AuthUser(ctx context.Context, username, password string) (*str
 	}, nil
 }
 
-func (s *Service) GetUserByID(ctx context.Context, id config.UserID) (*config.User, error) {
+func (s *Service) GetUserByID(_ context.Context, id config.UserID) (*config.User, error) {
 	user, err := s.findUser(func(user config.User) bool {
 		return user.ID == id
 	})
@@ -88,7 +88,7 @@ func (s *Service) GetUserByID(ctx context.Context, id config.UserID) (*config.Us
 	return user, nil
 }
 
-func (s *Service) GetTargets(ctx context.Context) ([]structs.Server, error) {
+func (s *Service) GetTargets(_ context.Context) ([]structs.Server, error) {
 	servers := just.SliceMap(s.opts.cfg.Targets, func(t config.Target) structs.Server {
 		return structs.Server{
 			ID:     t.ID,
@@ -100,7 +100,7 @@ func (s *Service) GetTargets(ctx context.Context) ([]structs.Server, error) {
 	return servers, nil
 }
 
-func (s *Service) GetTargetByID(ctx context.Context, id config.TargetID) (*config.Target, error) {
+func (s *Service) GetTargetByID(_ context.Context, id config.TargetID) (*config.Target, error) {
 	for i := range s.opts.cfg.Targets {
 		target := s.opts.cfg.Targets[i]
 		if target.ID == id {
@@ -111,7 +111,7 @@ func (s *Service) GetTargetByID(ctx context.Context, id config.TargetID) (*confi
 	return nil, fmt.Errorf("target not found: %w", ErrNotFound)
 }
 
-func (s *Service) GetACLs(ctx context.Context, uID config.UserID, tID config.TargetID) []config.ACL {
+func (s *Service) GetACLs(_ context.Context, uID config.UserID, tID config.TargetID) []config.ACL {
 	var res []config.ACL
 	for _, acl := range s.opts.cfg.ACLs {
 		if acl.Target == tID && acl.User == uID {
@@ -172,7 +172,7 @@ func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID conf
 	}, nil
 }
 
-func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (*pgxpool.Pool, error) {
+func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (*pgxpool.Pool, error) { //nolint:gocritic
 	{
 		s.connsMu.RLock()
 		pool, ok := s.conns[target.ID]

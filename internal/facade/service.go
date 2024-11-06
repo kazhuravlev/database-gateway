@@ -51,7 +51,7 @@ type Service struct {
 }
 
 func New(opts Options) (*Service, error) {
-	gob.Register(structs.User{})
+	gob.Register(structs.User{}) //nolint:exhaustruct
 	gob.Register(config.UserID(""))
 
 	if err := opts.Validate(); err != nil {
@@ -61,7 +61,7 @@ func New(opts Options) (*Service, error) {
 	return &Service{opts: opts}, nil
 }
 
-func (s *Service) Run(ctx context.Context) error {
+func (s *Service) Run(_ context.Context) error {
 	echoInst := echo.New()
 	echoInst.HideBanner = true
 	echoInst.Use(middleware.Recover())
@@ -128,6 +128,7 @@ func (s *Service) getServers(c echo.Context) error {
 	servers, err := s.opts.app.GetTargets(c.Request().Context())
 	if err != nil {
 		s.opts.logger.Error("get targets", slog.String("error", err.Error()))
+
 		return c.String(http.StatusInternalServerError, "the sky was falling")
 	}
 
@@ -151,11 +152,13 @@ func (s *Service) getServer(c echo.Context) error {
 func (s *Service) getAuth(c echo.Context) error {
 	switch s.opts.app.AuthType() {
 	default:
-		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType())
+		// TODO: choose a better way to show an error
+		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType()) //nolint:err113
 	case config.AuthTypeConfig:
 		return Render(c, http.StatusOK, templates.PageAuth(nil))
 	case config.AuthTypeOIDC:
 		panic("implement me")
+
 		return nil
 	}
 }
@@ -165,7 +168,8 @@ func (s *Service) postAuth(c echo.Context) error {
 
 	switch s.opts.app.AuthType() {
 	default:
-		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType())
+		// TODO: choose a better way to show an error
+		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType()) //nolint:err113
 	case config.AuthTypeConfig:
 		user, err := s.opts.app.AuthUser(ctx, c.FormValue("username"), c.FormValue("password"))
 		if err != nil {
@@ -177,7 +181,7 @@ func (s *Service) postAuth(c echo.Context) error {
 			return fmt.Errorf("have no session: %w", err)
 		}
 
-		sess.Options = &sessions.Options{
+		sess.Options = &sessions.Options{ //nolint:exhaustruct
 			Path:     "/",
 			MaxAge:   int(time.Hour.Seconds()),
 			HttpOnly: true,
@@ -190,17 +194,18 @@ func (s *Service) postAuth(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, "/")
 	case config.AuthTypeOIDC:
 		panic("implement me")
+
 		return nil
 	}
 }
 
-func (s *Service) logout(c echo.Context) error {
+func (*Service) logout(c echo.Context) error {
 	sess, err := session.Get(keySession, c)
 	if err != nil {
 		return c.Redirect(http.StatusSeeOther, "/")
 	}
 
-	sess.Options = &sessions.Options{
+	sess.Options = &sessions.Options{ //nolint:exhaustruct
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,

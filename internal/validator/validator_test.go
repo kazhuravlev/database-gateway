@@ -38,6 +38,7 @@ func TestValidator(t *testing.T) {
 			},
 		},
 	}
+	uID := config.UserID("user-1")
 
 	t.Run("bad_requests", func(t *testing.T) {
 		t.Parallel()
@@ -89,6 +90,7 @@ func TestValidator(t *testing.T) {
 		t.Run("complicated_query", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpSelect,
 				Target: "t1",
 				Tbl:    "public.clients",
@@ -120,6 +122,7 @@ GROUP BY region, product;`
 		t.Run("simple_allowed", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpSelect,
 				Target: "t1",
 				Tbl:    "public.clients",
@@ -133,6 +136,7 @@ GROUP BY region, product;`
 		t.Run("simple_denied", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpSelect,
 				Target: "t1",
 				Tbl:    "public.clients",
@@ -146,6 +150,7 @@ GROUP BY region, product;`
 		t.Run("select_from_allowed_select__is_not_allowed", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpSelect,
 				Target: "t1",
 				Tbl:    "public.clients",
@@ -163,6 +168,7 @@ GROUP BY region, product;`
 		t.Run("simple_allowed", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpUpdate,
 				Target: "t1",
 				Tbl:    "public.clients",
@@ -175,6 +181,7 @@ GROUP BY region, product;`
 		t.Run("simple_denied", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpUpdate,
 				Target: "t1",
 				Tbl:    "public.clients",
@@ -191,6 +198,7 @@ GROUP BY region, product;`
 		t.Run("simple_allowed", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpDelete,
 				Target: "t1",
 				Tbl:    "public.clients",
@@ -203,6 +211,7 @@ GROUP BY region, product;`
 		t.Run("simple_denied", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpDelete,
 				Target: "t1",
 				Tbl:    "public.clients",
@@ -219,6 +228,7 @@ GROUP BY region, product;`
 		t.Run("simple_allowed", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpInsert,
 				Target: "t1",
 				Tbl:    "public.clients",
@@ -232,6 +242,7 @@ GROUP BY region, product;`
 		t.Run("simple_denied", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpInsert,
 				Target: "t1",
 				Tbl:    "public.clients",
@@ -245,6 +256,7 @@ GROUP BY region, product;`
 		t.Run("allowed_2", func(t *testing.T) {
 			t.Parallel()
 			acls := []config.ACL{{
+				User:   uID,
 				Op:     config.OpInsert,
 				Target: "t1",
 				Tbl:    "public.clients",
