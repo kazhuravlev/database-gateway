@@ -114,6 +114,7 @@ func (s *Service) Run(ctx context.Context) error {
 	echoInst.POST("/servers/:id", s.runQuery)
 
 	echoInst.GET("/auth", s.getAuth)
+	echoInst.GET("/logout", s.logout)
 
 	echoInst.GET("/*", func(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, "/")
@@ -160,6 +161,25 @@ func (s *Service) getAuth(c echo.Context) error {
 		panic("implement me")
 		return nil
 	}
+}
+
+func (s *Service) logout(c echo.Context) error {
+	sess, err := session.Get(keySession, c)
+	if err != nil {
+		return c.Redirect(http.StatusSeeOther, "/")
+	}
+
+	sess.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+	}
+	delete(sess.Values, keyUserID)
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
+		return fmt.Errorf("save session: %w", err)
+	}
+
+	return c.Redirect(http.StatusSeeOther, "/")
 }
 
 func (s *Service) runQuery(c echo.Context) error {
