@@ -129,10 +129,16 @@ type UsersProviderOIDC struct {
 
 func (UsersProviderOIDC) isProviderConfiguration() {}
 
+type FacadeConfig struct {
+	Port         int    `json:"port"`
+	CookieSecret string `json:"jwt_secret"`
+}
+
 type Config struct {
 	Targets []Target    `json:"targets"`
 	Users   UsersConfig `json:"users"`
 	ACLs    []ACL       `json:"acls"`
+	Facade  FacadeConfig `json:"facade"`
 }
 
 func (c Config) Validate() error {

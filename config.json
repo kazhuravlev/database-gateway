@@ -103,5 +103,9 @@
 			"tbl": "public.clients",
 			"allow": true
 		}
-	]
+	],
+	"facade": {
+		"port": 8080,
+		"jwt_secret": "secret"
+	}
 }
