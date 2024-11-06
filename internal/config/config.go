@@ -17,11 +17,15 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/kazhuravlev/just"
 	"strings"
+
+	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/kazhuravlev/just"
+	"golang.org/x/oauth2"
 )
 
 type (
@@ -134,10 +138,11 @@ func (UsersProviderConfig) Type() AuthType {
 }
 
 type UsersProviderOIDC struct {
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	IssuerURL    string `json:"issuer_url"`
-	RedirectURL  string `json:"redirect_url"`
+	ClientID     string   `json:"client_id"`
+	ClientSecret string   `json:"client_secret"`
+	IssuerURL    string   `json:"issuer_url"`
+	RedirectURL  string   `json:"redirect_url"`
+	Scopes       []string `json:"scopes"`
 }
 
 func (UsersProviderOIDC) isProviderConfiguration() {}
@@ -145,15 +150,33 @@ func (UsersProviderOIDC) isProviderConfiguration() {}
 func (UsersProviderOIDC) Type() AuthType {
 	return AuthTypeOIDC
 }
+
+func (u *UsersProviderOIDC) init(ctx context.Context) (*oauth2.Config, error) {
+	provider, err := oidc.NewProvider(ctx, u.IssuerURL)
+	if err != nil {
+		return nil, fmt.Errorf("get provider: %w", err)
+	}
+
+	oauth2Config := oauth2.Config{
+		ClientID:     u.ClientID,
+		ClientSecret: u.ClientSecret,
+		Endpoint:     provider.Endpoint(),
+		RedirectURL:  u.RedirectURL,
+		Scopes:       append([]string{oidc.ScopeOpenID}, u.Scopes...),
+	}
+
+	return &oauth2Config, nil
+}
+
 type FacadeConfig struct {
 	Port         int    `json:"port"`
 	CookieSecret string `json:"jwt_secret"`
 }
 
 type Config struct {
-	Targets []Target    `json:"targets"`
-	Users   UsersConfig `json:"users"`
-	ACLs    []ACL       `json:"acls"`
+	Targets []Target     `json:"targets"`
+	Users   UsersConfig  `json:"users"`
+	ACLs    []ACL        `json:"acls"`
 	Facade  FacadeConfig `json:"facade"`
 }
 
