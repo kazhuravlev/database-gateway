@@ -61,7 +61,7 @@ func runApp(ctx context.Context) error {
 		return fmt.Errorf("create app: %w", err)
 	}
 
-	fInst, err := facade.New(facade.NewOptions(logger, appInst))
+	fInst, err := facade.New(facade.NewOptions(logger, appInst, cfg.Facade.CookieSecret, cfg.Facade.Port))
 	if err != nil {
 		return fmt.Errorf("create facade: %w", err)
 	}

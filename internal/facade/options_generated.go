@@ -15,6 +15,8 @@ type OptOptionsSetter func(o *Options)
 func NewOptions(
 	logger *slog.Logger,
 	app *app.Service,
+	cookieSecret string,
+	port int,
 	options ...OptOptionsSetter,
 ) Options {
 	o := Options{}
@@ -24,6 +26,10 @@ func NewOptions(
 	o.logger = logger
 
 	o.app = app
+
+	o.cookieSecret = cookieSecret
+
+	o.port = port
 
 	for _, opt := range options {
 		opt(&o)
@@ -35,6 +41,8 @@ func (o *Options) Validate() error {
 	errs := new(errors461e464ebed9.ValidationErrors)
 	errs.Add(errors461e464ebed9.NewValidationError("logger", _validate_Options_logger(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("app", _validate_Options_app(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("cookieSecret", _validate_Options_cookieSecret(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("port", _validate_Options_port(o)))
 	return errs.AsError()
 }
 
@@ -48,6 +56,20 @@ func _validate_Options_logger(o *Options) error {
 func _validate_Options_app(o *Options) error {
 	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.app, "required"); err != nil {
 		return fmt461e464ebed9.Errorf("field `app` did not pass the test: %w", err)
+	}
+	return nil
+}
+
+func _validate_Options_cookieSecret(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.cookieSecret, "required"); err != nil {
+		return fmt461e464ebed9.Errorf("field `cookieSecret` did not pass the test: %w", err)
+	}
+	return nil
+}
+
+func _validate_Options_port(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.port, "required"); err != nil {
+		return fmt461e464ebed9.Errorf("field `port` did not pass the test: %w", err)
 	}
 	return nil
 }
