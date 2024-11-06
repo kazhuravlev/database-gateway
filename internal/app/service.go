@@ -205,3 +205,7 @@ func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (
 
 	return dbpool, nil
 }
+
+func (s *Service) AuthType() config.AuthType {
+	return s.opts.cfg.Users.Provider.Type()
+}

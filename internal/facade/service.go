@@ -22,9 +22,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/gorilla/sessions"
+	"github.com/labstack/echo-contrib/session"
 
 	"github.com/kazhuravlev/database-gateway/internal/facade/static"
 
@@ -37,7 +42,11 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-const ctxUser = "c-user"
+const (
+	ctxUser    = "c-user"
+	keySession = "session"
+	keyUserID  = "uid"
+)
 
 type Service struct {
 	opts Options
@@ -56,27 +65,41 @@ func (s *Service) Run(ctx context.Context) error {
 	echoInst.HideBanner = true
 	echoInst.Use(middleware.Recover())
 	echoInst.Use(middleware.Logger())
-	echoInst.Use(middleware.BasicAuthWithConfig(middleware.BasicAuthConfig{
-		Skipper: func(_ echo.Context) bool {
-			return false
-		},
-		Validator: func(username, password string, c echo.Context) (bool, error) {
-			id, err := s.opts.app.AuthUser(c.Request().Context(), username, password)
-			if err != nil {
-				return false, fmt.Errorf("not authenticated: %w", err)
+	echoInst.Use(session.Middleware(sessions.NewCookieStore([]byte(s.opts.cookieSecret))))
+
+	echoInst.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			path := c.Request().URL.Path
+			if strings.HasPrefix(path, "/static") {
+				return next(c)
+			}
+			if strings.HasPrefix(path, "/auth") {
+				return next(c)
 			}
 
-			user, err := s.opts.app.GetUserByID(c.Request().Context(), id)
+			sess, err := session.Get(keySession, c)
 			if err != nil {
-				return false, fmt.Errorf("get user by id: %w", err)
+				return fmt.Errorf("have no session: %w", err)
 			}
 
-			c.Set(ctxUser, *user)
+			if _, ok := sess.Values[keyUserID]; !ok {
+				return c.Redirect(http.StatusTemporaryRedirect, "/auth")
+			}
 
-			return true, nil
-		},
-		Realm: "",
-	}))
+			//sess.Options = &sessions.Options{
+			//	Path:     "/",
+			//	MaxAge:   86400 * 7,
+			//	HttpOnly: true,
+			//}
+			//userID := ""
+			//sess.Values[keyUserID] = userID
+			//if err := sess.Save(c.Request(), c.Response()); err != nil {
+			//	return fmt.Errorf("save session: %w", err)
+			//}
+
+			return next(c)
+		}
+	})
 
 	echoInst.StaticFS("/static", static.Files)
 
@@ -86,6 +109,8 @@ func (s *Service) Run(ctx context.Context) error {
 	echoInst.GET("/servers", s.getServers)
 	echoInst.GET("/servers/:id", s.getServer)
 	echoInst.POST("/servers/:id", s.runQuery)
+
+	echoInst.GET("/auth", s.getAuth)
 
 	echoInst.GET("/*", func(c echo.Context) error {
 		return c.Redirect(http.StatusTemporaryRedirect, "/")
@@ -120,6 +145,18 @@ func (s *Service) getServer(c echo.Context) error {
 	acls := s.opts.app.GetACLs(c.Request().Context(), user.ID, tID)
 
 	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, ``, nil, nil))
+}
+
+func (s *Service) getAuth(c echo.Context) error {
+	switch s.opts.app.AuthType() {
+	default:
+		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType())
+	case config.AuthTypeConfig:
+		return Render(c, http.StatusOK, templates.PageAuth(io.EOF))
+	case config.AuthTypeOIDC:
+		panic("implement me")
+		return nil
+	}
 }
 
 func (s *Service) runQuery(c echo.Context) error {

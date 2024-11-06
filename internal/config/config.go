@@ -24,8 +24,16 @@ import (
 	"strings"
 )
 
-type UserID string
-type TargetID string
+type (
+	UserID   string
+	TargetID string
+	AuthType string
+)
+
+const (
+	AuthTypeConfig AuthType = "config"
+	AuthTypeOIDC   AuthType = "oidc"
+)
 
 type Op string
 
@@ -74,6 +82,7 @@ type User struct {
 
 type IProvider interface {
 	isProviderConfiguration()
+	Type() AuthType
 }
 
 type UsersConfig struct {
@@ -88,10 +97,10 @@ func (u *UsersConfig) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("unmarshal users config: %w", err)
 	}
 
-	switch cfg.Provider {
+	switch AuthType(cfg.Provider) {
 	default:
 		return errors.New("unknown users provider")
-	case "config":
+	case AuthTypeConfig:
 		var res struct {
 			Configuration UsersProviderConfig `json:"configuration"`
 		}
@@ -101,7 +110,7 @@ func (u *UsersConfig) UnmarshalJSON(data []byte) error {
 		*u = UsersConfig{
 			Provider: res.Configuration,
 		}
-	case "oidc":
+	case AuthTypeOIDC:
 		var res struct {
 			Configuration UsersProviderOIDC `json:"configuration"`
 		}
@@ -120,6 +129,10 @@ type UsersProviderConfig []User
 
 func (UsersProviderConfig) isProviderConfiguration() {}
 
+func (UsersProviderConfig) Type() AuthType {
+	return AuthTypeConfig
+}
+
 type UsersProviderOIDC struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
@@ -129,6 +142,9 @@ type UsersProviderOIDC struct {
 
 func (UsersProviderOIDC) isProviderConfiguration() {}
 
+func (UsersProviderOIDC) Type() AuthType {
+	return AuthTypeOIDC
+}
 type FacadeConfig struct {
 	Port         int    `json:"port"`
 	CookieSecret string `json:"jwt_secret"`
