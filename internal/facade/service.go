@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -114,6 +113,8 @@ func (s *Service) Run(ctx context.Context) error {
 	echoInst.POST("/servers/:id", s.runQuery)
 
 	echoInst.GET("/auth", s.getAuth)
+	echoInst.POST("/auth", s.postAuth)
+
 	echoInst.GET("/logout", s.logout)
 
 	echoInst.GET("/*", func(c echo.Context) error {
@@ -157,6 +158,40 @@ func (s *Service) getAuth(c echo.Context) error {
 		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType())
 	case config.AuthTypeConfig:
 		return Render(c, http.StatusOK, templates.PageAuth(nil))
+	case config.AuthTypeOIDC:
+		panic("implement me")
+		return nil
+	}
+}
+
+func (s *Service) postAuth(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	switch s.opts.app.AuthType() {
+	default:
+		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType())
+	case config.AuthTypeConfig:
+		user, err := s.opts.app.AuthUser(ctx, c.FormValue("username"), c.FormValue("password"))
+		if err != nil {
+			return Render(c, http.StatusOK, templates.PageAuth(err))
+		}
+
+		sess, err := session.Get(keySession, c)
+		if err != nil {
+			return fmt.Errorf("have no session: %w", err)
+		}
+
+		sess.Options = &sessions.Options{
+			Path:     "/",
+			MaxAge:   int(time.Hour.Seconds()),
+			HttpOnly: true,
+		}
+		sess.Values[keyUserID] = *user
+		if err := sess.Save(c.Request(), c.Response()); err != nil {
+			return fmt.Errorf("save session: %w", err)
+		}
+
+		return c.Redirect(http.StatusSeeOther, "/")
 	case config.AuthTypeOIDC:
 		panic("implement me")
 		return nil
