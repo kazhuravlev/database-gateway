@@ -19,6 +19,7 @@ package facade
 import (
 	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,6 +28,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/kazhuravlev/database-gateway/internal/structs"
 
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -53,6 +56,9 @@ type Service struct {
 }
 
 func New(opts Options) (*Service, error) {
+	gob.Register(structs.User{})
+	gob.Register(config.UserID(""))
+
 	if err := opts.Validate(); err != nil {
 		return nil, fmt.Errorf("bad configuration: %w", err)
 	}
