@@ -63,15 +63,18 @@ func (s *Service) findUser(fn func(user config.User) bool) (*config.User, error)
 	return nil, fmt.Errorf("user not exists: %w", ErrNotFound)
 }
 
-func (s *Service) AuthUser(ctx context.Context, username, password string) (config.UserID, error) {
+func (s *Service) AuthUser(ctx context.Context, username, password string) (*structs.User, error) {
 	user, err := s.findUser(func(user config.User) bool {
 		return user.Username == username && user.Password == password
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return user.ID, nil
+	return &structs.User{
+		ID:       user.ID,
+		Username: user.Username,
+	}, nil
 }
 
 func (s *Service) GetUserByID(ctx context.Context, id config.UserID) (*config.User, error) {
