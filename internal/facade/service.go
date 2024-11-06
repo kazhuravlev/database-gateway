@@ -86,16 +86,6 @@ func (s *Service) Run(ctx context.Context) error {
 				return c.Redirect(http.StatusTemporaryRedirect, "/auth")
 			}
 
-			//sess.Options = &sessions.Options{
-			//	Path:     "/",
-			//	MaxAge:   86400 * 7,
-			//	HttpOnly: true,
-			//}
-			//userID := ""
-			//sess.Values[keyUserID] = userID
-			//if err := sess.Save(c.Request(), c.Response()); err != nil {
-			//	return fmt.Errorf("save session: %w", err)
-			//}
 
 			return next(c)
 		}
