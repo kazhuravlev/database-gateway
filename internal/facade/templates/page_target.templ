@@ -94,10 +94,6 @@ templ queryResult(tbl structs.QTable) {
 	</div>
 }
 
-templ queryError(err error) {
-	<div class="w-full border border-red-500 p-2">{ err.Error() }</div>
-}
-
 templ PageTarget(user config.User, target config.Target, acls []config.ACL, query string, qTbl *structs.QTable, err error) {
 	@l_app() {
 		@header(user)
@@ -105,7 +101,7 @@ templ PageTarget(user config.User, target config.Target, acls []config.ACL, quer
 		@aclList(acls)
 		@sqlForm(query)
 		if err != nil {
-			@queryError(err)
+			@showError(err)
 		}
 		if qTbl != nil {
 			@queryResult(*qTbl)

@@ -17,3 +17,8 @@ templ button(text string, url templ.SafeURL) {
 		<a href={ url }>{ text }</a>
 	</div>
 }
+
+
+templ showError(err error) {
+	<div class="w-full border border-red-500 p-2">{ err.Error() }</div>
+}

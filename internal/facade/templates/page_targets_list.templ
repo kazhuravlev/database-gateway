@@ -9,7 +9,7 @@ import (
 templ listServers(servers []structs.Server) {
 	for _, item := range servers {
 		@w_appline() {
-			<a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>{ item.ID }</a>
+			<a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>{ string(item.ID) }</a>
 		}
 	}
 }
