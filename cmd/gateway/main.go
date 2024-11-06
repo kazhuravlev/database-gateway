@@ -23,9 +23,8 @@ import (
 	"os"
 
 	"github.com/kazhuravlev/database-gateway/internal/app"
-	"github.com/kazhuravlev/database-gateway/internal/facade"
-
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/facade"
 	"github.com/kazhuravlev/just"
 	_ "github.com/lib/pq"
 )
