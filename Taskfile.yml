@@ -26,7 +26,7 @@ vars:
 tasks:
   run:
     cmds:
-      - go run ./cmd/app
+      - go run ./cmd/gateway
 
   deps:run:
     desc: Run all deps
@@ -79,6 +79,7 @@ tasks:
     desc: Generate code
     cmds:
       - task: "generate:go"
+      - task: "generate:tailwind"
       - task: "generate:templ"
       - task: "generate:license"
       - task: "fmt"
