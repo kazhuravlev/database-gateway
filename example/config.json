@@ -82,22 +82,22 @@
 		"provider": "config",
 		"configuration": [
 			{
-				"id": "ka",
-				"username": "kazhuravlev",
-				"password": "example"
+				"id": "user-1",
+				"username": "username",
+				"password": "password"
 			}
 		]
 	},
 	"acls": [
 		{
-			"user": "ka",
+			"user": "user-1",
 			"op": "select",
 			"target": "local-1",
 			"tbl": "public.clients",
 			"allow": true
 		},
 		{
-			"user": "ka",
+			"user": "user-1",
 			"op": "insert",
 			"target": "local-1",
 			"tbl": "public.clients",
