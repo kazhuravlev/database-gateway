@@ -31,7 +31,7 @@ func authForm() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"w-full\"><form action=\"/auth\" method=\"POST\"><div class=\" flex flex-row justify-between\"><div class=\"flex-auto\"></div><div class=\"flex flex-col items-start gap-1\"><div><input class=\"px-2 py-1 text-black\" name=\"login\" type=\"text\" placeholder=\"login\"></div><div><input class=\"px-2 py-1 text-black\" name=\"password\" type=\"password\" placeholder=\"password\"></div><div><button type=\"submit\" class=\"bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1\">Login</button></div></div><div class=\"flex-auto\"></div></div></form></div>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"w-full\"><form action=\"/auth\" method=\"POST\"><div class=\" flex flex-row justify-between\"><div class=\"flex-auto\"></div><div class=\"flex flex-col items-start gap-1\"><div><input class=\"px-2 py-1 text-black\" name=\"username\" type=\"text\" placeholder=\"username\"></div><div><input class=\"px-2 py-1 text-black\" name=\"password\" type=\"password\" placeholder=\"password\"></div><div><button type=\"submit\" class=\"bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1\">Login</button></div></div><div class=\"flex-auto\"></div></div></form></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

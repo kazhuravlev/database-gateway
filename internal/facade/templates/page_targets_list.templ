@@ -14,7 +14,7 @@ templ listServers(servers []structs.Server) {
 	}
 }
 
-templ PageTargetsList(user config.User, servers []structs.Server) {
+templ PageTargetsList(user structs.User, servers []structs.Server) {
 	@l_app() {
 		@header(user)
 		@listServers(servers)
