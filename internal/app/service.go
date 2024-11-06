@@ -39,33 +39,50 @@ type Service struct {
 	opts Options
 
 	connsMu *sync.RWMutex
-	conns   map[string]*pgxpool.Pool
+	conns   map[config.TargetID]*pgxpool.Pool
 }
 
 func New(opts Options) (*Service, error) {
-	return &Service{opts: opts, connsMu: new(sync.RWMutex), conns: make(map[string]*pgxpool.Pool)}, nil
+	return &Service{opts: opts, connsMu: new(sync.RWMutex), conns: make(map[config.TargetID]*pgxpool.Pool)}, nil
 }
 
-func (s *Service) AuthUser(ctx context.Context, username, password string) (string, error) {
-	for i := range s.opts.cfg.Users {
-		user := s.opts.cfg.Users[i]
-		if user.Username == username && user.Password == password {
-			return user.Username, nil
-		}
+func (s *Service) findUser(fn func(user config.User) bool) (*config.User, error) {
+	users, ok := s.opts.cfg.Users.Provider.(config.UsersProviderConfig)
+	if !ok {
+		return nil, errors.New("not implemented")
 	}
 
-	return "", fmt.Errorf("user not exists: %w", ErrNotFound)
-}
+	user := just.SliceFindFirst(users, func(_ int, user config.User) bool {
+		return fn(user)
+	})
 
-func (s *Service) GetUserByUsername(ctx context.Context, id string) (*config.User, error) {
-	for i := range s.opts.cfg.Users {
-		user := s.opts.cfg.Users[i]
-		if user.Username == id {
-			return &user, nil
-		}
+	if user, ok := user.ValueOk(); ok {
+		return &user, nil
 	}
 
 	return nil, fmt.Errorf("user not exists: %w", ErrNotFound)
+}
+
+func (s *Service) AuthUser(ctx context.Context, username, password string) (config.UserID, error) {
+	user, err := s.findUser(func(user config.User) bool {
+		return user.Username == username && user.Password == password
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return user.ID, nil
+}
+
+func (s *Service) GetUserByID(ctx context.Context, id config.UserID) (*config.User, error) {
+	user, err := s.findUser(func(user config.User) bool {
+		return user.ID == id
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (s *Service) GetTargets(ctx context.Context) ([]structs.Server, error) {
@@ -80,7 +97,7 @@ func (s *Service) GetTargets(ctx context.Context) ([]structs.Server, error) {
 	return servers, nil
 }
 
-func (s *Service) GetTargetByID(ctx context.Context, id string) (*config.Target, error) {
+func (s *Service) GetTargetByID(ctx context.Context, id config.TargetID) (*config.Target, error) {
 	for i := range s.opts.cfg.Targets {
 		target := s.opts.cfg.Targets[i]
 		if target.ID == id {
@@ -91,10 +108,21 @@ func (s *Service) GetTargetByID(ctx context.Context, id string) (*config.Target,
 	return nil, fmt.Errorf("target not found: %w", ErrNotFound)
 }
 
-func (s *Service) RunQuery(ctx context.Context, username, srvID, query string) (*structs.QTable, error) {
-	user, err := s.GetUserByUsername(ctx, username)
+func (s *Service) GetACLs(ctx context.Context, uID config.UserID, tID config.TargetID) []config.ACL {
+	var res []config.ACL
+	for _, acl := range s.opts.cfg.ACLs {
+		if acl.Target == tID && acl.User == uID {
+			res = append(res, acl)
+		}
+	}
+
+	return res
+}
+
+func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (*structs.QTable, error) {
+	user, err := s.GetUserByID(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("get user by username: %w", err)
+		return nil, fmt.Errorf("get user by id: %w", err)
 	}
 
 	srv, err := s.GetTargetByID(ctx, srvID)
@@ -102,9 +130,7 @@ func (s *Service) RunQuery(ctx context.Context, username, srvID, query string) (
 		return nil, fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
-		return acl.Target == srvID
-	})
+	acls := s.GetACLs(ctx, user.ID, srvID)
 
 	if err := validator.IsAllowed(srv.Tables, acls, query); err != nil {
 		log.Error("err", err.Error())
@@ -154,7 +180,7 @@ func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (
 		}
 	}
 
-	s.opts.logger.Info("connect to target", slog.String("target", target.ID))
+	s.opts.logger.Info("connect to target", slog.String("target", string(target.ID)))
 	pgCfg := target.Connection
 
 	urlExample := fmt.Sprintf(

@@ -19,7 +19,7 @@ package structs
 import "github.com/kazhuravlev/database-gateway/internal/config"
 
 type Server struct {
-	ID     string
+	ID     config.TargetID
 	Type   string
 	Tables []config.TargetTable
 }

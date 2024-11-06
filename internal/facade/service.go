@@ -66,7 +66,7 @@ func (s *Service) Run(ctx context.Context) error {
 				return false, fmt.Errorf("not authenticated: %w", err)
 			}
 
-			user, err := s.opts.app.GetUserByUsername(c.Request().Context(), id)
+			user, err := s.opts.app.GetUserByID(c.Request().Context(), id)
 			if err != nil {
 				return false, fmt.Errorf("get user by id: %w", err)
 			}
@@ -111,14 +111,13 @@ func (s *Service) getServers(c echo.Context) error {
 func (s *Service) getServer(c echo.Context) error {
 	user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
 
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), c.Param("id"))
+	tID := config.TargetID(c.Param("id"))
+	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), tID)
 	if err != nil {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
-		return acl.Target == srv.ID
-	})
+	acls := s.opts.app.GetACLs(c.Request().Context(), user.ID, tID)
 
 	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, ``, nil, nil))
 }
@@ -126,7 +125,8 @@ func (s *Service) getServer(c echo.Context) error {
 func (s *Service) runQuery(c echo.Context) error {
 	user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
 
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), c.Param("id"))
+	tID := config.TargetID(c.Param("id"))
+	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), tID)
 	if err != nil {
 		return fmt.Errorf("get target by id: %w", err)
 	}
@@ -139,13 +139,11 @@ func (s *Service) runQuery(c echo.Context) error {
 	query := params.Get("query")
 	format := params.Get("format")
 
-	acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
-		return acl.Target == srv.ID
-	})
+	acls := s.opts.app.GetACLs(c.Request().Context(), user.ID, tID)
 
-	qTbl, err := s.opts.app.RunQuery(c.Request().Context(), user.Username, srv.ID, query)
+	qTbl, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
 	if err != nil {
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, query, nil, errors.New("unknown format"))) //nolint:err113
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, query, nil, err)) //nolint:err113
 	}
 
 	switch format {

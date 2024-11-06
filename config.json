@@ -78,24 +78,30 @@
 			]
 		}
 	],
-	"users": [
+	"users": {
+		"provider": "config",
+		"configuration": [
+			{
+				"id": "ka",
+				"username": "kazhuravlev",
+				"password": "example"
+			}
+		]
+	},
+	"acls": [
 		{
-			"username": "kazhuravlev",
-			"password": "example",
-			"acls": [
-				{
-					"op": "select",
-					"target": "local-1",
-					"tbl": "public.clients",
-					"allow": true
-				},
-				{
-					"op": "insert",
-					"target": "local-1",
-					"tbl": "public.clients",
-					"allow": true
-				}
-			]
+			"user": "ka",
+			"op": "select",
+			"target": "local-1",
+			"tbl": "public.clients",
+			"allow": true
+		},
+		{
+			"user": "ka",
+			"op": "insert",
+			"target": "local-1",
+			"tbl": "public.clients",
+			"allow": true
 		}
 	]
 }
