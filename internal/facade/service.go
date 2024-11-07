@@ -206,7 +206,7 @@ func (s *Service) postAuth(c echo.Context) error {
 func (*Service) logout(c echo.Context) error {
 	sess, err := session.Get(keySession, c)
 	if err != nil {
-		return c.Redirect(http.StatusSeeOther, "/")
+		return fmt.Errorf("get session: %w", err)
 	}
 
 	sess.Options = &sessions.Options{ //nolint:exhaustruct
