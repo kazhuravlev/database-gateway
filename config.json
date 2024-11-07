@@ -79,25 +79,28 @@
 		}
 	],
 	"users": {
-		"provider": "config",
-		"configuration": [
-			{
-				"id": "ka",
-				"username": "kazhuravlev",
-				"password": "example"
-			}
-		]
+		"provider": "oidc",
+		"configuration": {
+			"client_id": "example-app",
+			"client_secret": "example-app-secret",
+			"issuer_url": "http://localhost:5556",
+			"redirect_url": "http://localhost:8080/auth/callback",
+			"scopes": [
+				"email",
+				"profile"
+			]
+		}
 	},
 	"acls": [
 		{
-			"user": "ka",
+			"user": "test@example.com",
 			"op": "select",
 			"target": "local-1",
 			"tbl": "public.clients",
 			"allow": true
 		},
 		{
-			"user": "ka",
+			"user": "test@example.com",
 			"op": "insert",
 			"target": "local-1",
 			"tbl": "public.clients",

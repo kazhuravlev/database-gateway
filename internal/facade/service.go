@@ -186,7 +186,7 @@ func (s *Service) getAuthCallback(c echo.Context) error {
 
 	code := c.Request().URL.Query().Get("code")
 
-	user, err := s.opts.app.CompleteOIDC(c.Request().Context(), code)
+	user, expiry, err := s.opts.app.CompleteOIDC(c.Request().Context(), code)
 	if err != nil {
 		return fmt.Errorf("complete oidc: %w", err)
 	}
@@ -198,7 +198,7 @@ func (s *Service) getAuthCallback(c echo.Context) error {
 
 	sess.Options = &sessions.Options{ //nolint:exhaustruct
 		Path:     "/",
-		MaxAge:   int(time.Hour.Seconds()),
+		MaxAge:   int(expiry.Sub(time.Now()).Seconds()),
 		HttpOnly: true,
 	}
 	sess.Values[keyUserID] = *user

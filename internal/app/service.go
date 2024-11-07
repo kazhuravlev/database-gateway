@@ -256,35 +256,36 @@ func (s *Service) InitOIDC(_ context.Context) (string, error) {
 	return s.oauthCfg.AuthCodeURL(state), nil
 }
 
-func (s *Service) CompleteOIDC(ctx context.Context, code string) (*structs.User, error) {
+func (s *Service) CompleteOIDC(ctx context.Context, code string) (*structs.User, time.Time, error) {
 	if s.oauthCfg == nil {
-		return nil, errors.New("not available for this provider") //nolint:err113
+		return nil, time.Time{}, errors.New("not available for this provider") //nolint:err113
 	}
 
 	token, err := s.oauthCfg.Exchange(ctx, code)
 	if err != nil {
-		return nil, fmt.Errorf("exchange token: %w", err)
+		return nil, time.Time{}, fmt.Errorf("exchange token: %w", err)
 	}
 
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
-		return nil, errors.New("id_token not found in response") //nolint:err113
+		return nil, time.Time{}, errors.New("id_token not found in response") //nolint:err113
 	}
 
 	idToken, err := s.oidcProvider.Verifier(&oidc.Config{ClientID: s.oauthCfg.ClientID}).Verify(ctx, rawIDToken) //nolint:exhaustruct
 	if err != nil {
-		return nil, fmt.Errorf("verify id_token: %w", err)
+		return nil, time.Time{}, fmt.Errorf("verify id_token: %w", err)
 	}
 
 	var claims struct {
-		Email string `json:"email"`
+		Email             string `json:"email"`
+		PreferredUsername string `json:"preferred_username"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("parse id_token claims: %w", err)
+		return nil, time.Time{}, fmt.Errorf("parse id_token claims: %w", err)
 	}
 
 	return &structs.User{
 		ID:       config.UserID(claims.Email),
-		Username: claims.Email,
-	}, nil
+		Username: just.If(claims.PreferredUsername != "", claims.PreferredUsername, claims.Email),
+	}, just.If(token.Expiry.IsZero(), time.Now().Add(15*time.Minute), token.Expiry), nil
 }
