@@ -8,7 +8,9 @@ Run commands to get a local dbgw instance with 3 postgres.
 git clone https://github.com/kazhuravlev/database-gateway.git
 cd database-gateway/example
 docker compose up -d
-open 'http://user:password@127.0.0.1:8080'
+open 'http://127.0.0.1:8080'
+# Username: test@example.com
+# Password: password
 ```
 
 You will see a 3 postgres instances (`local-1`, `local-2`, `local-3`): ![pic1_instances.png](example/pic1_instances.png)

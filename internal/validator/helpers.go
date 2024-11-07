@@ -59,6 +59,7 @@ func GetColumnNames(req tree.NodeFormatter) ([]string, error) {
 
 	cols := just.SliceMap(colItems.Res(), func(col *tree.UnresolvedName) string {
 		starExp = starExp || col.Star
+
 		return col.String()
 	})
 

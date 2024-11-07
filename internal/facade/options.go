@@ -24,6 +24,8 @@ import (
 
 //go:generate toolset run options-gen -from-struct=Options
 type Options struct {
-	logger *slog.Logger `option:"mandatory" validate:"required"`
-	app    *app.Service `option:"mandatory" validate:"required"`
+	logger       *slog.Logger `option:"mandatory" validate:"required"`
+	app          *app.Service `option:"mandatory" validate:"required"`
+	cookieSecret string       `option:"mandatory" validate:"required"`
+	port         int          `option:"mandatory" validate:"required"`
 }

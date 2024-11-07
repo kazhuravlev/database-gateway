@@ -22,7 +22,10 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
+	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -31,6 +34,7 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/kazhuravlev/just"
 	"github.com/labstack/gommon/log"
+	"golang.org/x/oauth2"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -39,36 +43,90 @@ type Service struct {
 	opts Options
 
 	connsMu *sync.RWMutex
-	conns   map[string]*pgxpool.Pool
+	conns   map[config.TargetID]*pgxpool.Pool
+	// NOTE: can be nil (depends on [Options.cfg.Users.Provider])
+	oauthCfg     *oauth2.Config
+	oidcProvider *oidc.Provider
 }
 
-func New(opts Options) (*Service, error) {
-	return &Service{opts: opts, connsMu: new(sync.RWMutex), conns: make(map[string]*pgxpool.Pool)}, nil
-}
-
-func (s *Service) AuthUser(ctx context.Context, username, password string) (string, error) {
-	for i := range s.opts.cfg.Users {
-		user := s.opts.cfg.Users[i]
-		if user.Username == username && user.Password == password {
-			return user.Username, nil
-		}
+func New(opts Options) (*Service, error) { //nolint:gocritic
+	if err := opts.Validate(); err != nil {
+		return nil, fmt.Errorf("bad configuration: %w", err)
 	}
 
-	return "", fmt.Errorf("user not exists: %w", ErrNotFound)
+	var oidcProvider *oidc.Provider
+	var oauthCfg *oauth2.Config
+	if oidcCfg, ok := opts.cfg.Users.Provider.(config.UsersProviderOIDC); ok {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:mnd
+		defer cancel()
+
+		provider, err := oidc.NewProvider(ctx, oidcCfg.IssuerURL)
+		if err != nil {
+			return nil, fmt.Errorf("init provider: %w", err)
+		}
+
+		oauthCfg = &oauth2.Config{
+			ClientID:     oidcCfg.ClientID,
+			ClientSecret: oidcCfg.ClientSecret,
+			Endpoint:     provider.Endpoint(),
+			RedirectURL:  oidcCfg.RedirectURL,
+			Scopes:       append([]string{oidc.ScopeOpenID}, oidcCfg.Scopes...),
+		}
+		oidcProvider = provider
+	}
+
+	return &Service{
+		opts:         opts,
+		connsMu:      new(sync.RWMutex),
+		conns:        make(map[config.TargetID]*pgxpool.Pool),
+		oidcProvider: oidcProvider,
+		oauthCfg:     oauthCfg,
+	}, nil
 }
 
-func (s *Service) GetUserByUsername(ctx context.Context, id string) (*config.User, error) {
-	for i := range s.opts.cfg.Users {
-		user := s.opts.cfg.Users[i]
-		if user.Username == id {
-			return &user, nil
-		}
+func (s *Service) findUser(fn func(user config.User) bool) (*config.User, error) {
+	users, ok := s.opts.cfg.Users.Provider.(config.UsersProviderConfig)
+	if !ok {
+		return nil, errors.New("not implemented") //nolint:err113
+	}
+
+	user := just.SliceFindFirst(users, func(_ int, user config.User) bool {
+		return fn(user)
+	})
+
+	if user, ok := user.ValueOk(); ok {
+		return &user, nil
 	}
 
 	return nil, fmt.Errorf("user not exists: %w", ErrNotFound)
 }
 
-func (s *Service) GetTargets(ctx context.Context) ([]structs.Server, error) {
+func (s *Service) AuthUser(_ context.Context, username, password string) (*structs.User, error) {
+	user, err := s.findUser(func(user config.User) bool {
+		return user.Username == username && user.Password == password
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &structs.User{
+		ID:       user.ID,
+		Username: user.Username,
+	}, nil
+}
+
+func (s *Service) GetUserByID(_ context.Context, id config.UserID) (*config.User, error) {
+	user, err := s.findUser(func(user config.User) bool {
+		return user.ID == id
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (s *Service) GetTargets(_ context.Context) ([]structs.Server, error) {
 	servers := just.SliceMap(s.opts.cfg.Targets, func(t config.Target) structs.Server {
 		return structs.Server{
 			ID:     t.ID,
@@ -80,7 +138,7 @@ func (s *Service) GetTargets(ctx context.Context) ([]structs.Server, error) {
 	return servers, nil
 }
 
-func (s *Service) GetTargetByID(ctx context.Context, id string) (*config.Target, error) {
+func (s *Service) GetTargetByID(_ context.Context, id config.TargetID) (*config.Target, error) {
 	for i := range s.opts.cfg.Targets {
 		target := s.opts.cfg.Targets[i]
 		if target.ID == id {
@@ -91,20 +149,24 @@ func (s *Service) GetTargetByID(ctx context.Context, id string) (*config.Target,
 	return nil, fmt.Errorf("target not found: %w", ErrNotFound)
 }
 
-func (s *Service) RunQuery(ctx context.Context, username, srvID, query string) (*structs.QTable, error) {
-	user, err := s.GetUserByUsername(ctx, username)
-	if err != nil {
-		return nil, fmt.Errorf("get user by username: %w", err)
+func (s *Service) GetACLs(_ context.Context, uID config.UserID, tID config.TargetID) []config.ACL {
+	var res []config.ACL
+	for _, acl := range s.opts.cfg.ACLs {
+		if acl.Target == tID && acl.User == uID {
+			res = append(res, acl)
+		}
 	}
 
+	return res
+}
+
+func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (*structs.QTable, error) {
 	srv, err := s.GetTargetByID(ctx, srvID)
 	if err != nil {
 		return nil, fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
-		return acl.Target == srvID
-	})
+	acls := s.GetACLs(ctx, userID, srvID)
 
 	if err := validator.IsAllowed(srv.Tables, acls, query); err != nil {
 		log.Error("err", err.Error())
@@ -143,7 +205,7 @@ func (s *Service) RunQuery(ctx context.Context, username, srvID, query string) (
 	}, nil
 }
 
-func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (*pgxpool.Pool, error) {
+func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (*pgxpool.Pool, error) { //nolint:gocritic
 	{
 		s.connsMu.RLock()
 		pool, ok := s.conns[target.ID]
@@ -154,7 +216,7 @@ func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (
 		}
 	}
 
-	s.opts.logger.Info("connect to target", slog.String("target", target.ID))
+	s.opts.logger.Info("connect to target", slog.String("target", string(target.ID)))
 	pgCfg := target.Connection
 
 	urlExample := fmt.Sprintf(
@@ -178,4 +240,52 @@ func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (
 	s.connsMu.Unlock()
 
 	return dbpool, nil
+}
+
+func (s *Service) AuthType() config.AuthType {
+	return s.opts.cfg.Users.Provider.Type()
+}
+
+func (s *Service) InitOIDC(_ context.Context) (string, error) {
+	if s.oauthCfg == nil {
+		return "", errors.New("not available for this provider") //nolint:err113
+	}
+
+	state := just.Must(uuid.NewUUID()).String()
+
+	return s.oauthCfg.AuthCodeURL(state), nil
+}
+
+func (s *Service) CompleteOIDC(ctx context.Context, code string) (*structs.User, time.Time, error) {
+	if s.oauthCfg == nil {
+		return nil, time.Time{}, errors.New("not available for this provider") //nolint:err113
+	}
+
+	token, err := s.oauthCfg.Exchange(ctx, code)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("exchange token: %w", err)
+	}
+
+	rawIDToken, ok := token.Extra("id_token").(string)
+	if !ok {
+		return nil, time.Time{}, errors.New("id_token not found in response") //nolint:err113
+	}
+
+	idToken, err := s.oidcProvider.Verifier(&oidc.Config{ClientID: s.oauthCfg.ClientID}).Verify(ctx, rawIDToken) //nolint:exhaustruct
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("verify id_token: %w", err)
+	}
+
+	var claims struct {
+		Email             string `json:"email"`
+		PreferredUsername string `json:"preferred_username"`
+	}
+	if err := idToken.Claims(&claims); err != nil {
+		return nil, time.Time{}, fmt.Errorf("parse id_token claims: %w", err)
+	}
+
+	return &structs.User{
+		ID:       config.UserID(claims.Email),
+		Username: just.If(claims.PreferredUsername != "", claims.PreferredUsername, claims.Email),
+	}, just.If(token.Expiry.IsZero(), time.Now().Add(15*time.Minute), token.Expiry), nil
 }

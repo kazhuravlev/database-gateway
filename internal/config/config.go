@@ -17,8 +17,32 @@
 package config
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/kazhuravlev/just"
+)
+
+type (
+	UserID   string
+	TargetID string
+	AuthType string
+)
+
+const (
+	AuthTypeConfig AuthType = "config"
+	AuthTypeOIDC   AuthType = "oidc"
+)
+
+type Op string
+
+const (
+	OpSelect Op = "select"
+	OpInsert Op = "insert"
+	OpUpdate Op = "update"
+	OpDelete Op = "delete"
 )
 
 type TargetTable struct {
@@ -37,45 +61,112 @@ type Connection struct {
 }
 
 type Target struct {
-	ID         string        `json:"id"`
+	ID         TargetID      `json:"id"`
 	Type       string        `json:"type"`
 	Connection Connection    `json:"connection"`
 	Tables     []TargetTable `json:"tables"`
 }
 
-type Op string
-
-const (
-	OpSelect Op = "select"
-	OpInsert Op = "insert"
-	OpUpdate Op = "update"
-	OpDelete Op = "delete"
-)
-
 type ACL struct {
-	Op     Op     `json:"op"`
-	Target string `json:"target"`
-	Tbl    string `json:"tbl"`
-	Allow  bool   `json:"allow"`
+	User   UserID   `json:"user"`
+	Op     Op       `json:"op"`
+	Target TargetID `json:"target"`
+	Tbl    string   `json:"tbl"`
+	Allow  bool     `json:"allow"`
 }
 
 type User struct {
+	ID       UserID `json:"id"`
 	Username string `json:"username"`
 	Password string `json:"password"`
-	Acls     []ACL  `json:"acls"`
+}
+
+type IProvider interface {
+	isProviderConfiguration()
+	Type() AuthType
+}
+
+type UsersConfig struct {
+	Provider IProvider
+}
+
+func (u *UsersConfig) UnmarshalJSON(data []byte) error {
+	var cfg struct {
+		Provider string `json:"provider"`
+	}
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return fmt.Errorf("unmarshal users config: %w", err)
+	}
+
+	switch AuthType(cfg.Provider) {
+	default:
+		return errors.New("unknown users provider") //nolint:err113
+	case AuthTypeConfig:
+		var res struct {
+			Configuration UsersProviderConfig `json:"configuration"`
+		}
+		if err := json.Unmarshal(data, &res); err != nil {
+			return fmt.Errorf("unmarshal users config: %w", err)
+		}
+		*u = UsersConfig{
+			Provider: res.Configuration,
+		}
+	case AuthTypeOIDC:
+		var res struct {
+			Configuration UsersProviderOIDC `json:"configuration"`
+		}
+		if err := json.Unmarshal(data, &res); err != nil {
+			return fmt.Errorf("unmarshal users oidc: %w", err)
+		}
+		*u = UsersConfig{
+			Provider: res.Configuration,
+		}
+	}
+
+	return nil
+}
+
+type UsersProviderConfig []User
+
+func (UsersProviderConfig) isProviderConfiguration() {}
+
+func (UsersProviderConfig) Type() AuthType {
+	return AuthTypeConfig
+}
+
+type UsersProviderOIDC struct {
+	ClientID     string   `json:"client_id"`
+	ClientSecret string   `json:"client_secret"`
+	IssuerURL    string   `json:"issuer_url"`
+	RedirectURL  string   `json:"redirect_url"`
+	Scopes       []string `json:"scopes"`
+}
+
+func (UsersProviderOIDC) isProviderConfiguration() {}
+
+func (UsersProviderOIDC) Type() AuthType {
+	return AuthTypeOIDC
+}
+
+type FacadeConfig struct {
+	Port         int    `json:"port"`
+	CookieSecret string `json:"jwt_secret"`
 }
 
 type Config struct {
-	Targets []Target `json:"targets"`
-	Users   []User   `json:"users"`
+	Targets []Target     `json:"targets"`
+	Users   UsersConfig  `json:"users"`
+	ACLs    []ACL        `json:"acls"`
+	Facade  FacadeConfig `json:"facade"`
 }
 
-type hTable struct {
-	target string
-	table  string
-}
+func (c *Config) Validate() error {
+	type hTable struct {
+		target TargetID
+		table  string
+	}
 
-func (c Config) Validate() error {
+	// Check tht each target have table names with schema prefix
 	idx := make(map[hTable]struct{}, len(c.Targets)*2)
 	for i := range c.Targets {
 		target := c.Targets[i]
@@ -92,14 +183,26 @@ func (c Config) Validate() error {
 		}
 	}
 
-	for _, u := range c.Users {
-		for _, acl := range u.Acls {
-			key := hTable{
-				target: acl.Target,
-				table:  acl.Tbl,
-			}
-			if _, ok := idx[key]; !ok {
-				return fmt.Errorf("ACL (%#v) references for not existent table", acl) //nolint:err113
+	// Check that all acls linked with exists targets
+	for _, acl := range c.ACLs {
+		key := hTable{
+			target: acl.Target,
+			table:  acl.Tbl,
+		}
+		if _, ok := idx[key]; !ok {
+			return fmt.Errorf("ACL (%#v) references for not existent table", acl) //nolint:err113
+		}
+	}
+
+	// Check that acl relates to exists user (for config-based provider)
+	if users, ok := c.Users.Provider.(UsersProviderConfig); ok {
+		userMap := just.Slice2MapFn(users, func(_ int, user User) (UserID, struct{}) {
+			return user.ID, struct{}{}
+		})
+
+		for _, acl := range c.ACLs {
+			if !just.MapContainsKey(userMap, acl.User) {
+				return fmt.Errorf("ACL (%#v) targets to unknown user", acl) //nolint:err113
 			}
 		}
 	}

@@ -78,24 +78,37 @@
 			]
 		}
 	],
-	"users": [
-		{
-			"username": "kazhuravlev",
-			"password": "example",
-			"acls": [
-				{
-					"op": "select",
-					"target": "local-1",
-					"tbl": "public.clients",
-					"allow": true
-				},
-				{
-					"op": "insert",
-					"target": "local-1",
-					"tbl": "public.clients",
-					"allow": true
-				}
+	"users": {
+		"provider": "oidc",
+		"configuration": {
+			"client_id": "example-app",
+			"client_secret": "example-app-secret",
+			"issuer_url": "http://localhost:5556",
+			"redirect_url": "http://localhost:8080/auth/callback",
+			"scopes": [
+				"email",
+				"profile"
 			]
 		}
-	]
+	},
+	"acls": [
+		{
+			"user": "test@example.com",
+			"op": "select",
+			"target": "local-1",
+			"tbl": "public.clients",
+			"allow": true
+		},
+		{
+			"user": "test@example.com",
+			"op": "insert",
+			"target": "local-1",
+			"tbl": "public.clients",
+			"allow": true
+		}
+	],
+	"facade": {
+		"port": 8080,
+		"jwt_secret": "secret"
+	}
 }

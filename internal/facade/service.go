@@ -19,31 +19,42 @@ package facade
 import (
 	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
-	"github.com/kazhuravlev/database-gateway/internal/facade/static"
-
 	"github.com/a-h/templ"
-
+	"github.com/gorilla/sessions"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/facade/static"
 	"github.com/kazhuravlev/database-gateway/internal/facade/templates"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/just"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-const ctxUser = "c-user"
+const (
+	ctxUser    = "c-user"
+	keySession = "session"
+	keyUserID  = "uid"
+)
 
 type Service struct {
 	opts Options
 }
 
 func New(opts Options) (*Service, error) {
+	gob.Register(structs.User{}) //nolint:exhaustruct
+	gob.Register(config.UserID(""))
+
 	if err := opts.Validate(); err != nil {
 		return nil, fmt.Errorf("bad configuration: %w", err)
 	}
@@ -51,57 +62,86 @@ func New(opts Options) (*Service, error) {
 	return &Service{opts: opts}, nil
 }
 
-func (s *Service) Run(ctx context.Context) error {
+func (s *Service) Run(_ context.Context) error {
 	echoInst := echo.New()
 	echoInst.HideBanner = true
 	echoInst.Use(middleware.Recover())
-	echoInst.Use(middleware.Logger())
-	echoInst.Use(middleware.BasicAuthWithConfig(middleware.BasicAuthConfig{
-		Skipper: func(_ echo.Context) bool {
-			return false
-		},
-		Validator: func(username, password string, c echo.Context) (bool, error) {
-			id, err := s.opts.app.AuthUser(c.Request().Context(), username, password)
-			if err != nil {
-				return false, fmt.Errorf("not authenticated: %w", err)
-			}
-
-			user, err := s.opts.app.GetUserByUsername(c.Request().Context(), id)
-			if err != nil {
-				return false, fmt.Errorf("get user by id: %w", err)
-			}
-
-			c.Set(ctxUser, *user)
-
-			return true, nil
-		},
-		Realm: "",
+	echoInst.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Skipper: middleware.DefaultSkipper,
+		Format: `${time_rfc3339_nano} ${error} ` +
+			`${method} ${uri} ` +
+			`${status} ${latency_human} ` + "\n",
+		CustomTimeFormat: "2006-01-02 15:04:05.00000",
+		CustomTagFunc:    nil,
+		Output:           nil,
 	}))
+	echoInst.Use(session.Middleware(sessions.NewCookieStore([]byte(s.opts.cookieSecret))))
+
+	echoInst.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			path := c.Request().URL.Path
+			if strings.HasPrefix(path, "/static") {
+				return next(c)
+			}
+			if strings.HasPrefix(path, "/auth") {
+				return next(c)
+			}
+			if strings.HasPrefix(path, "/logout") {
+				return next(c)
+			}
+
+			sess, err := session.Get(keySession, c)
+			if err != nil {
+				return fmt.Errorf("have no session: %w", err)
+			}
+
+			user, ok := sess.Values[keyUserID]
+			if !ok {
+				return c.Redirect(http.StatusSeeOther, "/auth")
+			}
+
+			strUser, ok := user.(structs.User)
+			if !ok {
+				return c.Redirect(http.StatusSeeOther, "/logout")
+			}
+
+			c.Set(ctxUser, strUser)
+
+			return next(c)
+		}
+	})
 
 	echoInst.StaticFS("/static", static.Files)
 
 	echoInst.GET("/", func(c echo.Context) error {
-		return c.Redirect(http.StatusTemporaryRedirect, "/servers")
+		return c.Redirect(http.StatusSeeOther, "/servers")
 	})
 	echoInst.GET("/servers", s.getServers)
 	echoInst.GET("/servers/:id", s.getServer)
 	echoInst.POST("/servers/:id", s.runQuery)
 
+	echoInst.GET("/auth", s.getAuth)
+	echoInst.GET("/auth/callback", s.getAuthCallback)
+	echoInst.POST("/auth", s.postAuth)
+
+	echoInst.GET("/logout", s.logout)
+
 	echoInst.GET("/*", func(c echo.Context) error {
-		return c.Redirect(http.StatusTemporaryRedirect, "/")
+		return c.Redirect(http.StatusSeeOther, "/")
 	})
 
-	echoInst.Logger.Fatal(echoInst.Start(":8080"))
+	echoInst.Logger.Fatal(echoInst.Start(":" + strconv.Itoa(s.opts.port)))
 
 	return nil
 }
 
 func (s *Service) getServers(c echo.Context) error {
-	user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
 	servers, err := s.opts.app.GetTargets(c.Request().Context())
 	if err != nil {
 		s.opts.logger.Error("get targets", slog.String("error", err.Error()))
+
 		return c.String(http.StatusInternalServerError, "the sky was falling")
 	}
 
@@ -109,43 +149,138 @@ func (s *Service) getServers(c echo.Context) error {
 }
 
 func (s *Service) getServer(c echo.Context) error {
-	user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), c.Param("id"))
+	tID := config.TargetID(c.Param("id"))
+	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), tID)
 	if err != nil {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
-		return acl.Target == srv.ID
-	})
+	acls := s.opts.app.GetACLs(c.Request().Context(), user.ID, tID)
 
 	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, ``, nil, nil))
 }
 
-func (s *Service) runQuery(c echo.Context) error {
-	user := c.Get(ctxUser).(config.User) //nolint:forcetypeassert
+func (s *Service) getAuth(c echo.Context) error {
+	switch s.opts.app.AuthType() {
+	default:
+		// TODO: choose a better way to show an error
+		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType()) //nolint:err113
+	case config.AuthTypeConfig:
+		return Render(c, http.StatusOK, templates.PageAuth(nil))
+	case config.AuthTypeOIDC:
+		authURL, err := s.opts.app.InitOIDC(c.Request().Context())
+		if err != nil {
+			return fmt.Errorf("init oidc: %w", err)
+		}
 
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), c.Param("id"))
+		return c.Redirect(http.StatusSeeOther, authURL)
+	}
+}
+
+func (s *Service) getAuthCallback(c echo.Context) error {
+	if s.opts.app.AuthType() != config.AuthTypeOIDC {
+		return errors.New("not available") //nolint:err113
+	}
+
+	code := c.Request().URL.Query().Get("code")
+
+	user, expiry, err := s.opts.app.CompleteOIDC(c.Request().Context(), code)
+	if err != nil {
+		return fmt.Errorf("complete oidc: %w", err)
+	}
+
+	sess, err := session.Get(keySession, c)
+	if err != nil {
+		return fmt.Errorf("have no session: %w", err)
+	}
+
+	sess.Options = &sessions.Options{ //nolint:exhaustruct
+		Path:     "/",
+		MaxAge:   int(expiry.Sub(time.Now()).Seconds()),
+		HttpOnly: true,
+	}
+	sess.Values[keyUserID] = *user
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
+		return fmt.Errorf("save session: %w", err)
+	}
+
+	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+func (s *Service) postAuth(c echo.Context) error {
+	if s.opts.app.AuthType() != config.AuthTypeConfig {
+		// TODO: choose a better way to show an error
+		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType()) //nolint:err113
+	}
+
+	ctx := c.Request().Context()
+
+	user, err := s.opts.app.AuthUser(ctx, c.FormValue("username"), c.FormValue("password"))
+	if err != nil {
+		return Render(c, http.StatusOK, templates.PageAuth(err))
+	}
+
+	sess, err := session.Get(keySession, c)
+	if err != nil {
+		return fmt.Errorf("have no session: %w", err)
+	}
+
+	sess.Options = &sessions.Options{ //nolint:exhaustruct
+		Path:     "/",
+		MaxAge:   int(time.Hour.Seconds()),
+		HttpOnly: true,
+	}
+	sess.Values[keyUserID] = *user
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
+		return fmt.Errorf("save session: %w", err)
+	}
+
+	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+func (*Service) logout(c echo.Context) error {
+	sess, err := session.Get(keySession, c)
+	if err != nil {
+		return fmt.Errorf("get session: %w", err)
+	}
+
+	sess.Options = &sessions.Options{ //nolint:exhaustruct
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+	}
+	delete(sess.Values, keyUserID)
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
+		return fmt.Errorf("save session: %w", err)
+	}
+
+	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+func (s *Service) runQuery(c echo.Context) error {
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
+
+	tID := config.TargetID(c.Param("id"))
+	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), tID)
 	if err != nil {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
 	params, err := c.FormParams()
 	if err != nil {
-		return c.Redirect(http.StatusTemporaryRedirect, "/")
+		return c.Redirect(http.StatusSeeOther, "/")
 	}
 
 	query := params.Get("query")
 	format := params.Get("format")
 
-	acls := just.SliceFilter(user.Acls, func(acl config.ACL) bool {
-		return acl.Target == srv.ID
-	})
+	acls := s.opts.app.GetACLs(c.Request().Context(), user.ID, tID)
 
-	qTbl, err := s.opts.app.RunQuery(c.Request().Context(), user.Username, srv.ID, query)
+	qTbl, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
 	if err != nil {
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, query, nil, errors.New("unknown format"))) //nolint:err113
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, query, nil, err)) //nolint:err113
 	}
 
 	switch format {

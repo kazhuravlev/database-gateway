@@ -4,7 +4,7 @@
 			"id": "local-1",
 			"type": "postgres",
 			"connection": {
-				"host": "postgres1",
+				"host": "127.0.0.1",
 				"port": 5432,
 				"user": "pg01",
 				"password": "pg01",
@@ -35,8 +35,8 @@
 			"id": "local-2",
 			"type": "postgres",
 			"connection": {
-				"host": "postgres2",
-				"port": 5432,
+				"host": "127.0.0.1",
+				"port": 5433,
 				"user": "pg02",
 				"password": "pg02",
 				"db": "pg02",
@@ -58,8 +58,8 @@
 			"id": "local-3",
 			"type": "postgres",
 			"connection": {
-				"host": "postgres3",
-				"port": 5432,
+				"host": "127.0.0.1",
+				"port": 5434,
 				"user": "pg03",
 				"password": "pg03",
 				"db": "pg03",
@@ -78,24 +78,37 @@
 			]
 		}
 	],
-	"users": [
-		{
-			"username": "user",
-			"password": "password",
-			"acls": [
-				{
-					"op": "select",
-					"target": "local-1",
-					"tbl": "public.clients",
-					"allow": true
-				},
-				{
-					"op": "insert",
-					"target": "local-1",
-					"tbl": "public.clients",
-					"allow": true
-				}
+	"users": {
+		"provider": "oidc",
+		"configuration": {
+			"client_id": "example-app",
+			"client_secret": "example-app-secret",
+			"issuer_url": "http://localhost:5556",
+			"redirect_url": "http://localhost:8080/auth/callback",
+			"scopes": [
+				"email",
+				"profile"
 			]
 		}
-	]
+	},
+	"acls": [
+		{
+			"user": "test@example.com",
+			"op": "select",
+			"target": "local-1",
+			"tbl": "public.clients",
+			"allow": true
+		},
+		{
+			"user": "test@example.com",
+			"op": "insert",
+			"target": "local-1",
+			"tbl": "public.clients",
+			"allow": true
+		}
+	],
+	"facade": {
+		"port": 8080,
+		"jwt_secret": "secret"
+	}
 }

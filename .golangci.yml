@@ -45,6 +45,9 @@ linters:
 
 linters-settings:
   varnamelen:
+    ignore-names:
+      - 'ok'
+      - 'fn'
     ignore-decls:
       - 'c echo.Context'
   tagliatelle:

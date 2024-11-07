@@ -91,8 +91,10 @@ func TestGetColumnNames(t *testing.T) {
 
 	for _, row := range table {
 		t.Run(row.name, func(t *testing.T) {
+			t.Parallel()
+
 			stmts, err := parser.Parse(row.sql)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			require.Len(t, stmts, 1)
 
 			cols, err := validator.GetColumnNames(stmts[0].AST)

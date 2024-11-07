@@ -19,7 +19,7 @@ package structs
 import "github.com/kazhuravlev/database-gateway/internal/config"
 
 type Server struct {
-	ID     string
+	ID     config.TargetID
 	Type   string
 	Tables []config.TargetTable
 }
@@ -27,4 +27,9 @@ type Server struct {
 type QTable struct {
 	Headers []string
 	Rows    [][]string
+}
+
+type User struct {
+	ID       config.UserID
+	Username string
 }

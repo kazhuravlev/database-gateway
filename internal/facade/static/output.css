@@ -605,6 +605,10 @@ video {
   width: 100%;
 }
 
+.flex-auto {
+  flex: 1 1 auto;
+}
+
 .border-collapse {
   border-collapse: collapse;
 }
@@ -627,6 +631,10 @@ video {
 
 .justify-start {
   justify-content: flex-start;
+}
+
+.justify-between {
+  justify-content: space-between;
 }
 
 .gap-1 {
@@ -730,6 +738,11 @@ video {
 
 .font-bold {
   font-weight: 700;
+}
+
+.text-black {
+  --tw-text-opacity: 1;
+  color: rgb(0 0 0 / var(--tw-text-opacity));
 }
 
 .text-neutral-900 {
