@@ -77,6 +77,9 @@ func (s *Service) Run(_ context.Context) error {
 			if strings.HasPrefix(path, "/auth") {
 				return next(c)
 			}
+			if strings.HasPrefix(path, "/logout") {
+				return next(c)
+			}
 
 			sess, err := session.Get(keySession, c)
 			if err != nil {
