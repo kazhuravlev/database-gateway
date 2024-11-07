@@ -209,39 +209,34 @@ func (s *Service) getAuthCallback(c echo.Context) error {
 }
 
 func (s *Service) postAuth(c echo.Context) error {
-	ctx := c.Request().Context()
-
-	switch s.opts.app.AuthType() {
-	default:
+	if s.opts.app.AuthType() != config.AuthTypeConfig {
 		// TODO: choose a better way to show an error
 		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType()) //nolint:err113
-	case config.AuthTypeConfig:
-		user, err := s.opts.app.AuthUser(ctx, c.FormValue("username"), c.FormValue("password"))
-		if err != nil {
-			return Render(c, http.StatusOK, templates.PageAuth(err))
-		}
-
-		sess, err := session.Get(keySession, c)
-		if err != nil {
-			return fmt.Errorf("have no session: %w", err)
-		}
-
-		sess.Options = &sessions.Options{ //nolint:exhaustruct
-			Path:     "/",
-			MaxAge:   int(time.Hour.Seconds()),
-			HttpOnly: true,
-		}
-		sess.Values[keyUserID] = *user
-		if err := sess.Save(c.Request(), c.Response()); err != nil {
-			return fmt.Errorf("save session: %w", err)
-		}
-
-		return c.Redirect(http.StatusSeeOther, "/")
-	case config.AuthTypeOIDC:
-		panic("implement me")
-
-		return nil
 	}
+
+	ctx := c.Request().Context()
+
+	user, err := s.opts.app.AuthUser(ctx, c.FormValue("username"), c.FormValue("password"))
+	if err != nil {
+		return Render(c, http.StatusOK, templates.PageAuth(err))
+	}
+
+	sess, err := session.Get(keySession, c)
+	if err != nil {
+		return fmt.Errorf("have no session: %w", err)
+	}
+
+	sess.Options = &sessions.Options{ //nolint:exhaustruct
+		Path:     "/",
+		MaxAge:   int(time.Hour.Seconds()),
+		HttpOnly: true,
+	}
+	sess.Values[keyUserID] = *user
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
+		return fmt.Errorf("save session: %w", err)
+	}
+
+	return c.Redirect(http.StatusSeeOther, "/")
 }
 
 func (*Service) logout(c echo.Context) error {
