@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -120,7 +121,7 @@ func (s *Service) Run(_ context.Context) error {
 		return c.Redirect(http.StatusSeeOther, "/")
 	})
 
-	echoInst.Logger.Fatal(echoInst.Start(":8080"))
+	echoInst.Logger.Fatal(echoInst.Start(":" + strconv.Itoa(s.opts.port)))
 
 	return nil
 }
