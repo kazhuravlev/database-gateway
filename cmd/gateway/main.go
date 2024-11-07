@@ -55,7 +55,7 @@ func runApp(ctx context.Context) error {
 		ReplaceAttr: nil,
 	}))
 
-	appInst, err := app.New(app.NewOptions(logger, *cfg))
+	appInst, err := app.New(app.NewOptions(logger, *cfg)) //nolint:contextcheck
 	if err != nil {
 		return fmt.Errorf("create app: %w", err)
 	}

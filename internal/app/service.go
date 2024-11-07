@@ -26,8 +26,6 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
-	"golang.org/x/oauth2"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -36,6 +34,7 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/kazhuravlev/just"
 	"github.com/labstack/gommon/log"
+	"golang.org/x/oauth2"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -249,7 +248,7 @@ func (s *Service) AuthType() config.AuthType {
 
 func (s *Service) InitOIDC(_ context.Context) (string, error) {
 	if s.oauthCfg == nil {
-		return "", errors.New("not available for this provider")
+		return "", errors.New("not available for this provider") //nolint:err113
 	}
 
 	state := just.Must(uuid.NewUUID()).String()
@@ -259,7 +258,7 @@ func (s *Service) InitOIDC(_ context.Context) (string, error) {
 
 func (s *Service) CompleteOIDC(ctx context.Context, code string) (*structs.User, error) {
 	if s.oauthCfg == nil {
-		return nil, errors.New("not available for this provider")
+		return nil, errors.New("not available for this provider") //nolint:err113
 	}
 
 	token, err := s.oauthCfg.Exchange(ctx, code)
@@ -269,10 +268,10 @@ func (s *Service) CompleteOIDC(ctx context.Context, code string) (*structs.User,
 
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
-		return nil, fmt.Errorf("id_token not found in response")
+		return nil, errors.New("id_token not found in response") //nolint:err113
 	}
 
-	idToken, err := s.oidcProvider.Verifier(&oidc.Config{ClientID: s.oauthCfg.ClientID}).Verify(ctx, rawIDToken)
+	idToken, err := s.oidcProvider.Verifier(&oidc.Config{ClientID: s.oauthCfg.ClientID}).Verify(ctx, rawIDToken) //nolint:exhaustruct
 	if err != nil {
 		return nil, fmt.Errorf("verify id_token: %w", err)
 	}

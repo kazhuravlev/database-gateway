@@ -72,8 +72,9 @@ func (s *Service) Run(_ context.Context) error {
 			`${method} ${uri} ` +
 			`${status} ${latency_human} ` + "\n",
 		CustomTimeFormat: "2006-01-02 15:04:05.00000",
-	},
-	))
+		CustomTagFunc:    nil,
+		Output:           nil,
+	}))
 	echoInst.Use(session.Middleware(sessions.NewCookieStore([]byte(s.opts.cookieSecret))))
 
 	echoInst.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -169,18 +170,18 @@ func (s *Service) getAuth(c echo.Context) error {
 	case config.AuthTypeConfig:
 		return Render(c, http.StatusOK, templates.PageAuth(nil))
 	case config.AuthTypeOIDC:
-		authUrl, err := s.opts.app.InitOIDC(c.Request().Context())
+		authURL, err := s.opts.app.InitOIDC(c.Request().Context())
 		if err != nil {
 			return fmt.Errorf("init oidc: %w", err)
 		}
 
-		return c.Redirect(http.StatusSeeOther, authUrl)
+		return c.Redirect(http.StatusSeeOther, authURL)
 	}
 }
 
 func (s *Service) getAuthCallback(c echo.Context) error {
 	if s.opts.app.AuthType() != config.AuthTypeOIDC {
-		return errors.New("not available")
+		return errors.New("not available") //nolint:err113
 	}
 
 	code := c.Request().URL.Query().Get("code")
