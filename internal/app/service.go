@@ -20,8 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/google/uuid"
+	"golang.org/x/oauth2"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -40,10 +44,44 @@ type Service struct {
 
 	connsMu *sync.RWMutex
 	conns   map[config.TargetID]*pgxpool.Pool
+	// NOTE: can be nil (depends on [Options.cfg.Users.Provider])
+	oauthCfg     *oauth2.Config
+	oidcProvider *oidc.Provider
 }
 
 func New(opts Options) (*Service, error) { //nolint:gocritic
-	return &Service{opts: opts, connsMu: new(sync.RWMutex), conns: make(map[config.TargetID]*pgxpool.Pool)}, nil
+	if err := opts.Validate(); err != nil {
+		return nil, fmt.Errorf("bad configuration: %w", err)
+	}
+
+	var oidcProvider *oidc.Provider
+	var oauthCfg *oauth2.Config
+	if oidcCfg, ok := opts.cfg.Users.Provider.(config.UsersProviderOIDC); ok {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:mnd
+		defer cancel()
+
+		provider, err := oidc.NewProvider(ctx, oidcCfg.IssuerURL)
+		if err != nil {
+			return nil, fmt.Errorf("init provider: %w", err)
+		}
+
+		oauthCfg = &oauth2.Config{
+			ClientID:     oidcCfg.ClientID,
+			ClientSecret: oidcCfg.ClientSecret,
+			Endpoint:     provider.Endpoint(),
+			RedirectURL:  oidcCfg.RedirectURL,
+			Scopes:       append([]string{oidc.ScopeOpenID}, oidcCfg.Scopes...),
+		}
+		oidcProvider = provider
+	}
+
+	return &Service{
+		opts:         opts,
+		connsMu:      new(sync.RWMutex),
+		conns:        make(map[config.TargetID]*pgxpool.Pool),
+		oidcProvider: oidcProvider,
+		oauthCfg:     oauthCfg,
+	}, nil
 }
 
 func (s *Service) findUser(fn func(user config.User) bool) (*config.User, error) {
@@ -123,17 +161,12 @@ func (s *Service) GetACLs(_ context.Context, uID config.UserID, tID config.Targe
 }
 
 func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (*structs.QTable, error) {
-	user, err := s.GetUserByID(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("get user by id: %w", err)
-	}
-
 	srv, err := s.GetTargetByID(ctx, srvID)
 	if err != nil {
 		return nil, fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := s.GetACLs(ctx, user.ID, srvID)
+	acls := s.GetACLs(ctx, userID, srvID)
 
 	if err := validator.IsAllowed(srv.Tables, acls, query); err != nil {
 		log.Error("err", err.Error())
@@ -211,4 +244,47 @@ func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (
 
 func (s *Service) AuthType() config.AuthType {
 	return s.opts.cfg.Users.Provider.Type()
+}
+
+func (s *Service) InitOIDC(_ context.Context) (string, error) {
+	if s.oauthCfg == nil {
+		return "", errors.New("not available for this provider")
+	}
+
+	state := just.Must(uuid.NewUUID()).String()
+
+	return s.oauthCfg.AuthCodeURL(state), nil
+}
+
+func (s *Service) CompleteOIDC(ctx context.Context, code string) (*structs.User, error) {
+	if s.oauthCfg == nil {
+		return nil, errors.New("not available for this provider")
+	}
+
+	token, err := s.oauthCfg.Exchange(ctx, code)
+	if err != nil {
+		return nil, fmt.Errorf("exchange token: %w", err)
+	}
+
+	rawIDToken, ok := token.Extra("id_token").(string)
+	if !ok {
+		return nil, fmt.Errorf("id_token not found in response")
+	}
+
+	idToken, err := s.oidcProvider.Verifier(&oidc.Config{ClientID: s.oauthCfg.ClientID}).Verify(ctx, rawIDToken)
+	if err != nil {
+		return nil, fmt.Errorf("verify id_token: %w", err)
+	}
+
+	var claims struct {
+		Email string `json:"email"`
+	}
+	if err := idToken.Claims(&claims); err != nil {
+		return nil, fmt.Errorf("parse id_token claims: %w", err)
+	}
+
+	return &structs.User{
+		ID:       config.UserID(claims.Email),
+		Username: claims.Email,
+	}, nil
 }

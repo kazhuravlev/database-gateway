@@ -17,15 +17,12 @@
 package config
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/kazhuravlev/just"
-	"golang.org/x/oauth2"
 )
 
 type (
@@ -149,23 +146,6 @@ func (UsersProviderOIDC) isProviderConfiguration() {}
 
 func (UsersProviderOIDC) Type() AuthType {
 	return AuthTypeOIDC
-}
-
-func (u *UsersProviderOIDC) init(ctx context.Context) (*oauth2.Config, error) {
-	provider, err := oidc.NewProvider(ctx, u.IssuerURL)
-	if err != nil {
-		return nil, fmt.Errorf("get provider: %w", err)
-	}
-
-	oauth2Config := oauth2.Config{
-		ClientID:     u.ClientID,
-		ClientSecret: u.ClientSecret,
-		Endpoint:     provider.Endpoint(),
-		RedirectURL:  u.RedirectURL,
-		Scopes:       append([]string{oidc.ScopeOpenID}, u.Scopes...),
-	}
-
-	return &oauth2Config, nil
 }
 
 type FacadeConfig struct {

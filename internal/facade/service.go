@@ -66,7 +66,14 @@ func (s *Service) Run(_ context.Context) error {
 	echoInst := echo.New()
 	echoInst.HideBanner = true
 	echoInst.Use(middleware.Recover())
-	echoInst.Use(middleware.Logger())
+	echoInst.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Skipper: middleware.DefaultSkipper,
+		Format: `${time_rfc3339_nano} ${error} ` +
+			`${method} ${uri} ` +
+			`${status} ${latency_human} ` + "\n",
+		CustomTimeFormat: "2006-01-02 15:04:05.00000",
+	},
+	))
 	echoInst.Use(session.Middleware(sessions.NewCookieStore([]byte(s.opts.cookieSecret))))
 
 	echoInst.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -113,6 +120,7 @@ func (s *Service) Run(_ context.Context) error {
 	echoInst.POST("/servers/:id", s.runQuery)
 
 	echoInst.GET("/auth", s.getAuth)
+	echoInst.GET("/auth/callback", s.getAuthCallback)
 	echoInst.POST("/auth", s.postAuth)
 
 	echoInst.GET("/logout", s.logout)
@@ -161,10 +169,43 @@ func (s *Service) getAuth(c echo.Context) error {
 	case config.AuthTypeConfig:
 		return Render(c, http.StatusOK, templates.PageAuth(nil))
 	case config.AuthTypeOIDC:
-		panic("implement me")
+		authUrl, err := s.opts.app.InitOIDC(c.Request().Context())
+		if err != nil {
+			return fmt.Errorf("init oidc: %w", err)
+		}
 
-		return nil
+		return c.Redirect(http.StatusSeeOther, authUrl)
 	}
+}
+
+func (s *Service) getAuthCallback(c echo.Context) error {
+	if s.opts.app.AuthType() != config.AuthTypeOIDC {
+		return errors.New("not available")
+	}
+
+	code := c.Request().URL.Query().Get("code")
+
+	user, err := s.opts.app.CompleteOIDC(c.Request().Context(), code)
+	if err != nil {
+		return fmt.Errorf("complete oidc: %w", err)
+	}
+
+	sess, err := session.Get(keySession, c)
+	if err != nil {
+		return fmt.Errorf("have no session: %w", err)
+	}
+
+	sess.Options = &sessions.Options{ //nolint:exhaustruct
+		Path:     "/",
+		MaxAge:   int(time.Hour.Seconds()),
+		HttpOnly: true,
+	}
+	sess.Values[keyUserID] = *user
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
+		return fmt.Errorf("save session: %w", err)
+	}
+
+	return c.Redirect(http.StatusSeeOther, "/")
 }
 
 func (s *Service) postAuth(c echo.Context) error {
