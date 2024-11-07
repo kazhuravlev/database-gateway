@@ -6,6 +6,7 @@ require (
 	github.com/a-h/templ v0.2.778
 	github.com/auxten/postgresql-parser v1.0.1
 	github.com/coreos/go-oidc/v3 v3.11.0
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/sessions v1.4.0
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/kazhuravlev/just v0.72.0
