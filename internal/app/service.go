@@ -17,6 +17,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
@@ -143,13 +145,24 @@ func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Se
 
 	servers := just.SliceMap(availableTargets, func(t config.Target) structs.Server {
 		return structs.Server{
-			ID:     t.ID,
-			Type:   t.Type,
-			Tables: t.Tables,
+			ID:          t.ID,
+			Description: t.Description,
+			Tags:        adaptTags(t.Tags),
+			Type:        t.Type,
+			Tables:      t.Tables,
 		}
 	})
 
 	return servers, nil
+}
+
+func adaptTags(tags []string) []structs.Tag {
+	return just.SliceMap(tags, func(t string) structs.Tag {
+		return structs.Tag{
+			Name: t,
+			// Color: colorful.HappyColor().Hex(),
+		}
+	})
 }
 
 func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID config.TargetID) (*config.Target, error) {
@@ -215,11 +228,24 @@ func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID conf
 	return &structs.QTable{
 		Headers: cols,
 		Rows: just.SliceMap(rows, func(row []any) []string {
-			return just.SliceMap(row, func(v any) string {
-				return fmt.Sprint(v)
-			})
+			return just.SliceMap(row, adaptPgType)
 		}),
 	}, nil
+}
+
+func adaptPgType(val any) string {
+	switch val := val.(type) {
+	default:
+		return fmt.Sprint(val)
+	case pgtype.Numeric:
+		// TODO: is that really best solution?
+		res, err := val.MarshalJSON()
+		if err != nil {
+			return "--bad payload--"
+		}
+
+		return string(bytes.Trim(res, `"`))
+	}
 }
 
 func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (*pgxpool.Pool, error) { //nolint:gocritic
