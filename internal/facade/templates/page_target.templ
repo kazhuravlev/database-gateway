@@ -3,6 +3,7 @@ package templates
 import (
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/just"
 )
 
 templ targetInfo(target config.Target) {
@@ -13,8 +14,13 @@ templ targetInfo(target config.Target) {
 				for _, tbl := range target.Tables {
 					<div class="flex flex-row gap-1">
 						<div class="font-bold">{ tbl.Table }</div>
-						for _, col := range tbl.Fields {
-							<div>{ col }</div>
+						for  iter, elem := range just.SliceIter(tbl.Fields) {
+							<div>
+								{ elem }
+								if !iter.IsLast() {
+									,
+								}
+							</div>
 						}
 					</div>
 				}
