@@ -126,8 +126,22 @@ func (s *Service) GetUserByID(_ context.Context, id config.UserID) (*config.User
 	return user, nil
 }
 
-func (s *Service) GetTargets(_ context.Context) ([]structs.Server, error) {
-	servers := just.SliceMap(s.opts.cfg.Targets, func(t config.Target) structs.Server {
+// GetTargets return targets that available for this user id.
+func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Server, error) {
+	userACLs := just.SliceFilter(s.opts.cfg.ACLs, func(acl config.ACL) bool {
+		// Filter acls that related to user
+		return acl.User == uID && acl.Allow
+	})
+
+	targets := just.Slice2MapFn(userACLs, func(_ int, acl config.ACL) (config.TargetID, struct{}) {
+		return acl.Target, struct{}{}
+	})
+
+	availableTargets := just.SliceFilter(s.opts.cfg.Targets, func(target config.Target) bool {
+		return just.MapContainsKey(targets, target.ID)
+	})
+
+	servers := just.SliceMap(availableTargets, func(t config.Target) structs.Server {
 		return structs.Server{
 			ID:     t.ID,
 			Type:   t.Type,
@@ -149,15 +163,10 @@ func (s *Service) GetTargetByID(_ context.Context, id config.TargetID) (*config.
 	return nil, fmt.Errorf("target not found: %w", ErrNotFound)
 }
 
-func (s *Service) GetACLs(_ context.Context, uID config.UserID, tID config.TargetID) []config.ACL {
-	var res []config.ACL
-	for _, acl := range s.opts.cfg.ACLs {
-		if acl.Target == tID && acl.User == uID {
-			res = append(res, acl)
-		}
-	}
-
-	return res
+func (s *Service) FilterACLs(_ context.Context, uID config.UserID, tID config.TargetID) []config.ACL {
+	return just.SliceFilter(s.opts.cfg.ACLs, func(acl config.ACL) bool {
+		return acl.Target == tID && acl.User == uID
+	})
 }
 
 func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (*structs.QTable, error) {
@@ -166,7 +175,7 @@ func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID conf
 		return nil, fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := s.GetACLs(ctx, userID, srvID)
+	acls := s.FilterACLs(ctx, userID, srvID)
 
 	if err := validator.IsAllowed(srv.Tables, acls, query); err != nil {
 		log.Error("err", err.Error())

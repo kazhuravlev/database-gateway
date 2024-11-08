@@ -138,7 +138,7 @@ func (s *Service) Run(_ context.Context) error {
 func (s *Service) getServers(c echo.Context) error {
 	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
-	servers, err := s.opts.app.GetTargets(c.Request().Context())
+	servers, err := s.opts.app.GetTargets(c.Request().Context(), user.ID)
 	if err != nil {
 		s.opts.logger.Error("get targets", slog.String("error", err.Error()))
 
@@ -157,7 +157,7 @@ func (s *Service) getServer(c echo.Context) error {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := s.opts.app.GetACLs(c.Request().Context(), user.ID, tID)
+	acls := s.opts.app.FilterACLs(c.Request().Context(), user.ID, tID)
 
 	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, ``, nil, nil))
 }
@@ -276,7 +276,7 @@ func (s *Service) runQuery(c echo.Context) error {
 	query := params.Get("query")
 	format := params.Get("format")
 
-	acls := s.opts.app.GetACLs(c.Request().Context(), user.ID, tID)
+	acls := s.opts.app.FilterACLs(c.Request().Context(), user.ID, tID)
 
 	qTbl, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
 	if err != nil {
