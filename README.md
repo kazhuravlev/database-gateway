@@ -19,7 +19,10 @@ open 'http://127.0.0.1:8080'
 # Password: password
 ```
 
-You will see a 3 postgres instances (`local-1`, `local-2`, `local-3`): ![pic1_instances.png](example/pic1_instances.png)
+You will see only 2 instances from 3 postgres instances (`local-1`, `local-2`,`local-3`) because ACL is applied to test
+user. ACLs stored in [config.json](example/config.json).
+
+![pic1_instances.png](example/pic1_instances.png)
 
 Choose `local-1`, put this query `select id, name from clients` and click `Run` ![pic2_run.png](example/pic2_run.png)
 
