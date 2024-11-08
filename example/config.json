@@ -83,7 +83,7 @@
 		"configuration": {
 			"client_id": "example-app",
 			"client_secret": "example-app-secret",
-			"issuer_url": "http://localhost:5556",
+			"issuer_url": "http://dex:5556",
 			"redirect_url": "http://localhost:8080/auth/callback",
 			"scopes": [
 				"email",
