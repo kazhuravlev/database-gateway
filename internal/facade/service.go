@@ -152,7 +152,7 @@ func (s *Service) getServer(c echo.Context) error {
 	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
 	tID := config.TargetID(c.Param("id"))
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), tID)
+	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), user.ID, tID)
 	if err != nil {
 		return fmt.Errorf("get target by id: %w", err)
 	}
@@ -263,7 +263,7 @@ func (s *Service) runQuery(c echo.Context) error {
 	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
 	tID := config.TargetID(c.Param("id"))
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), tID)
+	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), user.ID, tID)
 	if err != nil {
 		return fmt.Errorf("get target by id: %w", err)
 	}
