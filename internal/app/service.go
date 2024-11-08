@@ -149,15 +149,10 @@ func (s *Service) GetTargetByID(_ context.Context, id config.TargetID) (*config.
 	return nil, fmt.Errorf("target not found: %w", ErrNotFound)
 }
 
-func (s *Service) GetACLs(_ context.Context, uID config.UserID, tID config.TargetID) []config.ACL {
-	var res []config.ACL
-	for _, acl := range s.opts.cfg.ACLs {
-		if acl.Target == tID && acl.User == uID {
-			res = append(res, acl)
-		}
-	}
-
-	return res
+func (s *Service) FilterACLs(_ context.Context, uID config.UserID, tID config.TargetID) []config.ACL {
+	return just.SliceFilter(s.opts.cfg.ACLs, func(acl config.ACL) bool {
+		return acl.Target == tID && acl.User == uID
+	})
 }
 
 func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (*structs.QTable, error) {
@@ -166,7 +161,7 @@ func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID conf
 		return nil, fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := s.GetACLs(ctx, userID, srvID)
+	acls := s.FilterACLs(ctx, userID, srvID)
 
 	if err := validator.IsAllowed(srv.Tables, acls, query); err != nil {
 		log.Error("err", err.Error())

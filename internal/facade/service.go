@@ -157,7 +157,7 @@ func (s *Service) getServer(c echo.Context) error {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := s.opts.app.GetACLs(c.Request().Context(), user.ID, tID)
+	acls := s.opts.app.FilterACLs(c.Request().Context(), user.ID, tID)
 
 	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, ``, nil, nil))
 }
@@ -276,7 +276,7 @@ func (s *Service) runQuery(c echo.Context) error {
 	query := params.Get("query")
 	format := params.Get("format")
 
-	acls := s.opts.app.GetACLs(c.Request().Context(), user.ID, tID)
+	acls := s.opts.app.FilterACLs(c.Request().Context(), user.ID, tID)
 
 	qTbl, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
 	if err != nil {
