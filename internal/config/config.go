@@ -61,10 +61,12 @@ type Connection struct {
 }
 
 type Target struct {
-	ID         TargetID      `json:"id"`
-	Type       string        `json:"type"`
-	Connection Connection    `json:"connection"`
-	Tables     []TargetTable `json:"tables"`
+	ID          TargetID      `json:"id"`
+	Description string        `json:"description"`
+	Tags        []string      `json:"tags"`
+	Type        string        `json:"type"`
+	Connection  Connection    `json:"connection"`
+	Tables      []TargetTable `json:"tables"`
 }
 
 type ACL struct {

@@ -2,6 +2,12 @@
 	"targets": [
 		{
 			"id": "local-1",
+			"description": "Production for clients service",
+			"tags": [
+				"env:production",
+				"svc:clients",
+				"replica:analytics"
+			],
 			"type": "postgres",
 			"connection": {
 				"host": "127.0.0.1",
@@ -33,6 +39,12 @@
 		},
 		{
 			"id": "local-2",
+			"description": "Staging for clients service",
+			"tags": [
+				"env:staging",
+				"svc:clients",
+				"backup:each-night"
+			],
 			"type": "postgres",
 			"connection": {
 				"host": "127.0.0.1",
@@ -56,6 +68,12 @@
 		},
 		{
 			"id": "local-3",
+			"description": "Test server for John Doe experiments",
+			"tags": [
+				"env:dev",
+				"owner:john.doe",
+				"backup:never"
+			],
 			"type": "postgres",
 			"connection": {
 				"host": "127.0.0.1",
