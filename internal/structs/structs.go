@@ -18,10 +18,15 @@ package structs
 
 import "github.com/kazhuravlev/database-gateway/internal/config"
 
+type Tag struct {
+	Name string
+	// Color string
+}
+
 type Server struct {
 	ID          config.TargetID
 	Description string
-	Tags        []string
+	Tags        []Tag
 	Type        string
 	Tables      []config.TargetTable
 }

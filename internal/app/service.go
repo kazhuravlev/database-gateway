@@ -25,12 +25,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
@@ -148,13 +147,22 @@ func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Se
 		return structs.Server{
 			ID:          t.ID,
 			Description: t.Description,
-			Tags:        t.Tags,
+			Tags:        adaptTags(t.Tags),
 			Type:        t.Type,
 			Tables:      t.Tables,
 		}
 	})
 
 	return servers, nil
+}
+
+func adaptTags(tags []string) []structs.Tag {
+	return just.SliceMap(tags, func(t string) structs.Tag {
+		return structs.Tag{
+			Name: t,
+			// Color: colorful.HappyColor().Hex(),
+		}
+	})
 }
 
 func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID config.TargetID) (*config.Target, error) {
