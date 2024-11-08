@@ -6,10 +6,23 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 )
 
+templ targetImage(typ string) {
+	<img alt={ typ } src={ fmt.Sprintf("/static/%s.png", typ) } class="h-12 object-cover"/>
+}
+
 templ listServers(servers []structs.Server) {
 	for _, item := range servers {
 		@w_appline() {
-			<a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>{ string(item.ID) }</a>
+			<a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>
+				<div class="flex flex-row gap-2">
+					<div>
+						@targetImage(item.Type)
+					</div>
+					<div>{ item.Type }</div>
+					<div>{ string(item.ID) }</div>
+					<div>{ item.Description }</div>
+				</div>
+			</a>
 		}
 	}
 }
