@@ -126,8 +126,22 @@ func (s *Service) GetUserByID(_ context.Context, id config.UserID) (*config.User
 	return user, nil
 }
 
-func (s *Service) GetTargets(_ context.Context) ([]structs.Server, error) {
-	servers := just.SliceMap(s.opts.cfg.Targets, func(t config.Target) structs.Server {
+// GetTargets return targets that available for this user id.
+func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Server, error) {
+	userACLs := just.SliceFilter(s.opts.cfg.ACLs, func(acl config.ACL) bool {
+		// Filter acls that related to user
+		return acl.User == uID && acl.Allow
+	})
+
+	targets := just.Slice2MapFn(userACLs, func(_ int, acl config.ACL) (config.TargetID, struct{}) {
+		return acl.Target, struct{}{}
+	})
+
+	availableTargets := just.SliceFilter(s.opts.cfg.Targets, func(target config.Target) bool {
+		return just.MapContainsKey(targets, target.ID)
+	})
+
+	servers := just.SliceMap(availableTargets, func(t config.Target) structs.Server {
 		return structs.Server{
 			ID:     t.ID,
 			Type:   t.Type,

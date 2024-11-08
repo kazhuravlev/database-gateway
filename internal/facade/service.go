@@ -138,7 +138,7 @@ func (s *Service) Run(_ context.Context) error {
 func (s *Service) getServers(c echo.Context) error {
 	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
-	servers, err := s.opts.app.GetTargets(c.Request().Context())
+	servers, err := s.opts.app.GetTargets(c.Request().Context(), user.ID)
 	if err != nil {
 		s.opts.logger.Error("get targets", slog.String("error", err.Error()))
 
