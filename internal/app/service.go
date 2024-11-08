@@ -152,10 +152,18 @@ func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Se
 	return servers, nil
 }
 
-func (s *Service) GetTargetByID(_ context.Context, id config.TargetID) (*config.Target, error) {
+func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID config.TargetID) (*config.Target, error) {
 	for i := range s.opts.cfg.Targets {
 		target := s.opts.cfg.Targets[i]
-		if target.ID == id {
+		if target.ID == tID {
+			acls := just.SliceFilter(s.FilterACLs(ctx, uID, tID), func(acl config.ACL) bool {
+				return acl.Allow
+			})
+
+			if len(acls) == 0 {
+				return nil, fmt.Errorf("target not found: %w", ErrNotFound)
+			}
+
 			return &target, nil
 		}
 	}
@@ -170,7 +178,7 @@ func (s *Service) FilterACLs(_ context.Context, uID config.UserID, tID config.Ta
 }
 
 func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (*structs.QTable, error) {
-	srv, err := s.GetTargetByID(ctx, srvID)
+	srv, err := s.GetTargetByID(ctx, userID, srvID)
 	if err != nil {
 		return nil, fmt.Errorf("get target by id: %w", err)
 	}
