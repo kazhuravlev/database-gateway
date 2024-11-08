@@ -20,5 +20,5 @@ import (
 	"embed"
 )
 
-//go:embed *.css *.png *.ico *.webmanifest
+//go:embed *.css *.png *.ico *.webmanifest *.png
 var Files embed.FS
