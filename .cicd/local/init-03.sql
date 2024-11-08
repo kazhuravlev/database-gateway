@@ -14,14 +14,35 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-create table clients
+
+CREATE TABLE sales_olap_42
 (
-    id    text primary key,
-    name  text,
-    email text
+    region_id        INT  NOT NULL,
+    month            DATE NOT NULL,
+    product_category VARCHAR(50),
+    total_sales      NUMERIC(12, 2),
+    total_quantity   INT,
+    avg_sale_price   NUMERIC(8, 2),
+    PRIMARY KEY (region_id, month, product_category)
 );
 
 
-insert into clients(id, name, email)
-values ('1', 'kirill', 'k@email.com'),
-       ('2', 'andrew', 'a@email.com');
+
+INSERT INTO sales_olap_42 (region_id, month, product_category, total_sales, total_quantity, avg_sale_price)
+SELECT region_id,
+       month::date,
+       category                                    AS product_category,
+       ROUND((RANDOM() * 4000 + 1000)::numeric, 2) AS total_sales,
+       quantity                                    AS total_quantity,
+       ROUND((total_sales / quantity)::numeric, 2) AS avg_sale_price
+FROM (SELECT region_id,
+             category,
+             (date '2024-01-01' + (gs * '1 month'::interval))::date AS month,
+             FLOOR(RANDOM() * 90 + 10)                              AS quantity
+      FROM generate_series(1, 1200) AS gs,                 -- Generates data for 12 months
+           (VALUES (1), (2), (3)) AS regions(region_id), -- Region IDs
+           (VALUES ('Electronics'), ('Furniture'), ('Clothing')) AS categories(category) -- Product categories
+     ) AS base_data
+         CROSS JOIN LATERAL (
+    SELECT ROUND((RANDOM() * 4000 + 1000)::numeric, 2) AS total_sales
+    ) AS random_sales;
