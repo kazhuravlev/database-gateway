@@ -22,6 +22,14 @@ services:
     volumes:
       - './config.json:/app/config.json'
 
+  dex:
+    image: bitnami/dex
+    ports:
+      - '127.0.0.1:5556:5556'
+    volumes:
+      - './dex-config.yaml:/etc/dex/config.yaml'
+    command: [ 'serve', '/etc/dex/config.yaml' ]
+
   postgres1:
     image: postgres:16
     environment:
