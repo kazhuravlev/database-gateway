@@ -284,8 +284,13 @@ func (s *Service) CompleteOIDC(ctx context.Context, code string) (*structs.User,
 		return nil, time.Time{}, fmt.Errorf("parse id_token claims: %w", err)
 	}
 
+	expiry := token.Expiry
+	if expiry.IsZero() {
+		expiry = time.Now().Add(15 * time.Minute) //nolint:mnd
+	}
+
 	return &structs.User{
 		ID:       config.UserID(claims.Email),
 		Username: just.If(claims.PreferredUsername != "", claims.PreferredUsername, claims.Email),
-	}, just.If(token.Expiry.IsZero(), time.Now().Add(15*time.Minute), token.Expiry), nil
+	}, expiry, nil
 }

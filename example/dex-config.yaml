@@ -1,0 +1,36 @@
+# Database Gateway provides access to servers with ACL for safe and restricted database interactions.
+# Copyright (C) 2024  Kirill Zhuravlev
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+issuer: http://localhost:5556
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+staticClients:
+  - id: example-app
+    redirectURIs:
+      - http://localhost:8080/auth/callback
+    name: "Example App"
+    secret: example-app-secret
+
+enablePasswordDB: true
+staticPasswords:
+  - email: "test@example.com"
+    hash: "$2a$10$FOx1sBhDA4w0iDDHU.s7yeVcOCY/Di13tYyF8rWDM5TsmOq9b/k6a" # bcrypt hash of "password"
+    username: "test"
+    userID: "1"

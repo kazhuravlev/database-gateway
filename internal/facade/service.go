@@ -198,7 +198,7 @@ func (s *Service) getAuthCallback(c echo.Context) error {
 
 	sess.Options = &sessions.Options{ //nolint:exhaustruct
 		Path:     "/",
-		MaxAge:   int(expiry.Sub(time.Now()).Seconds()),
+		MaxAge:   int(time.Until(expiry).Seconds()),
 		HttpOnly: true,
 	}
 	sess.Values[keyUserID] = *user
