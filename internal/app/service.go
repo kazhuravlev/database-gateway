@@ -287,5 +287,5 @@ func (s *Service) CompleteOIDC(ctx context.Context, code string) (*structs.User,
 	return &structs.User{
 		ID:       config.UserID(claims.Email),
 		Username: just.If(claims.PreferredUsername != "", claims.PreferredUsername, claims.Email),
-	}, just.If(token.Expiry.IsZero(), time.Now().Add(15*time.Minute), token.Expiry), nil
+	}, just.If(idToken.Expiry.IsZero(), time.Now().Add(15*time.Minute), token.Expiry), nil
 }
