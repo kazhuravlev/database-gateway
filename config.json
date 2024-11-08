@@ -68,11 +68,14 @@
 			},
 			"tables": [
 				{
-					"table": "public.clients",
+					"table": "public.sales_olap_42",
 					"fields": [
-						"id",
-						"name",
-						"email"
+						"region_id",
+						"month",
+						"product_category",
+						"total_sales",
+						"total_quantity",
+						"avg_sale_price"
 					]
 				}
 			]
@@ -104,6 +107,13 @@
 			"op": "insert",
 			"target": "local-1",
 			"tbl": "public.clients",
+			"allow": true
+		},
+		{
+			"user": "test@example.com",
+			"op": "select",
+			"target": "local-3",
+			"tbl": "public.sales_olap_42",
 			"allow": true
 		}
 	],
