@@ -21,10 +21,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgtype"
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
@@ -145,9 +146,11 @@ func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Se
 
 	servers := just.SliceMap(availableTargets, func(t config.Target) structs.Server {
 		return structs.Server{
-			ID:     t.ID,
-			Type:   t.Type,
-			Tables: t.Tables,
+			ID:          t.ID,
+			Description: t.Description,
+			Tags:        t.Tags,
+			Type:        t.Type,
+			Tables:      t.Tables,
 		}
 	})
 
