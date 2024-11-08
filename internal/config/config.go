@@ -150,7 +150,7 @@ func (UsersProviderOIDC) Type() AuthType {
 
 type FacadeConfig struct {
 	Port         int    `json:"port"`
-	CookieSecret string `json:"jwt_secret"`
+	CookieSecret string `json:"cookie_secret"`
 }
 
 type Config struct {

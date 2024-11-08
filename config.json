@@ -109,6 +109,6 @@
 	],
 	"facade": {
 		"port": 8080,
-		"jwt_secret": "secret"
+		"cookie_secret": "secret"
 	}
 }
