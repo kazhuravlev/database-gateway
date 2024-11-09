@@ -1,13 +1,66 @@
 package templates
 
-import "github.com/kazhuravlev/database-gateway/internal/structs"
+import (
+	"fmt"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/just"
+)
+
+templ targetImage(typ string) {
+	<img alt={ typ } src={ fmt.Sprintf("/static/%s.png", typ) } class="h-12 object-cover"/>
+}
+
+css bgColor(color string) {
+	background-color: { templ.SafeCSSProperty(color) };
+}
+
+templ targetLine(item structs.Server) {
+	<div class="flex flex-row gap-2">
+		<div>
+			@targetImage(item.Type)
+		</div>
+		<div class="flex flex-col gap-1">
+			<div class="flex flex-row gap-1">
+				<div>{ item.Type }</div>
+				<div>{ string(item.ID) }</div>
+				<div>{ item.Description }</div>
+				<div class="flex flex-row gap-1">
+					for _, tag := range item.Tags {
+						<div class="rounded-sm">
+							<div class={ bgColor("#0088aa") }>
+								<div class="px-1 py-0.5">{ tag.Name }</div>
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+			<div class="flex flex-col">
+				for _, tbl := range item.Tables {
+					<div class="flex flex-row gap-1">
+						<div class="font-bold">{ tbl.Table }</div>
+						for  iter, elem := range just.SliceIter(tbl.Fields) {
+							<div>
+								{ elem }
+								if !iter.IsLast() {
+									,
+								}
+							</div>
+						}
+					</div>
+				}
+			</div>
+		</div>
+	</div>
+}
 
 templ header(user structs.User) {
 	@w_appline() {
 		<div class="flex flex-row items-center justify-start w-full gap-4">
 			<div class="px-2 py-1">User: { user.Username }</div>
-			<div class="">@button("All servers", "/servers")</div>
-			<div class="">@button("Logout", "/logout")</div>
+			<div class="">@button("All servers", "/servers")
+</div>
+			<div class="">@button("Logout", "/logout")
+</div>
 		</div>
 	}
 }
@@ -17,7 +70,6 @@ templ button(text string, url templ.SafeURL) {
 		<a href={ url }>{ text }</a>
 	</div>
 }
-
 
 templ showError(err error) {
 	<div class="w-full border border-red-500 p-2">{ err.Error() }</div>
