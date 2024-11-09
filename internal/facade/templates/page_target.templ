@@ -5,24 +5,6 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 )
 
-templ aclList(acls []config.ACL) {
-	if len(acls) == 0 {
-		<div>Have no any access to this server</div>
-	} else {
-		for _, acl := range acls {
-			<div class="flex flex-row gap-1">
-				<div>{ string(acl.Op) }</div>
-				<div>{ string(acl.Tbl) }</div>
-				if acl.Allow {
-					<div>allow</div>
-				} else {
-					<div>denied</div>
-				}
-			</div>
-		}
-	}
-}
-
 templ sqlForm(query string) {
 	<div class="w-full">
 		<form action="#" method="post" id="myForm" style="margin:0">
@@ -72,14 +54,11 @@ templ queryResult(tbl structs.QTable) {
 	</div>
 }
 
-templ PageTarget(user structs.User, target structs.Server, acls []config.ACL, query string, qTbl *structs.QTable, err error) {
+templ PageTarget(user structs.User, target structs.Server, query string, qTbl *structs.QTable, err error) {
 	@l_app() {
 		@header(user)
 		@w_appline() {
 			@targetLine(target)
-		}
-		@w_appline() {
-			@aclList(acls)
 		}
 		@w_appline() {
 			@sqlForm(query)
