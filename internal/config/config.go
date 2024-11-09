@@ -194,7 +194,7 @@ func (c *Config) Validate() error {
 	// Check that all acls linked with exists targets
 	for _, acl := range c.ACLs {
 		key := hTable{
-			target: acl.Target,
+			target: TargetID(acl.Target),
 			table:  acl.Tbl,
 		}
 		if _, ok := idx[key]; !ok {
@@ -209,7 +209,7 @@ func (c *Config) Validate() error {
 		})
 
 		for _, acl := range c.ACLs {
-			if !just.MapContainsKey(userMap, acl.User) {
+			if !just.MapContainsKey(userMap, UserID(acl.User)) {
 				return fmt.Errorf("ACL (%#v) targets to unknown user", acl) //nolint:err113
 			}
 		}
