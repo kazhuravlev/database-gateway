@@ -32,6 +32,7 @@ var (
 	ErrUnknownColumn    = errors.New("unknown column")
 )
 
+// IsAllowed will tokenize query, validate schema and check access after all.
 func IsAllowed(tables []config.TargetTable, haveAccess func(Vec) bool, query string) error {
 	vectors, err := MakeVectors(query)
 	if err != nil {
