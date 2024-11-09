@@ -22,6 +22,8 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/kazhuravlev/database-gateway/internal/app/rules"
+
 	"github.com/kazhuravlev/database-gateway/internal/app"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/facade"
@@ -55,7 +57,7 @@ func runApp(ctx context.Context) error {
 		ReplaceAttr: nil,
 	}))
 
-	appInst, err := app.New(app.NewOptions(logger, *cfg)) //nolint:contextcheck
+	appInst, err := app.New(app.NewOptions(logger, cfg.Targets, cfg.Users, rules.New(cfg.ACLs))) //nolint:contextcheck
 	if err != nil {
 		return fmt.Errorf("create app: %w", err)
 	}
