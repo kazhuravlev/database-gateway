@@ -28,9 +28,11 @@ import (
 func TestValidator(t *testing.T) {
 	t.Parallel()
 	target := config.Target{
-		ID:         "t1",
-		Type:       "postgres",
-		Connection: config.Connection{}, //nolint:exhaustruct
+		ID:          "t1",
+		Description: "",
+		Tags:        nil,
+		Type:        "postgres",
+		Connection:  config.Connection{}, //nolint:exhaustruct
 		Tables: []config.TargetTable{
 			{
 				Table:  "public.clients",

@@ -41,13 +41,13 @@ func adaptPgType(val any) string {
 	}
 }
 
-func adaptTarget(t config.Target) structs.Server {
+func adaptTarget(target config.Target) structs.Server { //nolint:gocritic
 	return structs.Server{
-		ID:          t.ID,
-		Description: t.Description,
-		Tags:        adaptTags(t.Tags),
-		Type:        t.Type,
-		Tables:      t.Tables,
+		ID:          target.ID,
+		Description: target.Description,
+		Tags:        adaptTags(target.Tags),
+		Type:        target.Type,
+		Tables:      target.Tables,
 	}
 }
 
