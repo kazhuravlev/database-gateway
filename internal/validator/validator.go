@@ -32,11 +32,7 @@ var (
 	ErrUnknownColumn    = errors.New("unknown column")
 )
 
-func IsAllowed(tables []config.TargetTable, acls []config.ACL, query string) error {
-	if len(acls) == 0 {
-		return fmt.Errorf("user have no any acls: %w", ErrAccessDenied)
-	}
-
+func IsAllowed(tables []config.TargetTable, haveAccess func(Vec) bool, query string) error {
 	vectors, err := makeVectors(query)
 	if err != nil {
 		return fmt.Errorf("make vectors: %w", err)
@@ -46,7 +42,7 @@ func IsAllowed(tables []config.TargetTable, acls []config.ACL, query string) err
 		return fmt.Errorf("validate schema: %w", err)
 	}
 
-	if err := validateAccess(vectors, acls); err != nil {
+	if err := validateAccess(vectors, haveAccess); err != nil {
 		return fmt.Errorf("validate access: %w", err)
 	}
 
@@ -76,25 +72,10 @@ func validateSchema(vectors []Vec, tables []config.TargetTable) error {
 	return nil
 }
 
-func validateAccess(vectors []Vec, acls []config.ACL) error {
+func validateAccess(vectors []Vec, haveAccess func(Vec) bool) error {
 	// Find acl for each vector.
 	for _, vec := range vectors {
-		isAllowed := false
-		for _, acl := range acls {
-			if acl.Op != vec.Op {
-				continue
-			}
-
-			if acl.Tbl != vec.Tbl {
-				continue
-			}
-
-			isAllowed = acl.Allow
-
-			break
-		}
-
-		if !isAllowed {
+		if !haveAccess(vec) {
 			return fmt.Errorf("denied operation (%s): %w", vec.String(), ErrAccessDenied)
 		}
 	}
