@@ -90,7 +90,7 @@ func TestValidator(t *testing.T) {
 		t.Parallel()
 		t.Run("complicated_query", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return true }
+			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `WITH regional_sales AS (
     SELECT region, SUM(amount) AS total_sales
     FROM orders
@@ -116,7 +116,7 @@ GROUP BY region, product;`
 		t.Parallel()
 		t.Run("simple_allowed", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return true }
+			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `select id, name from clients;`
 			err := validator.IsAllowed(target.Tables, haveAccess, query)
 			require.NoError(t, err)
@@ -124,7 +124,7 @@ GROUP BY region, product;`
 
 		t.Run("simple_denied", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return false }
+			haveAccess := func(_ validator.Vec) bool { return false }
 			query := `select id, name from clients;`
 			err := validator.IsAllowed(target.Tables, haveAccess, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
@@ -132,7 +132,7 @@ GROUP BY region, product;`
 
 		t.Run("select_from_allowed_select__is_not_allowed", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return true }
+			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `select id, name from (select id, name from clients)`
 			err := validator.IsAllowed(target.Tables, haveAccess, query)
 			// TODO: make it allowed. Actually this is legal query for this ACL.
@@ -144,13 +144,13 @@ GROUP BY region, product;`
 		t.Parallel()
 		t.Run("simple_allowed", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return true }
+			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `update clients set id=1 and name='john'`
 			require.NoError(t, validator.IsAllowed(target.Tables, haveAccess, query))
 		})
 		t.Run("simple_denied", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return false }
+			haveAccess := func(_ validator.Vec) bool { return false }
 			query := `update clients set id=1 and name='john'`
 			err := validator.IsAllowed(target.Tables, haveAccess, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
@@ -161,13 +161,13 @@ GROUP BY region, product;`
 		t.Parallel()
 		t.Run("simple_allowed", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return true }
+			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `delete from clients where id=42`
 			require.NoError(t, validator.IsAllowed(target.Tables, haveAccess, query))
 		})
 		t.Run("simple_denied", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return false }
+			haveAccess := func(_ validator.Vec) bool { return false }
 			query := `delete from clients where id=42`
 			err := validator.IsAllowed(target.Tables, haveAccess, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
@@ -178,7 +178,7 @@ GROUP BY region, product;`
 		t.Parallel()
 		t.Run("simple_allowed", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return true }
+			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `insert into clients(id) values (42)`
 			err := validator.IsAllowed(target.Tables, haveAccess, query)
 			require.NoError(t, err)
@@ -186,7 +186,7 @@ GROUP BY region, product;`
 
 		t.Run("simple_denied", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return false }
+			haveAccess := func(_ validator.Vec) bool { return false }
 			query := `insert into clients(id) values (42)`
 			err := validator.IsAllowed(target.Tables, haveAccess, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
@@ -194,7 +194,7 @@ GROUP BY region, product;`
 
 		t.Run("allowed_2", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return true }
+			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `insert into clients(id, name, email) values('11', '22', '33')`
 			err := validator.IsAllowed(target.Tables, haveAccess, query)
 			require.NoError(t, err)

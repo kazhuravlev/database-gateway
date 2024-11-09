@@ -20,7 +20,6 @@ import (
 	"log/slog"
 
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
-
 	"github.com/kazhuravlev/database-gateway/internal/config"
 )
 

@@ -22,9 +22,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
-
 	"github.com/kazhuravlev/database-gateway/internal/app"
+	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/facade"
 	"github.com/kazhuravlev/just"

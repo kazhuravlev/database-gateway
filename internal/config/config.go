@@ -23,32 +23,27 @@ import (
 	"strings"
 
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
-
 	"github.com/kazhuravlev/just"
 )
 
-type (
-	UserID   string
-	TargetID string
-	AuthType string
-)
-
-func (u UserID) S() string {
-	return string(u)
-}
-
-func (t TargetID) S() string {
-	return string(t)
-}
-
-func (op Op) S() string {
-	return string(op)
-}
+type AuthType string
 
 const (
 	AuthTypeConfig AuthType = "config"
 	AuthTypeOIDC   AuthType = "oidc"
 )
+
+type UserID string
+
+func (u UserID) S() string {
+	return string(u)
+}
+
+type TargetID string
+
+func (t TargetID) S() string {
+	return string(t)
+}
 
 type Op string
 
@@ -58,6 +53,10 @@ const (
 	OpUpdate Op = "update"
 	OpDelete Op = "delete"
 )
+
+func (op Op) S() string {
+	return string(op)
+}
 
 type TargetTable struct {
 	Table  string   `json:"table"`
@@ -168,7 +167,7 @@ type Config struct {
 	Facade  FacadeConfig `json:"facade"`
 }
 
-func (c *Config) Validate() error {
+func (c *Config) Validate() error { //nolint:cyclop
 	type hTable struct {
 		target TargetID
 		table  string

@@ -22,9 +22,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
-
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/just"
 )
