@@ -17,11 +17,9 @@
 package app
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
@@ -29,7 +27,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
@@ -86,23 +83,6 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 	}, nil
 }
 
-func (s *Service) findUser(fn func(user config.User) bool) (*config.User, error) {
-	users, ok := s.opts.cfg.Users.Provider.(config.UsersProviderConfig)
-	if !ok {
-		return nil, errors.New("not implemented") //nolint:err113
-	}
-
-	user := just.SliceFindFirst(users, func(_ int, user config.User) bool {
-		return fn(user)
-	})
-
-	if user, ok := user.ValueOk(); ok {
-		return &user, nil
-	}
-
-	return nil, fmt.Errorf("user not exists: %w", ErrNotFound)
-}
-
 func (s *Service) AuthUser(_ context.Context, username, password string) (*structs.User, error) {
 	user, err := s.findUser(func(user config.User) bool {
 		return user.Username == username && user.Password == password
@@ -115,17 +95,6 @@ func (s *Service) AuthUser(_ context.Context, username, password string) (*struc
 		ID:       user.ID,
 		Username: user.Username,
 	}, nil
-}
-
-func (s *Service) GetUserByID(_ context.Context, id config.UserID) (*config.User, error) {
-	user, err := s.findUser(func(user config.User) bool {
-		return user.ID == id
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
 }
 
 // GetTargets return targets that available for this user id.
@@ -143,45 +112,18 @@ func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Se
 		return just.MapContainsKey(targets, target.ID)
 	})
 
-	servers := just.SliceMap(availableTargets, func(t config.Target) structs.Server {
-		return structs.Server{
-			ID:          t.ID,
-			Description: t.Description,
-			Tags:        adaptTags(t.Tags),
-			Type:        t.Type,
-			Tables:      t.Tables,
-		}
-	})
+	servers := just.SliceMap(availableTargets, adaptTarget)
 
 	return servers, nil
 }
 
-func adaptTags(tags []string) []structs.Tag {
-	return just.SliceMap(tags, func(t string) structs.Tag {
-		return structs.Tag{
-			Name: t,
-			// Color: colorful.HappyColor().Hex(),
-		}
-	})
-}
-
-func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID config.TargetID) (*config.Target, error) {
-	for i := range s.opts.cfg.Targets {
-		target := s.opts.cfg.Targets[i]
-		if target.ID == tID {
-			acls := just.SliceFilter(s.FilterACLs(ctx, uID, tID), func(acl config.ACL) bool {
-				return acl.Allow
-			})
-
-			if len(acls) == 0 {
-				return nil, fmt.Errorf("target not found: %w", ErrNotFound)
-			}
-
-			return &target, nil
-		}
+func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID config.TargetID) (*structs.Server, error) {
+	res, err := s.getTargetByID(ctx, uID, tID)
+	if err != nil {
+		return nil, fmt.Errorf("get target: %w", err)
 	}
 
-	return nil, fmt.Errorf("target not found: %w", ErrNotFound)
+	return just.Pointer(adaptTarget(*res)), nil
 }
 
 func (s *Service) FilterACLs(_ context.Context, uID config.UserID, tID config.TargetID) []config.ACL {
@@ -191,7 +133,7 @@ func (s *Service) FilterACLs(_ context.Context, uID config.UserID, tID config.Ta
 }
 
 func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (*structs.QTable, error) {
-	srv, err := s.GetTargetByID(ctx, userID, srvID)
+	srv, err := s.getTargetByID(ctx, userID, srvID)
 	if err != nil {
 		return nil, fmt.Errorf("get target by id: %w", err)
 	}
@@ -231,58 +173,6 @@ func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID conf
 			return just.SliceMap(row, adaptPgType)
 		}),
 	}, nil
-}
-
-func adaptPgType(val any) string {
-	switch val := val.(type) {
-	default:
-		return fmt.Sprint(val)
-	case pgtype.Numeric:
-		// TODO: is that really best solution?
-		res, err := val.MarshalJSON()
-		if err != nil {
-			return "--bad payload--"
-		}
-
-		return string(bytes.Trim(res, `"`))
-	}
-}
-
-func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (*pgxpool.Pool, error) { //nolint:gocritic
-	{
-		s.connsMu.RLock()
-		pool, ok := s.conns[target.ID]
-		s.connsMu.RUnlock()
-
-		if ok {
-			return pool, nil
-		}
-	}
-
-	s.opts.logger.Info("connect to target", slog.String("target", string(target.ID)))
-	pgCfg := target.Connection
-
-	urlExample := fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		pgCfg.User,
-		pgCfg.Password,
-		pgCfg.Host,
-		pgCfg.Port,
-		pgCfg.DB,
-		just.If(pgCfg.UseSSL, "enable", "disable"),
-	)
-	dbpool, err := pgxpool.New(ctx, urlExample)
-	if err != nil {
-		return nil, fmt.Errorf("create db pool: %w", err)
-	}
-	// TODO: we cann disconnect on shutdown. But this is not so important.
-	// dbpool.Close()
-
-	s.connsMu.Lock()
-	s.conns[target.ID] = dbpool
-	s.connsMu.Unlock()
-
-	return dbpool, nil
 }
 
 func (s *Service) AuthType() config.AuthType {

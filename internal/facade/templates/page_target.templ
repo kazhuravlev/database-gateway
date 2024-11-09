@@ -6,29 +6,6 @@ import (
 	"github.com/kazhuravlev/just"
 )
 
-templ targetInfo(target config.Target) {
-	@w_appline() {
-		<div class="w-full flex flex-col gap-1">
-			<div>{ target.Type } ({ string(target.ID) })</div>
-			<div class="flex flex-col divide-orange-500">
-				for _, tbl := range target.Tables {
-					<div class="flex flex-row gap-1">
-						<div class="font-bold">{ tbl.Table }</div>
-						for  iter, elem := range just.SliceIter(tbl.Fields) {
-							<div>
-								{ elem }
-								if !iter.IsLast() {
-									,
-								}
-							</div>
-						}
-					</div>
-				}
-			</div>
-		</div>
-	}
-}
-
 templ aclList(acls []config.ACL) {
 	@w_appline() {
 		if len(acls) == 0 {
@@ -100,10 +77,12 @@ templ queryResult(tbl structs.QTable) {
 	</div>
 }
 
-templ PageTarget(user structs.User, target config.Target, acls []config.ACL, query string, qTbl *structs.QTable, err error) {
+templ PageTarget(user structs.User, target structs.Server, acls []config.ACL, query string, qTbl *structs.QTable, err error) {
 	@l_app() {
 		@header(user)
-		@targetInfo(target)
+		@w_appline() {
+			@targetLine(target)
+		}
 		@aclList(acls)
 		@sqlForm(query)
 		if err != nil {

@@ -657,11 +657,6 @@ video {
   gap: 1.25rem;
 }
 
-.divide-orange-500 > :not([hidden]) ~ :not([hidden]) {
-  --tw-divide-opacity: 1;
-  border-color: rgb(249 115 22 / var(--tw-divide-opacity));
-}
-
 .rounded-sm {
   border-radius: 0.125rem;
 }
