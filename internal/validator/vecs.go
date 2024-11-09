@@ -36,7 +36,8 @@ func (v Vec) String() string {
 	return fmt.Sprintf("%s:%s(%s)", v.Op, v.Tbl, strings.Join(v.Cols, ","))
 }
 
-func makeVectors(query string) ([]Vec, error) { //nolint:cyclop
+// MakeVectors create vectors from query.
+func MakeVectors(query string) ([]Vec, error) { //nolint:cyclop
 	stmts, err := parser.Parse(query)
 	if err != nil {
 		return nil, fmt.Errorf("parse query: %w", err)

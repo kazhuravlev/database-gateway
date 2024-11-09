@@ -33,24 +33,24 @@ var (
 )
 
 func IsAllowed(tables []config.TargetTable, haveAccess func(Vec) bool, query string) error {
-	vectors, err := makeVectors(query)
+	vectors, err := MakeVectors(query)
 	if err != nil {
 		return fmt.Errorf("make vectors: %w", err)
 	}
 
-	if err := validateSchema(vectors, tables); err != nil {
+	if err := ValidateSchema(vectors, tables); err != nil {
 		return fmt.Errorf("validate schema: %w", err)
 	}
 
-	if err := validateAccess(vectors, haveAccess); err != nil {
+	if err := ValidateAccess(vectors, haveAccess); err != nil {
 		return fmt.Errorf("validate access: %w", err)
 	}
 
 	return nil
 }
 
-// validateSchema will check that request contains only allowed columns.
-func validateSchema(vectors []Vec, tables []config.TargetTable) error {
+// ValidateSchema will check that request contains only allowed columns.
+func ValidateSchema(vectors []Vec, tables []config.TargetTable) error {
 	tblMap := just.Slice2MapFn(tables, func(_ int, tbl config.TargetTable) (string, config.TargetTable) {
 		return tbl.Table, tbl
 	})
@@ -72,7 +72,8 @@ func validateSchema(vectors []Vec, tables []config.TargetTable) error {
 	return nil
 }
 
-func validateAccess(vectors []Vec, haveAccess func(Vec) bool) error {
+// ValidateAccess check that all vectors is allowed to run.
+func ValidateAccess(vectors []Vec, haveAccess func(Vec) bool) error {
 	// Find acl for each vector.
 	for _, vec := range vectors {
 		if !haveAccess(vec) {
