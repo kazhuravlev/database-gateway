@@ -114,24 +114,24 @@
 	},
 	"acls": [
 		{
-			"user": "test@example.com",
-			"op": "select",
-			"target": "local-1",
-			"tbl": "public.clients",
+			"user": "admin@example.com",
+			"op": "*",
+			"target": "*",
+			"tbl": "*",
 			"allow": true
 		},
 		{
-			"user": "test@example.com",
-			"op": "insert",
+			"user": "user1@example.com",
+			"op": "*",
 			"target": "local-1",
-			"tbl": "public.clients",
+			"tbl": "*",
 			"allow": true
 		},
 		{
-			"user": "test@example.com",
+			"user": "user1@example.com",
 			"op": "select",
-			"target": "local-3",
-			"tbl": "public.sales_olap_42",
+			"target": "local-2",
+			"tbl": "*",
 			"allow": true
 		}
 	],

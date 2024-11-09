@@ -22,19 +22,28 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/just"
 )
 
-type (
-	UserID   string
-	TargetID string
-	AuthType string
-)
+type AuthType string
 
 const (
 	AuthTypeConfig AuthType = "config"
 	AuthTypeOIDC   AuthType = "oidc"
 )
+
+type UserID string
+
+func (u UserID) S() string {
+	return string(u)
+}
+
+type TargetID string
+
+func (t TargetID) S() string {
+	return string(t)
+}
 
 type Op string
 
@@ -44,6 +53,10 @@ const (
 	OpUpdate Op = "update"
 	OpDelete Op = "delete"
 )
+
+func (op Op) S() string {
+	return string(op)
+}
 
 type TargetTable struct {
 	Table  string   `json:"table"`
@@ -67,14 +80,6 @@ type Target struct {
 	Type        string        `json:"type"`
 	Connection  Connection    `json:"connection"`
 	Tables      []TargetTable `json:"tables"`
-}
-
-type ACL struct {
-	User   UserID   `json:"user"`
-	Op     Op       `json:"op"`
-	Target TargetID `json:"target"`
-	Tbl    string   `json:"tbl"`
-	Allow  bool     `json:"allow"`
 }
 
 type User struct {
@@ -158,11 +163,11 @@ type FacadeConfig struct {
 type Config struct {
 	Targets []Target     `json:"targets"`
 	Users   UsersConfig  `json:"users"`
-	ACLs    []ACL        `json:"acls"`
+	ACLs    []rules.ACL  `json:"acls"`
 	Facade  FacadeConfig `json:"facade"`
 }
 
-func (c *Config) Validate() error {
+func (c *Config) Validate() error { //nolint:cyclop
 	type hTable struct {
 		target TargetID
 		table  string
@@ -187,8 +192,12 @@ func (c *Config) Validate() error {
 
 	// Check that all acls linked with exists targets
 	for _, acl := range c.ACLs {
+		if acl.Target == rules.Star || acl.Tbl == rules.Star {
+			continue
+		}
+
 		key := hTable{
-			target: acl.Target,
+			target: TargetID(acl.Target),
 			table:  acl.Tbl,
 		}
 		if _, ok := idx[key]; !ok {
@@ -203,7 +212,7 @@ func (c *Config) Validate() error {
 		})
 
 		for _, acl := range c.ACLs {
-			if !just.MapContainsKey(userMap, acl.User) {
+			if !just.MapContainsKey(userMap, UserID(acl.User)) {
 				return fmt.Errorf("ACL (%#v) targets to unknown user", acl) //nolint:err113
 			}
 		}

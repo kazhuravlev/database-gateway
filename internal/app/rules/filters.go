@@ -14,19 +14,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package app
+package rules
 
-import (
-	"log/slog"
+type IFilter func(ACL) bool
 
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
-	"github.com/kazhuravlev/database-gateway/internal/config"
-)
+func ByUserID(uid string) IFilter {
+	return func(acl ACL) bool {
+		return acl.User == uid || acl.User == Star
+	}
+}
 
-//go:generate toolset run options-gen -from-struct=Options
-type Options struct {
-	logger  *slog.Logger       `option:"mandatory" validate:"required"`
-	targets []config.Target    `option:"mandatory" validate:"required"`
-	users   config.UsersConfig `option:"mandatory" validate:"required"`
-	acls    *rules.ACLs        `option:"mandatory" validate:"required"`
+func ByTargetID(tid string) IFilter {
+	return func(acl ACL) bool {
+		return acl.Target == tid || acl.Target == Star
+	}
+}
+
+func ByOp(op string) IFilter {
+	return func(acl ACL) bool {
+		return acl.Op == op || acl.Op == Star
+	}
+}
+
+func ByTable(tbl string) IFilter {
+	return func(acl ACL) bool {
+		return acl.Tbl == tbl || acl.Tbl == Star
+	}
 }

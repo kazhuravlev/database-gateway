@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
@@ -55,7 +56,7 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 
 	var oidcProvider *oidc.Provider
 	var oauthCfg *oauth2.Config
-	if oidcCfg, ok := opts.cfg.Users.Provider.(config.UsersProviderOIDC); ok {
+	if oidcCfg, ok := opts.users.Provider.(config.UsersProviderOIDC); ok {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:mnd
 		defer cancel()
 
@@ -99,17 +100,8 @@ func (s *Service) AuthUser(_ context.Context, username, password string) (*struc
 
 // GetTargets return targets that available for this user id.
 func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Server, error) {
-	userACLs := just.SliceFilter(s.opts.cfg.ACLs, func(acl config.ACL) bool {
-		// Filter acls that related to user
-		return acl.User == uID && acl.Allow
-	})
-
-	targets := just.Slice2MapFn(userACLs, func(_ int, acl config.ACL) (config.TargetID, struct{}) {
-		return acl.Target, struct{}{}
-	})
-
-	availableTargets := just.SliceFilter(s.opts.cfg.Targets, func(target config.Target) bool {
-		return just.MapContainsKey(targets, target.ID)
+	availableTargets := just.SliceFilter(s.opts.targets, func(target config.Target) bool {
+		return s.opts.acls.Allow(rules.ByUserID(uID.S()), rules.ByTargetID(target.ID.S()))
 	})
 
 	servers := just.SliceMap(availableTargets, adaptTarget)
@@ -126,21 +118,22 @@ func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID conf
 	return just.Pointer(adaptTarget(*res)), nil
 }
 
-func (s *Service) FilterACLs(_ context.Context, uID config.UserID, tID config.TargetID) []config.ACL {
-	return just.SliceFilter(s.opts.cfg.ACLs, func(acl config.ACL) bool {
-		return acl.Target == tID && acl.User == uID
-	})
-}
-
 func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (*structs.QTable, error) {
 	srv, err := s.getTargetByID(ctx, userID, srvID)
 	if err != nil {
 		return nil, fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := s.FilterACLs(ctx, userID, srvID)
+	haveAccess := func(vec validator.Vec) bool {
+		return s.opts.acls.Allow(
+			rules.ByUserID(userID.S()),
+			rules.ByTargetID(srvID.S()),
+			rules.ByOp(vec.Op.S()),
+			rules.ByTable(vec.Tbl),
+		)
+	}
 
-	if err := validator.IsAllowed(srv.Tables, acls, query); err != nil {
+	if err := validator.IsAllowed(srv.Tables, haveAccess, query); err != nil {
 		log.Error("err", err.Error())
 
 		return nil, fmt.Errorf("preflight check: %w", err)
@@ -176,7 +169,7 @@ func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID conf
 }
 
 func (s *Service) AuthType() config.AuthType {
-	return s.opts.cfg.Users.Provider.Type()
+	return s.opts.users.Provider.Type()
 }
 
 func (s *Service) InitOIDC(_ context.Context) (string, error) {

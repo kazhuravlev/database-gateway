@@ -32,29 +32,25 @@ var (
 	ErrUnknownColumn    = errors.New("unknown column")
 )
 
-func IsAllowed(tables []config.TargetTable, acls []config.ACL, query string) error {
-	if len(acls) == 0 {
-		return fmt.Errorf("user have no any acls: %w", ErrAccessDenied)
-	}
-
-	vectors, err := makeVectors(query)
+func IsAllowed(tables []config.TargetTable, haveAccess func(Vec) bool, query string) error {
+	vectors, err := MakeVectors(query)
 	if err != nil {
 		return fmt.Errorf("make vectors: %w", err)
 	}
 
-	if err := validateSchema(vectors, tables); err != nil {
+	if err := ValidateSchema(vectors, tables); err != nil {
 		return fmt.Errorf("validate schema: %w", err)
 	}
 
-	if err := validateAccess(vectors, acls); err != nil {
+	if err := ValidateAccess(vectors, haveAccess); err != nil {
 		return fmt.Errorf("validate access: %w", err)
 	}
 
 	return nil
 }
 
-// validateSchema will check that request contains only allowed columns.
-func validateSchema(vectors []Vec, tables []config.TargetTable) error {
+// ValidateSchema will check that request contains only allowed columns.
+func ValidateSchema(vectors []Vec, tables []config.TargetTable) error {
 	tblMap := just.Slice2MapFn(tables, func(_ int, tbl config.TargetTable) (string, config.TargetTable) {
 		return tbl.Table, tbl
 	})
@@ -76,25 +72,11 @@ func validateSchema(vectors []Vec, tables []config.TargetTable) error {
 	return nil
 }
 
-func validateAccess(vectors []Vec, acls []config.ACL) error {
+// ValidateAccess check that all vectors is allowed to run.
+func ValidateAccess(vectors []Vec, haveAccess func(Vec) bool) error {
 	// Find acl for each vector.
 	for _, vec := range vectors {
-		isAllowed := false
-		for _, acl := range acls {
-			if acl.Op != vec.Op {
-				continue
-			}
-
-			if acl.Tbl != vec.Tbl {
-				continue
-			}
-
-			isAllowed = acl.Allow
-
-			break
-		}
-
-		if !isAllowed {
+		if !haveAccess(vec) {
 			return fmt.Errorf("denied operation (%s): %w", vec.String(), ErrAccessDenied)
 		}
 	}

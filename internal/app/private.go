@@ -23,12 +23,13 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/just"
 )
 
 func (s *Service) findUser(fn func(user config.User) bool) (*config.User, error) {
-	users, ok := s.opts.cfg.Users.Provider.(config.UsersProviderConfig)
+	users, ok := s.opts.users.Provider.(config.UsersProviderConfig)
 	if !ok {
 		return nil, errors.New("not implemented") //nolint:err113
 	}
@@ -81,19 +82,13 @@ func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (
 	return dbpool, nil
 }
 
-func (s *Service) getTargetByID(ctx context.Context, uID config.UserID, tID config.TargetID) (*config.Target, error) {
-	for i := range s.opts.cfg.Targets {
-		target := s.opts.cfg.Targets[i]
+func (s *Service) getTargetByID(_ context.Context, uID config.UserID, tID config.TargetID) (*config.Target, error) {
+	for i := range s.opts.targets {
+		target := s.opts.targets[i]
 		if target.ID == tID {
-			acls := just.SliceFilter(s.FilterACLs(ctx, uID, tID), func(acl config.ACL) bool {
-				return acl.Allow
-			})
-
-			if len(acls) == 0 {
-				return nil, fmt.Errorf("target not found: %w", ErrNotFound)
+			if s.opts.acls.Allow(rules.ByUserID(uID.S()), rules.ByTargetID(target.ID.S())) {
+				return &target, nil
 			}
-
-			return &target, nil
 		}
 	}
 

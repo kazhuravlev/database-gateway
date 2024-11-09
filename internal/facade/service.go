@@ -157,9 +157,7 @@ func (s *Service) getServer(c echo.Context) error {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
-	acls := s.opts.app.FilterACLs(c.Request().Context(), user.ID, tID)
-
-	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, ``, nil, nil))
+	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, ``, nil, nil))
 }
 
 func (s *Service) getAuth(c echo.Context) error {
@@ -276,18 +274,16 @@ func (s *Service) runQuery(c echo.Context) error {
 	query := params.Get("query")
 	format := params.Get("format")
 
-	acls := s.opts.app.FilterACLs(c.Request().Context(), user.ID, tID)
-
 	qTbl, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
 	if err != nil {
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, query, nil, err)) //nolint:err113
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, query, nil, err)) //nolint:err113
 	}
 
 	switch format {
 	default:
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, query, nil, errors.New("unknown format"))) //nolint:err113
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, query, nil, errors.New("unknown format"))) //nolint:err113
 	case "html":
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, query, qTbl, nil))
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, query, qTbl, nil))
 	case "json":
 		qTbl := just.SliceMap(qTbl.Rows, func(row []string) map[string]any {
 			m := make(map[string]any, len(qTbl.Headers))
@@ -300,7 +296,7 @@ func (s *Service) runQuery(c echo.Context) error {
 
 		resBuf, err := json.Marshal(qTbl)
 		if err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, acls, query, nil, err))
+			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, query, nil, err))
 		}
 
 		c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json")) //nolint
