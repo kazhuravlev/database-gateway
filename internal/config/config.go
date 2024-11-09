@@ -31,6 +31,18 @@ type (
 	AuthType string
 )
 
+func (u UserID) S() string {
+	return string(u)
+}
+
+func (t TargetID) S() string {
+	return string(t)
+}
+
+func (op Op) S() string {
+	return string(op)
+}
+
 const (
 	AuthTypeConfig AuthType = "config"
 	AuthTypeOIDC   AuthType = "oidc"
