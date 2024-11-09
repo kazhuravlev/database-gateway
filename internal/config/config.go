@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kazhuravlev/database-gateway/internal/app/rules"
+
 	"github.com/kazhuravlev/just"
 )
 
@@ -79,14 +81,6 @@ type Target struct {
 	Type        string        `json:"type"`
 	Connection  Connection    `json:"connection"`
 	Tables      []TargetTable `json:"tables"`
-}
-
-type ACL struct {
-	User   UserID   `json:"user"`
-	Op     Op       `json:"op"`
-	Target TargetID `json:"target"`
-	Tbl    string   `json:"tbl"`
-	Allow  bool     `json:"allow"`
 }
 
 type User struct {
@@ -170,7 +164,7 @@ type FacadeConfig struct {
 type Config struct {
 	Targets []Target     `json:"targets"`
 	Users   UsersConfig  `json:"users"`
-	ACLs    []ACL        `json:"acls"`
+	ACLs    []rules.ACL  `json:"acls"`
 	Facade  FacadeConfig `json:"facade"`
 }
 
