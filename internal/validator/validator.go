@@ -74,11 +74,8 @@ func ValidateSchema(vectors []Vec, tables []config.TargetTable) error {
 
 // ValidateAccess check that all vectors is allowed to run.
 func ValidateAccess(vectors []Vec, haveAccess func(Vec) bool) error {
-	// Find acl for each vector.
-	for _, vec := range vectors {
-		if !haveAccess(vec) {
-			return fmt.Errorf("denied operation (%s): %w", vec.String(), ErrAccessDenied)
-		}
+	if !just.SliceAll(vectors, haveAccess) {
+		return fmt.Errorf("denied operation: %w", ErrAccessDenied)
 	}
 
 	return nil
