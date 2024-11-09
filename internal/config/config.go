@@ -193,6 +193,10 @@ func (c *Config) Validate() error {
 
 	// Check that all acls linked with exists targets
 	for _, acl := range c.ACLs {
+		if acl.Target == rules.Star || acl.Tbl == rules.Star {
+			continue
+		}
+
 		key := hTable{
 			target: TargetID(acl.Target),
 			table:  acl.Tbl,
