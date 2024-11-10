@@ -57,14 +57,14 @@ func (s *Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) err
 
 func (s *Service) GetQueryResults(conn qrm.DB, uid config.UserID, id uuid6.UUID) (*model.QueryResults, error) {
 	var obj model.QueryResults
-	q := tbl.QueryResults.
+	err := tbl.QueryResults.
 		SELECT(tbl.QueryResults.AllColumns).
 		WHERE(postgres.AND(
 			tbl.QueryResults.ID.EQ(postgres.UUID(id.ToUUID())),
 			tbl.QueryResults.UserID.EQ(postgres.String(uid.S())),
 		)).
-		LIMIT(1)
-	err := q.Query(conn, &obj)
+		LIMIT(1).
+		Query(conn, &obj)
 	if err := handleError("get query results", err, nil); err != nil {
 		return nil, err
 	}

@@ -171,7 +171,7 @@ func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID conf
 		}),
 	}
 
-	bb, err := json.Marshal(qTable)
+	buf, err := json.Marshal(qTable)
 	if err != nil {
 		return uuid6.Nil(), nil, fmt.Errorf("marshal qtable: %w", err)
 	}
@@ -181,7 +181,7 @@ func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID conf
 		UserID:    userID,
 		CreatedAt: queryStart,
 		Query:     query,
-		Response:  bb,
+		Response:  buf,
 	}
 	if err := s.opts.storage.InsertQueryResults(s.opts.storage.Conn(ctx), req); err != nil {
 		return uuid6.Nil(), nil, fmt.Errorf("insert query results: %w", err)

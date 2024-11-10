@@ -23,7 +23,6 @@ import (
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/just"
-	"github.com/pkg/errors"
 )
 
 func BuildDbDsn(cfg config.PostgresConfig) string {
@@ -42,7 +41,7 @@ func ConnectToPg(cfg config.PostgresConfig) (*sql.DB, error) {
 	postgresDSN := BuildDbDsn(cfg)
 	dbConn, err := sql.Open("postgres", postgresDSN)
 	if err != nil {
-		return nil, errors.Wrap(err, "connect to postgres")
+		return nil, fmt.Errorf("connect to postgres: %w", err)
 	}
 
 	dbConn.SetMaxIdleConns(2)                  //nolint:gomnd // it is obvious
@@ -50,7 +49,7 @@ func ConnectToPg(cfg config.PostgresConfig) (*sql.DB, error) {
 	dbConn.SetMaxOpenConns(cfg.MaxPoolSize)
 
 	if err := dbConn.Ping(); err != nil {
-		return nil, errors.Wrap(err, "ping postgres")
+		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
 
 	return dbConn, nil
