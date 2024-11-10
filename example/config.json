@@ -2,6 +2,12 @@
 	"targets": [
 		{
 			"id": "local-1",
+			"description": "Production for clients service",
+			"tags": [
+				"env:production",
+				"svc:clients",
+				"replica:analytics"
+			],
 			"type": "postgres",
 			"connection": {
 				"host": "postgres1",
@@ -33,6 +39,11 @@
 		},
 		{
 			"id": "local-2",
+			"description": "Another server",
+			"tags": [
+				"env:staging",
+				"svc:clients"
+			],
 			"type": "postgres",
 			"connection": {
 				"host": "postgres2",
@@ -56,6 +67,11 @@
 		},
 		{
 			"id": "local-3",
+			"description": "Experiments for John Doe",
+			"tags": [
+				"env:dev",
+				"backup:never"
+			],
 			"type": "postgres",
 			"connection": {
 				"host": "postgres3",
@@ -79,31 +95,33 @@
 		}
 	],
 	"users": {
-		"provider": "oidc",
-		"configuration": {
-			"client_id": "example-app",
-			"client_secret": "example-app-secret",
-			"issuer_url": "http://dex:5556",
-			"redirect_url": "http://localhost:8080/auth/callback",
-			"scopes": [
-				"email",
-				"profile"
-			]
-		}
+		"provider": "config",
+		"configuration": [
+			{
+				"id": "admin@example.com",
+				"username": "admin@example.com",
+				"password": "password"
+			},
+			{
+				"id": "user1@example.com",
+				"username": "user1@example.com",
+				"password": "password"
+			}
+		]
 	},
 	"acls": [
 		{
-			"user": "test@example.com",
-			"op": "select",
-			"target": "local-1",
-			"tbl": "public.clients",
+			"user": "admin@example.com",
+			"op": "*",
+			"target": "*",
+			"tbl": "*",
 			"allow": true
 		},
 		{
-			"user": "test@example.com",
-			"op": "insert",
-			"target": "local-1",
-			"tbl": "public.clients",
+			"user": "user1@example.com",
+			"op": "select",
+			"target": "*",
+			"tbl": "*",
 			"allow": true
 		}
 	],

@@ -31,4 +31,6 @@ WORKDIR /app
 
 COPY --from=builder /app/gateway /app/gateway
 
-CMD ["/app/gateway"]
+ENTRYPOINT ["/app/gateway"]
+
+CMD ["run"]
