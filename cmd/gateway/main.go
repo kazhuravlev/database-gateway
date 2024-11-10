@@ -27,13 +27,12 @@ import (
 	"github.com/go-jet/jet/v2/generator/postgres"
 	"github.com/go-jet/jet/v2/generator/template"
 	postgres2 "github.com/go-jet/jet/v2/postgres"
-	"github.com/kazhuravlev/database-gateway/internal/pgdb"
-	"github.com/urfave/cli/v2"
-
 	"github.com/kazhuravlev/database-gateway/internal/app"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/facade"
+	"github.com/kazhuravlev/database-gateway/internal/pgdb"
 	_ "github.com/lib/pq"
+	"github.com/urfave/cli/v2"
 )
 
 const keyConfig = "config"

@@ -19,10 +19,9 @@ package app
 import (
 	"log/slog"
 
-	"github.com/kazhuravlev/database-gateway/internal/storage"
-
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/storage"
 )
 
 //go:generate toolset run options-gen -from-struct=Options

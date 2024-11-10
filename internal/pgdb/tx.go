@@ -30,19 +30,19 @@ func NewConn(ctx context.Context, db *sql.DB) *conn {
 	return &conn{ctx: ctx, db: db}
 }
 
-func (c *conn) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (c *conn) Exec(query string, args ...any) (sql.Result, error) {
 	return c.db.Exec(query, args...) //nolint:wrapcheck
 }
 
-func (c *conn) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+func (c *conn) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	return c.db.ExecContext(ctx, query, args...) //nolint:wrapcheck
 }
 
-func (c *conn) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (c *conn) Query(query string, args ...any) (*sql.Rows, error) {
 	return c.db.Query(query, args...) //nolint:wrapcheck
 }
 
-func (c *conn) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+func (c *conn) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	return c.db.QueryContext(ctx, query, args...) //nolint:wrapcheck
 }
 
@@ -59,19 +59,19 @@ func NewTx(ctx context.Context, db *sql.Tx) *tx {
 	return &tx{ctx: ctx, db: db}
 }
 
-func (t *tx) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (t *tx) Exec(query string, args ...any) (sql.Result, error) {
 	return t.db.ExecContext(t.ctx, query, args...) //nolint:wrapcheck
 }
 
-func (t *tx) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+func (t *tx) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	return t.db.ExecContext(ctx, query, args...) //nolint:wrapcheck
 }
 
-func (t *tx) Query(query string, args ...interface{}) (*sql.Rows, error) {
+func (t *tx) Query(query string, args ...any) (*sql.Rows, error) {
 	return t.db.QueryContext(t.ctx, query, args...) //nolint:wrapcheck
 }
 
-func (t *tx) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+func (t *tx) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	return t.db.QueryContext(ctx, query, args...) //nolint:wrapcheck
 }
 

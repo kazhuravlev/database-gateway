@@ -23,7 +23,6 @@ import (
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/just"
-
 	"github.com/pkg/errors"
 )
 

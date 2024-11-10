@@ -16,7 +16,7 @@
 
 package storage
 
-//type InsertChatReq struct {
+// type InsertChatReq struct {
 //	ID       int
 //	Username string
 //	FullChat tg.MessagesChatFull
