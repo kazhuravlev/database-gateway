@@ -138,5 +138,14 @@
 	"facade": {
 		"port": 8080,
 		"cookie_secret": "secret"
+	},
+	"storage": {
+		"host": "127.0.0.1",
+		"port": 5432,
+		"database": "local__dbgw",
+		"username": "local__dbgw",
+		"password": "local__dbgw",
+		"use_ssl": false,
+		"max_pool_size": 16
 	}
 }
