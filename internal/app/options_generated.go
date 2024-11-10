@@ -7,6 +7,7 @@ import (
 
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/storage"
 	errors461e464ebed9 "github.com/kazhuravlev/options-gen/pkg/errors"
 	validator461e464ebed9 "github.com/kazhuravlev/options-gen/pkg/validator"
 )
@@ -18,6 +19,7 @@ func NewOptions(
 	targets []config.Target,
 	users config.UsersConfig,
 	acls *rules.ACLs,
+	storage *storage.Service,
 	options ...OptOptionsSetter,
 ) Options {
 	o := Options{}
@@ -32,6 +34,8 @@ func NewOptions(
 
 	o.acls = acls
 
+	o.storage = storage
+
 	for _, opt := range options {
 		opt(&o)
 	}
@@ -44,6 +48,7 @@ func (o *Options) Validate() error {
 	errs.Add(errors461e464ebed9.NewValidationError("targets", _validate_Options_targets(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("users", _validate_Options_users(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("acls", _validate_Options_acls(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("storage", _validate_Options_storage(o)))
 	return errs.AsError()
 }
 
@@ -71,6 +76,13 @@ func _validate_Options_users(o *Options) error {
 func _validate_Options_acls(o *Options) error {
 	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.acls, "required"); err != nil {
 		return fmt461e464ebed9.Errorf("field `acls` did not pass the test: %w", err)
+	}
+	return nil
+}
+
+func _validate_Options_storage(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.storage, "required"); err != nil {
+		return fmt461e464ebed9.Errorf("field `storage` did not pass the test: %w", err)
 	}
 	return nil
 }

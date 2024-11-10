@@ -19,6 +19,8 @@ package app
 import (
 	"log/slog"
 
+	"github.com/kazhuravlev/database-gateway/internal/storage"
+
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 )
@@ -29,4 +31,5 @@ type Options struct {
 	targets []config.Target    `option:"mandatory" validate:"required"`
 	users   config.UsersConfig `option:"mandatory" validate:"required"`
 	acls    *rules.ACLs        `option:"mandatory" validate:"required"`
+	storage *storage.Service   `option:"mandatory" validate:"required"`
 }
