@@ -4,7 +4,7 @@
 			"id": "local-1",
 			"type": "postgres",
 			"connection": {
-				"host": "127.0.0.1",
+				"host": "postgres1",
 				"port": 5432,
 				"user": "pg01",
 				"password": "pg01",
@@ -35,8 +35,8 @@
 			"id": "local-2",
 			"type": "postgres",
 			"connection": {
-				"host": "127.0.0.1",
-				"port": 5433,
+				"host": "postgres2",
+				"port": 5432,
 				"user": "pg02",
 				"password": "pg02",
 				"db": "pg02",
@@ -58,8 +58,8 @@
 			"id": "local-3",
 			"type": "postgres",
 			"connection": {
-				"host": "127.0.0.1",
-				"port": 5434,
+				"host": "postgres3",
+				"port": 5432,
 				"user": "pg03",
 				"password": "pg03",
 				"db": "pg03",
