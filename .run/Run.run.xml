@@ -20,6 +20,7 @@
   <configuration default="false" name="Run" type="GoApplicationRunConfiguration" factoryName="Go Application">
     <module name="database-gateway" />
     <working_directory value="$PROJECT_DIR$" />
+    <parameters value="run" />
     <kind value="PACKAGE" />
     <package value="github.com/kazhuravlev/database-gateway/cmd/gateway" />
     <directory value="$PROJECT_DIR$" />
