@@ -25,11 +25,11 @@ func TestMakeVectors(t *testing.T) {
 				Cols: []string{"f1", "f2", "f3", "f4", "f5"},
 			}})
 		f("insert_complex",
-			`insert into clients (f1, f2) values (1, 2) returning f3`,
+			`insert into clients (f1, f2) values (1, 2) on conflict (f3, f4) do update set f5=33 returning f6`,
 			[]validator.Vec{{
 				Op:   config.OpInsert,
 				Tbl:  "public.clients",
-				Cols: []string{"f1", "f2", "f3"},
+				Cols: []string{"f1", "f2", "f3", "f4", "f5", "f6"},
 			}})
 		f("update_complex",
 			`update clients set f1=1 where f2=2 returning f3`,
@@ -45,5 +45,29 @@ func TestMakeVectors(t *testing.T) {
 				Tbl:  "public.clients",
 				Cols: []string{"f1", "f2"},
 			}})
+	})
+
+	t.Run("bad_path", func(t *testing.T) {
+		f := func(name, query string, err error) {
+			t.Run(name, func(t *testing.T) {
+				vecs, err2 := validator.MakeVectors(query)
+				require.Error(t, err2)
+				require.ErrorIs(t, err2, err)
+				require.Nil(t, vecs)
+			})
+		}
+
+		f("select_star",
+			`select * from clients`,
+			validator.ErrComplicatedQuery)
+		f("insert_star",
+			`insert into clients(f1, f3) values(1,2) returning *`,
+			validator.ErrComplicatedQuery)
+		f("update_star",
+			`update clients set f1=1 where f2=2 returning *`,
+			validator.ErrComplicatedQuery)
+		f("delete_star",
+			`delete from clients where f1=1 returning *`,
+			validator.ErrComplicatedQuery)
 	})
 }
