@@ -43,6 +43,9 @@ Choose `local-1`, put this query `select id, name from clients` and click `Run` 
 ## Interesting projects
 
 - https://github.com/vitessio/vitess
+- https://github.com/blastrain/vitess-sqlparser
+- https://github.com/antlr/grammars-v4/tree/master/sql/postgresql/Go
+- https://github.com/pingcap/tidb/pkg/parser
 - https://github.com/xwb1989/sqlparser
 - https://github.com/cockroachdb/cockroach/pkg/sql/parser
 - https://github.com/auxten/postgresql-parser
