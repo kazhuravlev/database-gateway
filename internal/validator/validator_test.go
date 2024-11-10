@@ -25,6 +25,61 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestValidateSchema(t *testing.T) {
+	t.Run("happy_path", func(t *testing.T) {
+		f := func(name string, vecs []validator.Vec, tbls []config.TargetTable) {
+			t.Run(name, func(t *testing.T) {
+				err := validator.ValidateSchema(vecs, tbls)
+				require.NoError(t, err)
+			})
+		}
+
+		f("both_args_nil", nil, nil)
+		f("both_exists", []validator.Vec{
+			{
+				Op:   config.OpInsert,
+				Tbl:  "tbl1",
+				Cols: []string{"col1", "col2"},
+			},
+		}, []config.TargetTable{
+			{
+				Table:  "tbl1",
+				Fields: []string{"col1", "col2"},
+			},
+		})
+	})
+
+	t.Run("bad_path", func(t *testing.T) {
+		f := func(name string, vecs []validator.Vec, tbls []config.TargetTable, err error) {
+			t.Run(name, func(t *testing.T) {
+				err2 := validator.ValidateSchema(vecs, tbls)
+				require.Error(t, err2)
+				require.ErrorIs(t, err2, err)
+			})
+		}
+
+		f("tbl_not_exists", []validator.Vec{
+			{
+				Op:   config.OpInsert,
+				Tbl:  "tbl1",
+				Cols: []string{"col1", "col2"},
+			},
+		}, nil, validator.ErrAccessDenied)
+		f("col_not_exists", []validator.Vec{
+			{
+				Op:   config.OpInsert,
+				Tbl:  "tbl1",
+				Cols: []string{"col1", "col2"},
+			},
+		}, []config.TargetTable{
+			{
+				Table:  "tbl1",
+				Fields: []string{"col1"},
+			},
+		}, validator.ErrAccessDenied)
+	})
+}
+
 func TestValidator(t *testing.T) {
 	t.Parallel()
 	target := config.Target{
