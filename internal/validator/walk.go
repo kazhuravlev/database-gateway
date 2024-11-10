@@ -258,8 +258,10 @@ func Walk(collect ICollect, statements ...tree.NodeFormatter) error { //nolint:f
 		case *tree.IndexFlags:
 			next = append(next, &node.Index)
 		case *tree.ReturningExprs:
-		case tree.UnqualifiedStar:
+			next = append(next, just.Pointer(tree.SelectExprs(*node)))
+		case *tree.ReturningNothing:
 		case *tree.NoReturningClause:
+		case tree.UnqualifiedStar:
 		case *tree.Name:
 		case *tree.NumVal:
 		case *tree.StrVal:
