@@ -37,7 +37,7 @@ Choose `local-1`, put this query `select id, name from clients` and click `Run` 
 - [ ] Output query results in CSV format
 - [ ] MySQL support
 - [ ] Query history tracking
-- [ ] Unique links for query results (useful for debugging)
+- [x] Unique links for query results (useful for debugging)
 - [ ] API for test automation
 
 ## Interesting projects
