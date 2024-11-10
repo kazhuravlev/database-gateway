@@ -41,7 +41,7 @@ func main() {
 	application := &cli.App{ //nolint:exhaustruct
 		Name: "dbgw",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
+			&cli.StringFlag{ //nolint:exhaustruct
 				Aliases: []string{"c"},
 				Name:    keyConfig,
 				Value:   "config.json",

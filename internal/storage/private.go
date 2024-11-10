@@ -18,12 +18,12 @@ package storage
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/go-jet/jet/v2/qrm"
 	"github.com/kazhuravlev/just"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 )
 
 func handleError(msg string, err error, res sql.Result) error {

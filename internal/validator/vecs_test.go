@@ -25,9 +25,13 @@ import (
 )
 
 func TestMakeVectors(t *testing.T) {
+	t.Parallel()
+
 	t.Run("happy_path", func(t *testing.T) {
+		t.Parallel()
 		test := func(name, query string, exp []validator.Vec) {
 			t.Run(name, func(t *testing.T) {
+				t.Parallel()
 				vecs, err := validator.MakeVectors(query)
 				require.NoError(t, err)
 				require.Equal(t, exp, vecs)
@@ -65,8 +69,10 @@ func TestMakeVectors(t *testing.T) {
 	})
 
 	t.Run("bad_path", func(t *testing.T) {
+		t.Parallel()
 		test := func(name, query string, err error) {
 			t.Run(name, func(t *testing.T) {
+				t.Parallel()
 				vecs, err2 := validator.MakeVectors(query)
 				require.Error(t, err2)
 				require.ErrorIs(t, err2, err)
