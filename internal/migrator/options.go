@@ -14,21 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package app
+package migrator
 
 import (
-	"log/slog"
-
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
-	"github.com/kazhuravlev/database-gateway/internal/config"
-	"github.com/kazhuravlev/database-gateway/internal/storage"
+	"database/sql"
+	"embed"
 )
 
-//go:generate toolset run options-gen -from-struct=Options
+//go:generate toolset run  options-gen -from-struct=Options
 type Options struct {
-	logger  *slog.Logger       `option:"mandatory" validate:"required"`
-	targets []config.Target    `option:"mandatory" validate:"required"`
-	users   config.UsersConfig `option:"mandatory" validate:"required"`
-	acls    *rules.ACLs        `option:"mandatory" validate:"required"`
-	storage *storage.Service   `option:"mandatory" validate:"required"`
+	migrationsFs        embed.FS `option:"mandatory" validate:"required"`
+	migrationsTableName string   `option:"mandatory" validate:"required"`
+	migrationsDir       string   `option:"mandatory" validate:"required"`
+	db                  *sql.DB  `option:"mandatory" validate:"required"`
 }

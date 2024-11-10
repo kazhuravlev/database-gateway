@@ -14,21 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package app
+package migrations
 
 import (
-	"log/slog"
-
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
-	"github.com/kazhuravlev/database-gateway/internal/config"
-	"github.com/kazhuravlev/database-gateway/internal/storage"
+	"embed"
+	"path/filepath"
 )
 
-//go:generate toolset run options-gen -from-struct=Options
-type Options struct {
-	logger  *slog.Logger       `option:"mandatory" validate:"required"`
-	targets []config.Target    `option:"mandatory" validate:"required"`
-	users   config.UsersConfig `option:"mandatory" validate:"required"`
-	acls    *rules.ACLs        `option:"mandatory" validate:"required"`
-	storage *storage.Service   `option:"mandatory" validate:"required"`
-}
+//go:embed *.sql
+var Migrations embed.FS
+
+// AbsMigrationsDir должен указывать на директорию, где хранятся миграции.
+var AbsMigrationsDir = func() string { //nolint:gochecknoglobals
+	abs, err := filepath.Abs(absMigrationsDir)
+	if err != nil {
+		panic("the sky is falling")
+	}
+
+	return abs
+}()
+
+const (
+	absMigrationsDir = "./internal/storage/migrations"
+	TableName        = "goose_migrations"
+)

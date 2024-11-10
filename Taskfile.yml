@@ -20,13 +20,14 @@ vars:
   PROJECT_NAME: database-gateway
   DEPS_COMPOSE_FILE: ./.cicd/local/docker-compose.yaml
   DOCKER_IMAGE_NAME: kazhuravlev/database-gateway
+  GO_ENTRYPOINT: ./cmd/gateway
   GIT_TAG:
     sh: "gt t l -f tag"
 
 tasks:
   run:
     cmds:
-      - go run ./cmd/gateway
+      - go run {{ .GO_ENTRYPOINT }} run
 
   deps:run:
     desc: Run all deps
@@ -68,6 +69,16 @@ tasks:
       - toolset run gofumpt -l -w .
       - toolset run goimports -d -w $(find . -type f -name '*.go' -not -path './.cicd/*')
 
+  migrations:new:
+    desc: Create new migration
+    cmds:
+      - go run {{ .GO_ENTRYPOINT }} migrate-new
+
+  migrations:up:
+    desc: Up all migrations
+    cmds:
+      - go run {{ .GO_ENTRYPOINT }} migrate-up
+
   ci:lint:
     desc: Run linter in CI tool
     cmds:
@@ -81,9 +92,19 @@ tasks:
       - task: "generate:go"
       - task: "generate:tailwind"
       - task: "generate:templ"
+      - task: "generate:jet"
       - task: "generate:license"
       - task: "fmt"
-  
+
+  generate:jet:
+    desc: Generate jet models
+    cmds:
+      - echo ">>> Jet generate"
+      - go run {{ .GO_ENTRYPOINT }} jet-generate
+      - rm -rf ./internal/storage/jetgen/{table,model}
+      - mv ./internal/storage/jetgen/local__dbgw/public/* ./internal/storage/jetgen/
+      - rm -rf ./internal/storage/jetgen/local__dbgw
+
   generate:license:
     cmds:
       - toolset run addlicense -f LICENSE_gplv3_header.txt .

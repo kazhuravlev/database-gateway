@@ -50,6 +50,7 @@ linters-settings:
       - 'fn'
     ignore-decls:
       - 'c echo.Context'
+      - 'c *cli.Context'
   tagliatelle:
     case:
       rules:

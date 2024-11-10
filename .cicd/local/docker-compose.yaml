@@ -21,37 +21,49 @@ services:
       - '127.0.0.1:5556:5556'
     volumes:
       - './dex-config.yaml:/etc/dex/config.yaml'
-    command: ['serve', '/etc/dex/config.yaml']
+    command: [ 'serve', '/etc/dex/config.yaml' ]
 
-  postgres-1:
+  # This is a primary application storage
+  storage-postgres:
     image: postgres:16
     ports:
       - '127.0.0.1:5432:5432'
     environment:
-      POSTGRES_DB: pg01
-      POSTGRES_USER: pg01
-      POSTGRES_PASSWORD: pg01
-    volumes:
-      - './init-01.sql:/docker-entrypoint-initdb.d/init.sql'
+      POSTGRES_DB: local__dbgw
+      POSTGRES_USER: local__dbgw
+      POSTGRES_PASSWORD: local__dbgw
 
-  postgres-2:
+  # This is an external databases
+
+  postgres-5433:
     image: postgres:16
     ports:
       - '127.0.0.1:5433:5432'
     environment:
-      POSTGRES_DB: pg02
-      POSTGRES_USER: pg02
-      POSTGRES_PASSWORD: pg02
+      POSTGRES_DB: pg5433
+      POSTGRES_USER: pg5433
+      POSTGRES_PASSWORD: pg5433
     volumes:
-      - './init-02.sql:/docker-entrypoint-initdb.d/init.sql'
+      - './init-5433.sql:/docker-entrypoint-initdb.d/init.sql'
 
-  postgres-3:
+  postgres-5434:
     image: postgres:16
     ports:
       - '127.0.0.1:5434:5432'
     environment:
-      POSTGRES_DB: pg03
-      POSTGRES_USER: pg03
-      POSTGRES_PASSWORD: pg03
+      POSTGRES_DB: pg5434
+      POSTGRES_USER: pg5434
+      POSTGRES_PASSWORD: pg5434
     volumes:
-      - './init-03.sql:/docker-entrypoint-initdb.d/init.sql'
+      - './init-5434.sql:/docker-entrypoint-initdb.d/init.sql'
+
+  postgres-5435:
+    image: postgres:16
+    ports:
+      - '127.0.0.1:5435:5432'
+    environment:
+      POSTGRES_DB: pg5435
+      POSTGRES_USER: pg5435
+      POSTGRES_PASSWORD: pg5435
+    volumes:
+      - './init-5435.sql:/docker-entrypoint-initdb.d/init.sql'

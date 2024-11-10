@@ -14,21 +14,43 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package app
+package pgdb
 
 import (
-	"log/slog"
+	"database/sql"
+	"fmt"
+	"time"
 
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
-	"github.com/kazhuravlev/database-gateway/internal/storage"
+	"github.com/kazhuravlev/just"
 )
 
-//go:generate toolset run options-gen -from-struct=Options
-type Options struct {
-	logger  *slog.Logger       `option:"mandatory" validate:"required"`
-	targets []config.Target    `option:"mandatory" validate:"required"`
-	users   config.UsersConfig `option:"mandatory" validate:"required"`
-	acls    *rules.ACLs        `option:"mandatory" validate:"required"`
-	storage *storage.Service   `option:"mandatory" validate:"required"`
+func BuildDbDsn(cfg config.PostgresConfig) string {
+	return fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		cfg.Host,
+		cfg.Port,
+		cfg.Username,
+		cfg.Password,
+		cfg.Database,
+		just.If(cfg.UseSSL, "prefer", "disable"),
+	)
+}
+
+func ConnectToPg(cfg config.PostgresConfig) (*sql.DB, error) {
+	postgresDSN := BuildDbDsn(cfg)
+	dbConn, err := sql.Open("postgres", postgresDSN)
+	if err != nil {
+		return nil, fmt.Errorf("connect to postgres: %w", err)
+	}
+
+	dbConn.SetMaxIdleConns(2)                  //nolint:gomnd // it is obvious
+	dbConn.SetConnMaxLifetime(5 * time.Minute) //nolint:gomnd // it is obvious
+	dbConn.SetMaxOpenConns(cfg.MaxPoolSize)
+
+	if err := dbConn.Ping(); err != nil {
+		return nil, fmt.Errorf("ping postgres: %w", err)
+	}
+
+	return dbConn, nil
 }

@@ -14,21 +14,43 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package app
+package storage
 
 import (
-	"log/slog"
+	"database/sql"
+	"errors"
+	"fmt"
 
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
-	"github.com/kazhuravlev/database-gateway/internal/config"
-	"github.com/kazhuravlev/database-gateway/internal/storage"
+	"github.com/go-jet/jet/v2/qrm"
+	"github.com/kazhuravlev/just"
+	"github.com/lib/pq"
 )
 
-//go:generate toolset run options-gen -from-struct=Options
-type Options struct {
-	logger  *slog.Logger       `option:"mandatory" validate:"required"`
-	targets []config.Target    `option:"mandatory" validate:"required"`
-	users   config.UsersConfig `option:"mandatory" validate:"required"`
-	acls    *rules.ACLs        `option:"mandatory" validate:"required"`
-	storage *storage.Service   `option:"mandatory" validate:"required"`
+func handleError(msg string, err error, res sql.Result) error {
+	if err != nil {
+		if errors.Is(err, qrm.ErrNoRows) {
+			return fmt.Errorf("%s: %w", msg, ErrNotFound)
+		}
+
+		if pqErr, ok := just.ErrAs[*pq.Error](err); ok {
+			if pqErr.Code == "23505" {
+				return fmt.Errorf("%s: record already exists: %w", msg, ErrIntegrityViolation)
+			}
+		}
+
+		return fmt.Errorf("%s: %w", msg, err)
+	}
+
+	if res != nil {
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("%s: check affected rows: %w", msg, err)
+		}
+
+		if affected == 0 {
+			return fmt.Errorf("%s: no rows affected: %w", msg, ErrNotFound)
+		}
+	}
+
+	return nil
 }

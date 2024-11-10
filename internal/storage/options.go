@@ -14,21 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package app
+package storage
 
 import (
+	"database/sql"
 	"log/slog"
-
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
-	"github.com/kazhuravlev/database-gateway/internal/config"
-	"github.com/kazhuravlev/database-gateway/internal/storage"
 )
 
-//go:generate toolset run options-gen -from-struct=Options
+//go:generate toolset run  options-gen -from-struct=Options
 type Options struct {
-	logger  *slog.Logger       `option:"mandatory" validate:"required"`
-	targets []config.Target    `option:"mandatory" validate:"required"`
-	users   config.UsersConfig `option:"mandatory" validate:"required"`
-	acls    *rules.ACLs        `option:"mandatory" validate:"required"`
-	storage *storage.Service   `option:"mandatory" validate:"required"`
+	logger  *slog.Logger `option:"mandatory" validate:"required"`
+	dbWrite *sql.DB      `option:"mandatory" validate:"required"`
 }

@@ -58,6 +58,16 @@ func (op Op) S() string {
 	return string(op)
 }
 
+type PostgresConfig struct {
+	Host        string `json:"host"`
+	Port        int    `json:"port"`
+	Database    string `json:"database"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	UseSSL      bool   `json:"use_ssl"`
+	MaxPoolSize int    `json:"max_pool_size"`
+}
+
 type TargetTable struct {
 	Table  string   `json:"table"`
 	Fields []string `json:"fields"`
@@ -161,10 +171,11 @@ type FacadeConfig struct {
 }
 
 type Config struct {
-	Targets []Target     `json:"targets"`
-	Users   UsersConfig  `json:"users"`
-	ACLs    []rules.ACL  `json:"acls"`
-	Facade  FacadeConfig `json:"facade"`
+	Targets []Target       `json:"targets"`
+	Users   UsersConfig    `json:"users"`
+	ACLs    []rules.ACL    `json:"acls"`
+	Facade  FacadeConfig   `json:"facade"`
+	Storage PostgresConfig `json:"storage"`
 }
 
 func (c *Config) Validate() error { //nolint:cyclop

@@ -22,6 +22,13 @@ services:
     volumes:
       - './config.json:/app/config.json'
 
+  storage-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: local__dbgw
+      POSTGRES_USER: local__dbgw
+      POSTGRES_PASSWORD: local__dbgw
+
   dex:
     image: bitnami/dex
     ports:

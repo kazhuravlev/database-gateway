@@ -45,7 +45,7 @@ func (s *Service) findUser(fn func(user config.User) bool) (*config.User, error)
 	return nil, fmt.Errorf("user not exists: %w", ErrNotFound)
 }
 
-func (s *Service) getConnectionByID(ctx context.Context, target config.Target) (*pgxpool.Pool, error) { //nolint:gocritic
+func (s *Service) getConnection(ctx context.Context, target config.Target) (*pgxpool.Pool, error) { //nolint:gocritic
 	{
 		s.connsMu.RLock()
 		pool, ok := s.conns[target.ID]

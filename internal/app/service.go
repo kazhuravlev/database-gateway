@@ -18,6 +18,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -30,7 +31,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/kazhuravlev/just"
 	"github.com/labstack/gommon/log"
@@ -118,10 +121,10 @@ func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID conf
 	return just.Pointer(adaptTarget(*res)), nil
 }
 
-func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (*structs.QTable, error) {
+func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (uuid6.UUID, *structs.QTable, error) {
 	srv, err := s.getTargetByID(ctx, userID, srvID)
 	if err != nil {
-		return nil, fmt.Errorf("get target by id: %w", err)
+		return uuid6.Nil(), nil, fmt.Errorf("get target by id: %w", err)
 	}
 
 	haveAccess := func(vec validator.Vec) bool {
@@ -136,36 +139,55 @@ func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID conf
 	if err := validator.IsAllowed(srv.Tables, haveAccess, query); err != nil {
 		log.Error("err", err.Error())
 
-		return nil, fmt.Errorf("preflight check: %w", err)
+		return uuid6.Nil(), nil, fmt.Errorf("preflight check: %w", err)
 	}
 
-	conn, err := s.getConnectionByID(ctx, *srv)
+	conn, err := s.getConnection(ctx, *srv)
 	if err != nil {
-		return nil, fmt.Errorf("get connection by id: %w", err)
+		return uuid6.Nil(), nil, fmt.Errorf("get connection by id: %w", err)
 	}
 
+	queryStart := time.Now()
 	res, err := conn.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
+		return uuid6.Nil(), nil, fmt.Errorf("query: %w", err)
 	}
 
 	rows, err := pgx.CollectRows(res, func(row pgx.CollectableRow) ([]any, error) {
 		return row.Values()
 	})
 	if err != nil {
-		return nil, fmt.Errorf("collect rowsL %w", err)
+		return uuid6.Nil(), nil, fmt.Errorf("collect rowsL %w", err)
 	}
 
 	cols := just.SliceMap(res.FieldDescriptions(), func(fd pgconn.FieldDescription) string {
 		return fd.Name
 	})
 
-	return &structs.QTable{
+	qTable := structs.QTable{
 		Headers: cols,
 		Rows: just.SliceMap(rows, func(row []any) []string {
 			return just.SliceMap(row, adaptPgType)
 		}),
-	}, nil
+	}
+
+	buf, err := json.Marshal(qTable)
+	if err != nil {
+		return uuid6.Nil(), nil, fmt.Errorf("marshal qtable: %w", err)
+	}
+
+	req := storage.InsertQueryResultsReq{
+		ID:        uuid6.New(),
+		UserID:    userID,
+		CreatedAt: queryStart,
+		Query:     query,
+		Response:  buf,
+	}
+	if err := s.opts.storage.InsertQueryResults(s.opts.storage.Conn(ctx), req); err != nil {
+		return uuid6.Nil(), nil, fmt.Errorf("insert query results: %w", err)
+	}
+
+	return req.ID, &qTable, nil
 }
 
 func (s *Service) AuthType() config.AuthType {
@@ -219,4 +241,26 @@ func (s *Service) CompleteOIDC(ctx context.Context, code string) (*structs.User,
 		ID:       config.UserID(claims.Email),
 		Username: just.If(claims.PreferredUsername != "", claims.PreferredUsername, claims.Email),
 	}, expiry, nil
+}
+
+func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uuid6.UUID) (*QueryResults, error) {
+	res, err := s.opts.storage.GetQueryResults(s.opts.storage.Conn(ctx), uid, qid)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, fmt.Errorf("unknown result id: %w", ErrNotFound)
+		}
+
+		return nil, fmt.Errorf("get query results: %w", err)
+	}
+
+	var qTable structs.QTable
+	if err := json.Unmarshal(res.Response, &qTable); err != nil {
+		return nil, fmt.Errorf("unmarshal query results: %w", err)
+	}
+
+	return &QueryResults{
+		CreatedAt: res.CreatedAt,
+		Query:     res.Query,
+		QTable:    qTable,
+	}, nil
 }

@@ -32,8 +32,8 @@ type Server struct {
 }
 
 type QTable struct {
-	Headers []string
-	Rows    [][]string
+	Headers []string   `json:"headers"`
+	Rows    [][]string `json:"rows"`
 }
 
 type User struct {
