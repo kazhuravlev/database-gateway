@@ -30,7 +30,11 @@ staticClients:
 
 enablePasswordDB: true
 staticPasswords:
-  - email: "test@example.com"
+  - email: "admin@example.com"
     hash: "$2a$10$FOx1sBhDA4w0iDDHU.s7yeVcOCY/Di13tYyF8rWDM5TsmOq9b/k6a" # bcrypt hash of "password"
-    username: "test"
+    username: "admin"
     userID: "1"
+  - email: "user1@example.com"
+    hash: "$2a$10$FOx1sBhDA4w0iDDHU.s7yeVcOCY/Di13tYyF8rWDM5TsmOq9b/k6a" # bcrypt hash of "password"
+    username: "user1"
+    userID: "2"
