@@ -14,29 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package structs
+package app
 
-import "github.com/kazhuravlev/database-gateway/internal/config"
+import (
+	"time"
 
-type Tag struct {
-	Name string
-	// Color string
-}
+	"github.com/kazhuravlev/database-gateway/internal/structs"
+)
 
-type Server struct {
-	ID          config.TargetID
-	Description string
-	Tags        []Tag
-	Type        string
-	Tables      []config.TargetTable
-}
-
-type QTable struct {
-	Headers []string   `json:"headers"`
-	Rows    [][]string `json:"rows"`
-}
-
-type User struct {
-	ID       config.UserID
-	Username string
+type QueryResults struct {
+	CreatedAt time.Time
+	Query     string
+	QTable    structs.QTable
 }

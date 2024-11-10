@@ -25,9 +25,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
+	"github.com/kazhuravlev/just"
 
 	"github.com/a-h/templ"
 	"github.com/gorilla/sessions"
@@ -35,7 +39,6 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/facade/static"
 	"github.com/kazhuravlev/database-gateway/internal/facade/templates"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
-	"github.com/kazhuravlev/just"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -119,6 +122,7 @@ func (s *Service) Run(_ context.Context) error {
 	echoInst.GET("/servers", s.getServers)
 	echoInst.GET("/servers/:id", s.getServer)
 	echoInst.POST("/servers/:id", s.runQuery)
+	echoInst.GET("/servers/:id/:qid", s.getQueryResults)
 
 	echoInst.GET("/auth", s.getAuth)
 	echoInst.GET("/auth/callback", s.getAuthCallback)
@@ -157,7 +161,9 @@ func (s *Service) getServer(c echo.Context) error {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
-	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, ``, nil, nil))
+	formUrl := fmt.Sprintf("/servers/%s", srv.ID.S())
+
+	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formUrl, ``, nil, nil))
 }
 
 func (s *Service) getAuth(c echo.Context) error {
@@ -273,30 +279,62 @@ func (s *Service) runQuery(c echo.Context) error {
 
 	query := params.Get("query")
 	format := params.Get("format")
+	formUrl := fmt.Sprintf("/servers/%s", srv.ID.S())
 
-	qTbl, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
+	queryID, _, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
 	if err != nil {
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, query, nil, err)) //nolint:err113
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formUrl, query, nil, err)) //nolint:err113
 	}
+
+	params2 := url.Values{}
+	params2.Set("format", format)
+	targetUrl := fmt.Sprintf("/servers/%s/%s?%s", srv.ID, queryID.S(), params2.Encode())
+
+	return c.Redirect(http.StatusSeeOther, targetUrl)
+}
+
+func (s *Service) getQueryResults(c echo.Context) error {
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
+
+	tID := config.TargetID(c.Param("id"))
+	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), user.ID, tID)
+	if err != nil {
+		return fmt.Errorf("get target by id: %w", err)
+	}
+
+	qID := uuid6.FromStr(c.Param("qid"))
+	qRes, err := s.opts.app.GetQueryResults(c.Request().Context(), user.ID, qID)
+	if err != nil {
+		return fmt.Errorf("get query results: %w", err)
+	}
+
+	params, err := c.FormParams()
+	if err != nil {
+		return c.Redirect(http.StatusSeeOther, "/")
+	}
+
+	format := params.Get("format")
+	formUrl := fmt.Sprintf("/servers/%s", srv.ID.S())
 
 	switch format {
 	default:
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, query, nil, errors.New("unknown format"))) //nolint:err113
+		correctedUrl := fmt.Sprintf(c.Request().URL.Path + "?format=html")
+		return c.Redirect(http.StatusSeeOther, correctedUrl)
 	case "html":
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, query, qTbl, nil))
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formUrl, qRes.Query, &qRes.QTable, nil))
 	case "json":
-		qTbl := just.SliceMap(qTbl.Rows, func(row []string) map[string]any {
-			m := make(map[string]any, len(qTbl.Headers))
-			for i := range qTbl.Headers {
-				m[qTbl.Headers[i]] = row[i]
+		qTbl2 := just.SliceMap(qRes.QTable.Rows, func(row []string) map[string]any {
+			m := make(map[string]any, len(qRes.QTable.Headers))
+			for i := range qRes.QTable.Headers {
+				m[qRes.QTable.Headers[i]] = row[i]
 			}
 
 			return m
 		})
 
-		resBuf, err := json.Marshal(qTbl)
+		resBuf, err := json.Marshal(qTbl2)
 		if err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, query, nil, err))
+			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formUrl, qRes.Query, nil, err))
 		}
 
 		c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json")) //nolint

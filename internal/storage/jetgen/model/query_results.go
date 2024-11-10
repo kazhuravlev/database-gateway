@@ -8,16 +8,15 @@
 package model
 
 import (
-	"encoding/json"
-	"time"
-
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
+	"time"
 )
 
 type QueryResults struct {
-	ID        string `sql:"primary_key"`
+	ID        uuid6.UUID `sql:"primary_key"`
 	UserID    config.UserID
 	CreatedAt time.Time
 	Query     string
-	Response  json.RawMessage
+	Response  []byte
 }

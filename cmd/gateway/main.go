@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -105,7 +104,7 @@ func cmdGenerateModels(c *cli.Context, cfg config.Config) error {
 		"query_results": {
 			"id":       template.NewType(uuid6.Nil()),
 			"user_id":  template.NewType(config.UserID("")),
-			"response": template.NewType(json.RawMessage{}),
+			"response": template.NewType([]byte{}),
 		},
 	}
 

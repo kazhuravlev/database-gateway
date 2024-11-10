@@ -4,9 +4,9 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 )
 
-templ sqlForm(query string) {
+templ sqlForm(formUrl, query string) {
 	<div class="w-full">
-		<form action="#" method="post" id="myForm" style="margin:0">
+		<form action={templ.SafeURL(formUrl)} method="post" id="myForm" style="margin:0">
 			<div class="flex flex-col items-start gap-1">
 				<textarea id="textInput" name="query" placeholder="select col1, col2 from some_table limit 1" class="w-full p-1 h-24 border border-2 border-orange-400 text-neutral-900">{ query }</textarea>
 				<div class="flex flex-row items-start gap-2">
@@ -53,14 +53,14 @@ templ queryResult(tbl structs.QTable) {
 	</div>
 }
 
-templ PageTarget(user structs.User, target structs.Server, query string, qTbl *structs.QTable, err error) {
+templ PageTarget(user structs.User, target structs.Server, formUrl,query string, qTbl *structs.QTable, err error) {
 	@l_app() {
 		@header(user)
 		@w_appline() {
 			@targetLine(target)
 		}
 		@w_appline() {
-			@sqlForm(query)
+			@sqlForm(formUrl,query)
 		}
 		if err != nil {
 			@showError(err)

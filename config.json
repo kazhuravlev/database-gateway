@@ -1,7 +1,7 @@
 {
 	"targets": [
 		{
-			"id": "local-1",
+			"id": "pg-5433",
 			"description": "Production for clients service",
 			"tags": [
 				"env:production",
@@ -11,10 +11,10 @@
 			"type": "postgres",
 			"connection": {
 				"host": "127.0.0.1",
-				"port": 5432,
-				"user": "pg01",
-				"password": "pg01",
-				"db": "pg01",
+				"port": 5433,
+				"user": "pg5433",
+				"password": "pg5433",
+				"db": "pg5433",
 				"use_ssl": false,
 				"max_pool_size": 4
 			},
@@ -38,7 +38,7 @@
 			]
 		},
 		{
-			"id": "local-2",
+			"id": "pg-5434",
 			"description": "Staging for clients service",
 			"tags": [
 				"env:staging",
@@ -48,10 +48,10 @@
 			"type": "postgres",
 			"connection": {
 				"host": "127.0.0.1",
-				"port": 5433,
-				"user": "pg02",
-				"password": "pg02",
-				"db": "pg02",
+				"port": 5434,
+				"user": "pg5434",
+				"password": "pg5434",
+				"db": "pg5434",
 				"use_ssl": false,
 				"max_pool_size": 4
 			},
@@ -67,7 +67,7 @@
 			]
 		},
 		{
-			"id": "local-3",
+			"id": "pg-5435",
 			"description": "Test server for John Doe experiments",
 			"tags": [
 				"env:dev",
@@ -77,10 +77,10 @@
 			"type": "postgres",
 			"connection": {
 				"host": "127.0.0.1",
-				"port": 5434,
-				"user": "pg03",
-				"password": "pg03",
-				"db": "pg03",
+				"port": 5435,
+				"user": "pg5435",
+				"password": "pg5435",
+				"db": "pg5435",
 				"use_ssl": false,
 				"max_pool_size": 4
 			},
@@ -123,14 +123,14 @@
 		{
 			"user": "user1@example.com",
 			"op": "*",
-			"target": "local-1",
+			"target": "pg-5433",
 			"tbl": "*",
 			"allow": true
 		},
 		{
 			"user": "user1@example.com",
 			"op": "select",
-			"target": "local-2",
+			"target": "pg-5434",
 			"tbl": "*",
 			"allow": true
 		}
