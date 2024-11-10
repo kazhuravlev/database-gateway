@@ -21,12 +21,11 @@ import (
 	"time"
 
 	"github.com/go-jet/jet/v2/postgres"
-	"github.com/kazhuravlev/database-gateway/internal/uuid6"
-
 	"github.com/go-jet/jet/v2/qrm"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/storage/jetgen/model"
 	tbl "github.com/kazhuravlev/database-gateway/internal/storage/jetgen/table"
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 )
 
 type InsertQueryResultsReq struct {

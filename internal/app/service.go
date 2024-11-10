@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/kazhuravlev/database-gateway/internal/storage"
-	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 	"sync"
 	"time"
 
@@ -33,7 +31,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/kazhuravlev/just"
 	"github.com/labstack/gommon/log"

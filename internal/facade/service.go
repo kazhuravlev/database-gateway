@@ -30,15 +30,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kazhuravlev/database-gateway/internal/uuid6"
-	"github.com/kazhuravlev/just"
-
 	"github.com/a-h/templ"
 	"github.com/gorilla/sessions"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/facade/static"
 	"github.com/kazhuravlev/database-gateway/internal/facade/templates"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
+	"github.com/kazhuravlev/just"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
