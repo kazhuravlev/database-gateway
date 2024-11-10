@@ -79,6 +79,15 @@ func withApp(cmd func(context.Context, *cli.Context, config.Config, *app.Service
 
 		logger.Info("start")
 
+		migratorInst, err := newMigrator(cfg.Storage)
+		if err != nil {
+			return fmt.Errorf("create new migrator: %w", err)
+		}
+
+		if err := migratorInst.Up(); err != nil {
+			return fmt.Errorf("up all migrations: %w", err)
+		}
+
 		dbConnWrite, err := pgdb.ConnectToPg(cfg.Storage)
 		if err != nil {
 			return fmt.Errorf("connect to db: %w", err)
