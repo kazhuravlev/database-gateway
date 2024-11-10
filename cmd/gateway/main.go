@@ -23,6 +23,8 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
+
 	"github.com/go-jet/jet/v2/generator/metadata"
 	"github.com/go-jet/jet/v2/generator/postgres"
 	"github.com/go-jet/jet/v2/generator/template"
@@ -101,6 +103,7 @@ func cmdGenerateModels(c *cli.Context, cfg config.Config) error {
 	// map[TABLE_NAME]map[FIELD_NAME]FIELD_TYPE
 	customFields := map[string]map[string]template.Type{
 		"query_results": {
+			"id":       template.NewType(uuid6.Nil()),
 			"user_id":  template.NewType(config.UserID("")),
 			"response": template.NewType(json.RawMessage{}),
 		},
