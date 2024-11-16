@@ -17,6 +17,9 @@
 services:
   dbgw:
     image: kazhuravlev/database-gateway:latest
+    restart: on-failure
+    depends_on:
+      - "storage-postgres"
     ports:
       - '127.0.0.1:8080:8080'
     volumes:
@@ -24,6 +27,12 @@ services:
 
   storage-postgres:
     image: postgres:16
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready", "-d", "local__dbgw" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     environment:
       POSTGRES_DB: local__dbgw
       POSTGRES_USER: local__dbgw
