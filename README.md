@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/github/license/kazhuravlev/database-gateway?color=blue)](https://github.com/kazhuravlev/database-gateway/blob/master/LICENSE)
 [![Build Status](https://github.com/kazhuravlev/database-gateway/actions/workflows/main.yml/badge.svg)](https://github.com/kazhuravlev/database-gateway/actions/workflows/main.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kazhuravlev/database-gateway)](https://goreportcard.com/report/github.com/kazhuravlev/database-gateway)
-[![CodeCov](https://codecov.io/gh/kazhuravlev/database-gateway/branch/master/graph/badge.svg?token=tNKcOjlxLo)](https://codecov.io/gh/kazhuravlev/database-gateway)
+[![codecov](https://codecov.io/gh/kazhuravlev/database-gateway/graph/badge.svg?token=DLOML3FTN1)](https://codecov.io/gh/kazhuravlev/database-gateway)
 
 This service provides a unified web interface for secure, controlled access to company databases. It enables employees
 to run queries on `production` databases while enforcing access control (`ACL`) policies. For example, team leads may
