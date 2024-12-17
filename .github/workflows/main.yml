@@ -1,11 +1,11 @@
 name: Go
 on:
   pull_request:
-    branches:
-      - 'main'
+    branches: ['main']
   push:
-    tags:
-      - '*'
+    tags: ['*']
+    branches: ['main']
+
 jobs:
   build:
     name: Build on golang ${{ matrix.go_version }} and ${{ matrix.os }}
