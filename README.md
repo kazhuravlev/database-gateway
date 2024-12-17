@@ -1,5 +1,13 @@
 # Database Gateway
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/kazhuravlev/database-gateway.svg)](https://pkg.go.dev/github.com/kazhuravlev/database-gateway)
+[![License](https://img.shields.io/github/license/kazhuravlev/database-gateway?color=blue)](https://github.com/kazhuravlev/database-gateway/blob/master/LICENSE)
+[![Build Status](https://github.com/kazhuravlev/database-gateway/actions/workflows/release.yml/badge.svg)](https://github.com/kazhuravlev/database-gateway/actions/workflows/release.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kazhuravlev/database-gateway)](https://goreportcard.com/report/github.com/kazhuravlev/database-gateway)
+[![CodeCov](https://codecov.io/gh/kazhuravlev/database-gateway/branch/master/graph/badge.svg?token=tNKcOjlxLo)](https://codecov.io/gh/kazhuravlev/database-gateway)
+
+
+
 This service provides a unified web interface for secure, controlled access to company databases. It enables employees
 to run queries on `production` databases while enforcing access control (`ACL`) policies. For example, team leads may
 have permissions to execute both `SELECT` and `INSERT` queries on certain tables, while other team members are
