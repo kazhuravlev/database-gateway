@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/kazhuravlev/database-gateway.svg)](https://pkg.go.dev/github.com/kazhuravlev/database-gateway)
 [![License](https://img.shields.io/github/license/kazhuravlev/database-gateway?color=blue)](https://github.com/kazhuravlev/database-gateway/blob/master/LICENSE)
-[![Build Status](https://github.com/kazhuravlev/database-gateway/actions/workflows/release.yml/badge.svg)](https://github.com/kazhuravlev/database-gateway/actions/workflows/release.yml)
+[![Build Status](https://github.com/kazhuravlev/database-gateway/actions/workflows/main.yml/badge.svg)](https://github.com/kazhuravlev/database-gateway/actions/workflows/main.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kazhuravlev/database-gateway)](https://goreportcard.com/report/github.com/kazhuravlev/database-gateway)
 [![CodeCov](https://codecov.io/gh/kazhuravlev/database-gateway/branch/master/graph/badge.svg?token=tNKcOjlxLo)](https://codecov.io/gh/kazhuravlev/database-gateway)
 
