@@ -233,8 +233,8 @@ github.com/kazhuravlev/just v0.72.0 h1:S00MjK8WlvmDJL6glbwb8WLMlMj/hFWL13zZyuZ0v
 github.com/kazhuravlev/just v0.72.0/go.mod h1:36D5y2JKFDztf3j3rC/EE9Vwhj5zT530nG5/iWc9dL0=
 github.com/kazhuravlev/options-gen v0.33.2 h1:K4rHJXVkG1XGtg/IIXIpdPkOKCN30ZCqYzlohepLdz4=
 github.com/kazhuravlev/options-gen v0.33.2/go.mod h1:wCFGkAThbEJhMo+dSV3m9giwPOdPyj5nLYfhkZfkF+Y=
-github.com/kazhuravlev/postgresql-parser v0.0.1 h1:f+i+Idv6158NNm/pvjvMYF2dsKL0tgB9PghO70EJduU=
-github.com/kazhuravlev/postgresql-parser v0.0.1/go.mod h1:GTsgkqvxnxEQdckuOO6ocAL8Dg6Ve7gfOghD5knKZb0=
+github.com/kazhuravlev/postgresql-parser v0.0.2 h1:Qbpeow2TC+/0sOXjFU0jBeHJ2fWjsz6W2wRTZZ5BK2U=
+github.com/kazhuravlev/postgresql-parser v0.0.2/go.mod h1:GTsgkqvxnxEQdckuOO6ocAL8Dg6Ve7gfOghD5knKZb0=
 github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQLJ+jE2L00=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
