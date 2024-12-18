@@ -2,19 +2,19 @@
 	"tools": [
 		{
 			"runtime": "go",
-			"module": "github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0",
+			"module": "github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2",
 			"alias": null,
 			"tags": null
 		},
 		{
 			"runtime": "go",
-			"module": "golang.org/x/tools/cmd/stringer@v0.26.0",
+			"module": "golang.org/x/tools/cmd/stringer@v0.28.0",
 			"alias": null,
 			"tags": null
 		},
 		{
 			"runtime": "go",
-			"module": "golang.org/x/tools/cmd/goimports@v0.26.0",
+			"module": "golang.org/x/tools/cmd/goimports@v0.28.0",
 			"alias": null,
 			"tags": null
 		},
@@ -26,7 +26,7 @@
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.33.1",
+			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.33.2",
 			"alias": null,
 			"tags": null
 		},
@@ -44,7 +44,7 @@
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/hexdigest/gowrap/cmd/gowrap@v1.4.0",
+			"module": "github.com/hexdigest/gowrap/cmd/gowrap@v1.4.1",
 			"alias": null,
 			"tags": null
 		},

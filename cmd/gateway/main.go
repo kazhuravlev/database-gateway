@@ -75,12 +75,18 @@ func main() {
 	}
 
 	if err := application.Run(os.Args); err != nil {
-		fmt.Println(err)
+		fmt.Println(err) //nolint:forbidigo
 		os.Exit(1)
 	}
 }
 
-func cmdRun(ctx context.Context, c *cli.Context, cfg config.Config, appInst *app.Service, logger *slog.Logger) error {
+func cmdRun(
+	ctx context.Context,
+	_ *cli.Context,
+	cfg config.Config, //nolint:gocritic
+	appInst *app.Service,
+	logger *slog.Logger,
+) error {
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("validate config: %w", err)
 	}
@@ -97,7 +103,7 @@ func cmdRun(ctx context.Context, c *cli.Context, cfg config.Config, appInst *app
 	return nil
 }
 
-func cmdGenerateModels(c *cli.Context, cfg config.Config) error {
+func cmdGenerateModels(_ *cli.Context, cfg config.Config) error { //nolint:gocritic
 	// map[TABLE_NAME]map[FIELD_NAME]FIELD_TYPE
 	customFields := map[string]map[string]template.Type{
 		"query_results": {
@@ -107,7 +113,7 @@ func cmdGenerateModels(c *cli.Context, cfg config.Config) error {
 		},
 	}
 
-	postgresDSN := pgdb.BuildDbDsn(cfg.Storage)
+	postgresDSN := pgdb.BuildDBDsn(cfg.Storage)
 
 	dbTemplate := template.Default(postgres2.Dialect).
 		UseSchema(func(schema metadata.Schema) template.Schema {
@@ -137,7 +143,7 @@ func cmdGenerateModels(c *cli.Context, cfg config.Config) error {
 	return nil
 }
 
-func cmdMigrateUp(c *cli.Context, cfg config.Config) error {
+func cmdMigrateUp(_ *cli.Context, cfg config.Config) error { //nolint:gocritic
 	migratorInst, err := newMigrator(cfg.Storage)
 	if err != nil {
 		return fmt.Errorf("create new migrator: %w", err)
@@ -150,7 +156,7 @@ func cmdMigrateUp(c *cli.Context, cfg config.Config) error {
 	return nil
 }
 
-func cmdMigrateDownOne(c *cli.Context, cfg config.Config) error {
+func cmdMigrateDownOne(_ *cli.Context, cfg config.Config) error { //nolint:gocritic
 	migratorInst, err := newMigrator(cfg.Storage)
 	if err != nil {
 		return fmt.Errorf("create new migrator: %w", err)
@@ -163,7 +169,7 @@ func cmdMigrateDownOne(c *cli.Context, cfg config.Config) error {
 	return nil
 }
 
-func cmdMigrateCreateNew(c *cli.Context, cfg config.Config) error {
+func cmdMigrateCreateNew(_ *cli.Context, cfg config.Config) error { //nolint:gocritic
 	migratorInst, err := newMigrator(cfg.Storage)
 	if err != nil {
 		return fmt.Errorf("create new migrator: %w", err)

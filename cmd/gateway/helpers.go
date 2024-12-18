@@ -30,11 +30,10 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/storage/migrations"
 	"github.com/kazhuravlev/just"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 )
 
-func withConfig(action func(c *cli.Context, cfg config.Config) error) cli.ActionFunc {
+func withConfig(action func(c *cli.Context, cfg config.Config) error) cli.ActionFunc { //nolint:gocritic
 	return func(c *cli.Context) error {
 		configFilename := c.String(keyConfig)
 
@@ -47,10 +46,10 @@ func withConfig(action func(c *cli.Context, cfg config.Config) error) cli.Action
 	}
 }
 
-func newMigrator(cfg config.PostgresConfig) (*migrator.Migrator, error) {
+func newMigrator(cfg config.PostgresConfig) (*migrator.Migrator, error) { //nolint:gocritic
 	dbConn, err := pgdb.ConnectToPg(cfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "connect to postgres")
+		return nil, fmt.Errorf("connect to postgres: %w", err)
 	}
 
 	migratorInst, err := migrator.New(migrator.NewOptions(
@@ -60,13 +59,15 @@ func newMigrator(cfg config.PostgresConfig) (*migrator.Migrator, error) {
 		dbConn,
 	))
 	if err != nil {
-		return nil, errors.Wrap(err, "create new migrator")
+		return nil, fmt.Errorf("create migrator: %w", err)
 	}
 
 	return migratorInst, nil
 }
 
-func withApp(cmd func(context.Context, *cli.Context, config.Config, *app.Service, *slog.Logger) error) func(*cli.Context, config.Config) error {
+func withApp(
+	cmd func(context.Context, *cli.Context, config.Config, *app.Service, *slog.Logger) error,
+) func(*cli.Context, config.Config) error {
 	return func(c *cli.Context, cfg config.Config) error {
 		ctx, cancel := context.WithCancel(c.Context)
 		defer cancel()

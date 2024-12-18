@@ -25,7 +25,7 @@ import (
 	"github.com/kazhuravlev/just"
 )
 
-func BuildDbDsn(cfg config.PostgresConfig) string {
+func BuildDBDsn(cfg config.PostgresConfig) string { //nolint:gocritic
 	return fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Host,
@@ -37,15 +37,15 @@ func BuildDbDsn(cfg config.PostgresConfig) string {
 	)
 }
 
-func ConnectToPg(cfg config.PostgresConfig) (*sql.DB, error) {
-	postgresDSN := BuildDbDsn(cfg)
+func ConnectToPg(cfg config.PostgresConfig) (*sql.DB, error) { //nolint:gocritic
+	postgresDSN := BuildDBDsn(cfg)
 	dbConn, err := sql.Open("postgres", postgresDSN)
 	if err != nil {
 		return nil, fmt.Errorf("connect to postgres: %w", err)
 	}
 
-	dbConn.SetMaxIdleConns(2)                  //nolint:gomnd // it is obvious
-	dbConn.SetConnMaxLifetime(5 * time.Minute) //nolint:gomnd // it is obvious
+	dbConn.SetMaxIdleConns(2)                  //nolint:mnd
+	dbConn.SetConnMaxLifetime(5 * time.Minute) //nolint:mnd
 	dbConn.SetMaxOpenConns(cfg.MaxPoolSize)
 
 	if err := dbConn.Ping(); err != nil {

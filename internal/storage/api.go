@@ -36,7 +36,7 @@ type InsertQueryResultsReq struct {
 	Response  json.RawMessage
 }
 
-func (s *Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) error {
+func (*Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) error { //nolint:gocritic
 	obj := model.QueryResults{
 		ID:        req.ID,
 		UserID:    req.UserID,
@@ -55,7 +55,7 @@ func (s *Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) err
 	return nil
 }
 
-func (s *Service) GetQueryResults(conn qrm.DB, uid config.UserID, id uuid6.UUID) (*model.QueryResults, error) {
+func (*Service) GetQueryResults(conn qrm.DB, uid config.UserID, id uuid6.UUID) (*model.QueryResults, error) {
 	var obj model.QueryResults
 	err := tbl.QueryResults.
 		SELECT(tbl.QueryResults.AllColumns).

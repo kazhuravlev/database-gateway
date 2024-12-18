@@ -160,9 +160,9 @@ func (s *Service) getServer(c echo.Context) error {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
-	formUrl := fmt.Sprintf("/servers/%s", srv.ID.S())
+	formURL := "/servers/%s" + srv.ID.S()
 
-	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formUrl, ``, nil, nil))
+	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, ``, nil, nil))
 }
 
 func (s *Service) getAuth(c echo.Context) error {
@@ -278,18 +278,18 @@ func (s *Service) runQuery(c echo.Context) error {
 
 	query := params.Get("query")
 	format := params.Get("format")
-	formUrl := fmt.Sprintf("/servers/%s", srv.ID.S())
+	formURL := "/servers/%s" + srv.ID.S()
 
 	queryID, _, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
 	if err != nil {
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formUrl, query, nil, err)) //nolint:err113
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, query, nil, err)) //nolint:err113
 	}
 
 	params2 := url.Values{}
 	params2.Set("format", format)
-	targetUrl := fmt.Sprintf("/servers/%s/%s?%s", srv.ID, queryID.S(), params2.Encode())
+	targetURL := fmt.Sprintf("/servers/%s/%s?%s", srv.ID, queryID.S(), params2.Encode())
 
-	return c.Redirect(http.StatusSeeOther, targetUrl)
+	return c.Redirect(http.StatusSeeOther, targetURL)
 }
 
 func (s *Service) getQueryResults(c echo.Context) error {
@@ -313,14 +313,15 @@ func (s *Service) getQueryResults(c echo.Context) error {
 	}
 
 	format := params.Get("format")
-	formUrl := fmt.Sprintf("/servers/%s", srv.ID.S())
+	formURL := "/servers/%s" + srv.ID.S()
 
 	switch format {
 	default:
-		correctedUrl := fmt.Sprintf(c.Request().URL.Path + "?format=html")
-		return c.Redirect(http.StatusSeeOther, correctedUrl)
+		correctedURL := c.Request().URL.Path + "?format=html"
+
+		return c.Redirect(http.StatusSeeOther, correctedURL)
 	case "html":
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formUrl, qRes.Query, &qRes.QTable, nil))
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, &qRes.QTable, nil))
 	case "json":
 		qTbl2 := just.SliceMap(qRes.QTable.Rows, func(row []string) map[string]any {
 			m := make(map[string]any, len(qRes.QTable.Headers))
@@ -333,7 +334,7 @@ func (s *Service) getQueryResults(c echo.Context) error {
 
 		resBuf, err := json.Marshal(qTbl2)
 		if err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formUrl, qRes.Query, nil, err))
+			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, nil, err))
 		}
 
 		c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json")) //nolint
