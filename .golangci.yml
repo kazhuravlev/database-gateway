@@ -42,6 +42,9 @@ linters:
     - govet
 
 linters-settings:
+  gomoddirectives:
+    replace-allow-list:
+      - github.com/auxten/postgresql-parser
   varnamelen:
     ignore-names:
       - 'ok'

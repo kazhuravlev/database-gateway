@@ -19,7 +19,7 @@ version: "3"
 vars:
   PROJECT_NAME: database-gateway
   DEPS_COMPOSE_FILE: ./.cicd/local/docker-compose.yaml
-  DOCKER_IMAGE_NAME: kazhuravlev/database-gateway
+  DOCKER_IMAGE_NAME: database-gateway
   GO_ENTRYPOINT: ./cmd/gateway
   GIT_TAG:
     sh: "gt t l -f tag"
@@ -148,10 +148,3 @@ tasks:
           --platform linux/amd64 \
           -t {{ .DOCKER_IMAGE_NAME }}:{{.GIT_TAG}} \
           -f Dockerfile .
-
-  docker:push:
-    cmds:
-      - echo ">>> Docker push"
-      - docker tag {{ .DOCKER_IMAGE_NAME }}:{{.GIT_TAG}} {{ .DOCKER_IMAGE_NAME }}:latest
-      - docker push {{ .DOCKER_IMAGE_NAME }}:{{.GIT_TAG}}
-      - docker push {{ .DOCKER_IMAGE_NAME }}:latest

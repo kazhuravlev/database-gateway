@@ -14,23 +14,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-FROM golang:1.23 AS builder
+FROM alpine:3.21
 
-COPY go.mod .
-COPY go.sum .
+ENV WORKDIR=/workdir
 
-RUN go mod download
+RUN mkdir -p ${WORKDIR}
 
-COPY . .
+WORKDIR ${WORKDIR}
 
-RUN env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/gateway ./cmd/gateway
+VOLUME ${WORKDIR}
 
-FROM alpine:3.20
+ENTRYPOINT ["/bin/gateway"]
 
-WORKDIR /app
-
-COPY --from=builder /app/gateway /app/gateway
-
-ENTRYPOINT ["/app/gateway"]
-
-CMD ["run"]
+COPY database-gateway /bin/gateway

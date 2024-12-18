@@ -1,0 +1,85 @@
+# Database Gateway provides access to servers with ACL for safe and restricted database interactions.
+# Copyright (C) 2024  Kirill Zhuravlev
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+version: 2
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: 'database-gateway'
+    binary: 'database-gateway'
+    main: ./cmd/gateway
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Summary}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+#    goarch:
+#      - amd64
+#    goarm:
+#      - 6
+#      - 7
+#    goamd64:
+#      - v2
+#      - v3
+#    goarm64:
+#      - v9.0
+dockers:
+  - id: 'database-gateway'
+    goos: linux
+    goarch: amd64
+    ids:
+      - 'database-gateway'
+    image_templates:
+      - "kazhuravlev/database-gateway:latest"
+      - "kazhuravlev/database-gateway:{{ .Tag }}"
+      - "kazhuravlev/database-gateway:v{{ .Major }}"
+      - "kazhuravlev/database-gateway:v{{ .Major }}.{{ .Minor }}"
+    dockerfile: 'Dockerfile'
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+brews:
+  - name: 'database-gateway'
+    goarm: "6"
+    goamd64: v3
+    repository:
+      owner: 'kazhuravlev'
+      name: 'homebrew-database-gateway'
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    url_template: "https://github.com/kazhuravlev/database-gateway/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    commit_author:
+      name: goreleaserbot
+      email: kazhuravlev+goreleaserbot@fastmail.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    homepage: "https://github.com/kazhuravlev/database-gateway"
+    description: "Safe access to production databases"
+    license: "GPL-3.0"
+    test: |
+      system "#{bin}/gateway help"
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
