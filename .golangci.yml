@@ -36,12 +36,10 @@ linters:
     - godox
     - wsl
     - wrapcheck
-    - gomnd
     - exportloopref
     - nosprintfhostport
     - nolintlint
     - govet
-    - execinquery
 
 linters-settings:
   varnamelen:
@@ -51,6 +49,7 @@ linters-settings:
     ignore-decls:
       - 'c echo.Context'
       - 'c *cli.Context'
+      - 'id *UUID'
   tagliatelle:
     case:
       rules:
