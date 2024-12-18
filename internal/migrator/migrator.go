@@ -17,8 +17,9 @@
 package migrator
 
 import (
+	"fmt"
+
 	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
 )
 
@@ -30,7 +31,7 @@ type Migrator struct {
 
 func New(opts Options) (*Migrator, error) {
 	if err := opts.Validate(); err != nil {
-		return nil, errors.Wrap(err, "validate options")
+		return nil, fmt.Errorf("invalid options: %w", err)
 	}
 
 	goose.SetBaseFS(opts.migrationsFs)
@@ -38,7 +39,7 @@ func New(opts Options) (*Migrator, error) {
 	goose.SetSequential(true)
 
 	if err := goose.SetDialect(dialect); err != nil {
-		return nil, errors.Wrap(err, "set dialect")
+		return nil, fmt.Errorf("failed to set goose dialect: %w", err)
 	}
 
 	return &Migrator{
@@ -48,7 +49,7 @@ func New(opts Options) (*Migrator, error) {
 
 func (m *Migrator) CreateNewMigration(name, typ string) error {
 	if err := goose.Create(m.opts.db, m.opts.migrationsDir, name, typ); err != nil {
-		return errors.Wrap(err, "create new migration")
+		return fmt.Errorf("failed to create migration: %w", err)
 	}
 
 	return nil
@@ -56,7 +57,7 @@ func (m *Migrator) CreateNewMigration(name, typ string) error {
 
 func (m *Migrator) Up() error {
 	if err := goose.Up(m.opts.db, "."); err != nil {
-		return errors.Wrap(err, "up migrations")
+		return fmt.Errorf("migrate up: %w", err)
 	}
 
 	return nil
@@ -64,7 +65,7 @@ func (m *Migrator) Up() error {
 
 func (m *Migrator) DownOne() error {
 	if err := goose.Down(m.opts.db, "."); err != nil {
-		return errors.Wrap(err, "down one migration")
+		return fmt.Errorf("migrate down: %w", err)
 	}
 
 	return nil
@@ -72,7 +73,7 @@ func (m *Migrator) DownOne() error {
 
 func (m *Migrator) DownAll() error {
 	if err := goose.DownTo(m.opts.db, ".", 0); err != nil {
-		return errors.Wrap(err, "down one migration")
+		return fmt.Errorf("migrate down one: %w", err)
 	}
 
 	return nil

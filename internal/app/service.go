@@ -121,7 +121,12 @@ func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID conf
 	return just.Pointer(adaptTarget(*res)), nil
 }
 
-func (s *Service) RunQuery(ctx context.Context, userID config.UserID, srvID config.TargetID, query string) (uuid6.UUID, *structs.QTable, error) {
+func (s *Service) RunQuery(
+	ctx context.Context,
+	userID config.UserID,
+	srvID config.TargetID,
+	query string,
+) (uuid6.UUID, *structs.QTable, error) {
 	srv, err := s.getTargetByID(ctx, userID, srvID)
 	if err != nil {
 		return uuid6.Nil(), nil, fmt.Errorf("get target by id: %w", err)

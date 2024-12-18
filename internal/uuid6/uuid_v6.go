@@ -28,7 +28,7 @@ import (
 
 var nilUUID = ulid.ULID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} //nolint:gochecknoglobals
 
-type UUID ulid.ULID
+type UUID ulid.ULID //nolint:recvcheck
 
 func New() UUID {
 	return UUID(ulid.Make())

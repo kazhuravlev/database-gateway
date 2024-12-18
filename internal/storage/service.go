@@ -28,7 +28,6 @@ import (
 )
 
 var (
-	ErrBadRequest         = errors.New("bad request")
 	ErrNotFound           = errors.New("not found")
 	ErrIntegrityViolation = errors.New("integrity violation")
 )
