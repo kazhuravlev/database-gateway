@@ -17,8 +17,8 @@ builds:
     goos:
       - linux
       - darwin
-    goarch:
-      - amd64
+#    goarch:
+#      - amd64
 #    goarm:
 #      - 6
 #      - 7
