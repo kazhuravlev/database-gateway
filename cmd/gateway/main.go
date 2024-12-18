@@ -37,9 +37,7 @@ import (
 
 const keyConfig = "config"
 
-var (
-	version = "unknown-local-build"
-)
+var version = "unknown-local-build"
 
 func main() {
 	application := &cli.App{ //nolint:exhaustruct
