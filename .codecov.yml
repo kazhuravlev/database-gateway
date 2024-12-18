@@ -1,0 +1,4 @@
+ignore:
+  - 'internal/facade/templates/*.go'
+  - 'internal/storage/jetgen/*.go'
+  - '**/*_generated.go'
