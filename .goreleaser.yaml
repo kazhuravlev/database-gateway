@@ -17,6 +17,18 @@ builds:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
+#    goarm:
+#      - 6
+#      - 7
+#    goamd64:
+#      - v2
+#      - v3
+#    goarm64:
+#      - v9.0
 dockers:
   - id: 'database-gateway'
     goos: linux
