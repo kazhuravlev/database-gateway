@@ -26,4 +26,4 @@ VOLUME ${WORKDIR}
 
 ENTRYPOINT ["/bin/gateway"]
 
-COPY gateway /bin/gateway
+COPY database-gateway /bin/gateway
