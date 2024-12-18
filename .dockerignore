@@ -1,6 +1,5 @@
 *
-!go.mod
-!go.sum
-!cmd
-!internal
-!pkg
+!cmd/
+!internal/
+!.toolset*
+!go.*

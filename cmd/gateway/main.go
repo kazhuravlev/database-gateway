@@ -37,9 +37,14 @@ import (
 
 const keyConfig = "config"
 
+var (
+	version = "unknown-local-build"
+)
+
 func main() {
 	application := &cli.App{ //nolint:exhaustruct
-		Name: "dbgw",
+		Name:    "gateway",
+		Version: version,
 		Flags: []cli.Flag{
 			&cli.StringFlag{ //nolint:exhaustruct
 				Aliases: []string{"c"},

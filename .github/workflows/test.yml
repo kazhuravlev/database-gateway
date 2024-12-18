@@ -14,13 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-name: Go
+name: Test
+
 on:
   pull_request:
-    branches: ['main']
+    branches: [ 'main' ]
   push:
-    tags: ['*']
-    branches: ['main']
+    tags: [ '*' ]
+    branches: [ 'main' ]
 
 jobs:
   build:
@@ -35,19 +36,23 @@ jobs:
           - "macOS-latest"
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Set up Go ${{ matrix.go_version }}
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go_version }}
         id: go
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Get dependencies
         run: go mod download
+
+      - name: Build
+        run: |
+          go build -v -o /dev/null ./cmd/gateway
 
       - name: Test
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
