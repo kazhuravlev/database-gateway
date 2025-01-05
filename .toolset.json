@@ -3,55 +3,13 @@
 	"tools": [
 		{
 			"runtime": "go",
-			"module": "github.com/golangci/golangci-lint/cmd/golangci-lint@v1.62.2",
+			"module": "golang.org/x/tools/cmd/goimports@v0.32.0",
 			"alias": null,
 			"tags": null
 		},
 		{
 			"runtime": "go",
-			"module": "golang.org/x/tools/cmd/stringer@v0.28.0",
-			"alias": null,
-			"tags": null
-		},
-		{
-			"runtime": "go",
-			"module": "golang.org/x/tools/cmd/goimports@v0.28.0",
-			"alias": null,
-			"tags": null
-		},
-		{
-			"runtime": "go",
-			"module": "mvdan.cc/gofumpt@v0.7.0",
-			"alias": null,
-			"tags": null
-		},
-		{
-			"runtime": "go",
-			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.33.2",
-			"alias": null,
-			"tags": null
-		},
-		{
-			"runtime": "go",
-			"module": "github.com/kazhuravlev/structspec/cmd/structspec@v0.4.2",
-			"alias": null,
-			"tags": null
-		},
-		{
-			"runtime": "go",
-			"module": "gotest.tools/gotestsum@v1.12.0",
-			"alias": null,
-			"tags": null
-		},
-		{
-			"runtime": "go",
-			"module": "github.com/hexdigest/gowrap/cmd/gowrap@v1.4.1",
-			"alias": null,
-			"tags": null
-		},
-		{
-			"runtime": "go",
-			"module": "github.com/vburenin/ifacemaker@v1.2.1",
+			"module": "mvdan.cc/gofumpt@v0.8.0",
 			"alias": null,
 			"tags": null
 		},
@@ -63,7 +21,19 @@
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/a-h/templ/cmd/templ@v0.2.793",
+			"module": "github.com/a-h/templ/cmd/templ@v0.3.857",
+			"alias": null,
+			"tags": null
+		},
+		{
+			"runtime": "go",
+			"module": "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.1",
+			"alias": null,
+			"tags": null
+		},
+		{
+			"runtime": "go",
+			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.42.1",
 			"alias": null,
 			"tags": null
 		}

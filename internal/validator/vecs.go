@@ -21,9 +21,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/auxten/postgresql-parser/pkg/sql/parser"
-	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	parser2 "github.com/kazhuravlev/database-gateway/internal/parser"
 )
 
 type Vec struct {
@@ -38,139 +37,46 @@ func (v Vec) String() string {
 
 // MakeVectors create vectors from query.
 func MakeVectors(query string) ([]Vec, error) { //nolint:cyclop
-	stmts, err := parser.Parse(query)
+	res, err := parser2.Parse(query)
 	if err != nil {
-		return nil, fmt.Errorf("parse query: %w", err)
+		if errors.Is(err, parser2.ErrNotImplemented) {
+			return nil, errors.Join(err, ErrComplicatedQuery)
+		}
+
+		return nil, fmt.Errorf("parse sql: %w", err)
 	}
 
-	if len(stmts) != 1 {
-		return nil, fmt.Errorf("query must contains only one statement: %w", ErrBadQuery)
-	}
-
-	stmt := stmts[0]
-
-	if tree.CanModifySchema(stmt.AST) {
-		return nil, fmt.Errorf("unable to modify schema: %w", ErrBadQuery)
-	}
-
-	var vectors []Vec
-	var errs []error
-	collect := func(req tree.NodeFormatter) {
-		switch req := req.(type) {
-		case *tree.Insert:
-			vec, err := makeInsertVec(req)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("make insert vec: %w", err))
-			} else {
-				vectors = append(vectors, *vec)
+	vectors := make([]Vec, len(res))
+	for i, res := range res {
+		switch expr := res.(type) {
+		default:
+			return nil, fmt.Errorf("unexpected type (%T)", expr)
+		case parser2.SelectVec:
+			vectors[i] = Vec{
+				Op:   config.OpSelect,
+				Tbl:  expr.Tbl,
+				Cols: expr.Columns(),
 			}
-		case *tree.Select:
-			vec, err := MakeSelectVec(req)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("make select vec: %w", err))
-			} else {
-				vectors = append(vectors, *vec)
+		case parser2.InsertVec:
+			vectors[i] = Vec{
+				Op:   config.OpInsert,
+				Tbl:  expr.Tbl,
+				Cols: expr.Columns(),
 			}
-		case *tree.Update:
-			vec, err := makeUpdateVec(req)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("make update vec: %w", err))
-			} else {
-				vectors = append(vectors, *vec)
+		case parser2.UpdateVec:
+			vectors[i] = Vec{
+				Op:   config.OpUpdate,
+				Tbl:  expr.Tbl,
+				Cols: expr.Columns(),
 			}
-		case *tree.Delete:
-			vec, err := makeDeleteVec(req)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("make delete vec: %w", err))
-			} else {
-				vectors = append(vectors, *vec)
+		case parser2.DeleteVec:
+			vectors[i] = Vec{
+				Op:   config.OpDelete,
+				Tbl:  expr.Tbl,
+				Cols: expr.Columns(),
 			}
 		}
 	}
-	if err := Walk(collect, stmt.AST); err != nil {
-		return nil, fmt.Errorf("walk statement ast: %w", err)
-	}
-
-	if len(errs) > 0 {
-		return nil, fmt.Errorf("parse query: %w", errors.Join(errs...))
-	}
-
-	if len(vectors) == 0 {
-		return nil, fmt.Errorf("unsupported query: %w", ErrBadQuery)
-	}
 
 	return vectors, nil
-}
-
-func makeInsertVec(req *tree.Insert) (*Vec, error) {
-	tName, err := getTableName(req.Table)
-	if err != nil {
-		return nil, fmt.Errorf("get table name for insert: %w", err)
-	}
-
-	cols, err := GetColumnNames(req)
-	if err != nil {
-		return nil, fmt.Errorf("get column names: %w", err)
-	}
-
-	return &Vec{Op: config.OpInsert, Tbl: tName, Cols: cols}, nil
-}
-
-func MakeSelectVec(req *tree.Select) (*Vec, error) {
-	sel, ok := req.Select.(*tree.SelectClause)
-	if !ok {
-		return nil, fmt.Errorf("query have complicated select definition: %w", ErrComplicatedQuery)
-	}
-
-	if len(sel.From.Tables) != 1 {
-		return nil, fmt.Errorf("select have a several tables: %w", ErrComplicatedQuery)
-	}
-
-	tName, err := getTableName(sel.From.Tables[0])
-	if err != nil {
-		return nil, fmt.Errorf("get table name for select: %w", err)
-	}
-
-	cols, err := GetColumnNames(req)
-	if err != nil {
-		return nil, fmt.Errorf("get column names: %w", err)
-	}
-
-	return &Vec{Op: config.OpSelect, Tbl: tName, Cols: cols}, nil
-}
-
-func makeUpdateVec(req *tree.Update) (*Vec, error) {
-	tName, err := getTableName(req.Table)
-	if err != nil {
-		return nil, fmt.Errorf("get table name for update: %w", err)
-	}
-
-	cols, err := GetColumnNames(req)
-	if err != nil {
-		return nil, fmt.Errorf("get column names: %w", err)
-	}
-
-	return &Vec{
-		Op:   config.OpUpdate,
-		Tbl:  tName,
-		Cols: cols,
-	}, nil
-}
-
-func makeDeleteVec(req *tree.Delete) (*Vec, error) {
-	tName, err := getTableName(req.Table)
-	if err != nil {
-		return nil, fmt.Errorf("get table name for delete: %w", err)
-	}
-
-	cols, err := GetColumnNames(req)
-	if err != nil {
-		return nil, fmt.Errorf("get column names: %w", err)
-	}
-
-	return &Vec{
-		Op:   config.OpDelete,
-		Tbl:  tName,
-		Cols: cols,
-	}, nil
 }

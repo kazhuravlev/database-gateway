@@ -17,6 +17,7 @@
 package validator_test
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
@@ -30,11 +31,17 @@ func TestMakeVectors(t *testing.T) {
 	t.Run("happy_path", func(t *testing.T) {
 		t.Parallel()
 		test := func(name, query string, exp []validator.Vec) {
+			t.Helper()
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
+				t.Helper()
 				vecs, err := validator.MakeVectors(query)
 				require.NoError(t, err)
-				require.Equal(t, exp, vecs)
+				require.Len(t, vecs, len(exp))
+				for i := range exp {
+					sort.Strings(vecs[i].Cols)
+					require.Equal(t, exp[i], vecs[i])
+				}
 			})
 		}
 
@@ -42,28 +49,28 @@ func TestMakeVectors(t *testing.T) {
 			`select f1, count(f2) from clients where f3=1 group by f4 order by f5`,
 			[]validator.Vec{{
 				Op:   config.OpSelect,
-				Tbl:  "public.clients",
+				Tbl:  "clients",
 				Cols: []string{"f1", "f2", "f3", "f4", "f5"},
 			}})
 		test("insert_complex",
 			`insert into clients (f1, f2) values (1, 2) on conflict (f3, f4) do update set f5=33 returning f6`,
 			[]validator.Vec{{
 				Op:   config.OpInsert,
-				Tbl:  "public.clients",
+				Tbl:  "clients",
 				Cols: []string{"f1", "f2", "f3", "f4", "f5", "f6"},
 			}})
 		test("update_complex",
 			`update clients set f1=1 where f2=2 returning f3`,
 			[]validator.Vec{{
 				Op:   config.OpUpdate,
-				Tbl:  "public.clients",
+				Tbl:  "clients",
 				Cols: []string{"f1", "f2", "f3"},
 			}})
 		test("delete_complex",
 			`delete from clients where f1=1 returning f2`,
 			[]validator.Vec{{
 				Op:   config.OpDelete,
-				Tbl:  "public.clients",
+				Tbl:  "clients",
 				Cols: []string{"f1", "f2"},
 			}})
 	})
@@ -71,7 +78,9 @@ func TestMakeVectors(t *testing.T) {
 	t.Run("bad_path", func(t *testing.T) {
 		t.Parallel()
 		test := func(name, query string, err error) {
+			t.Helper()
 			t.Run(name, func(t *testing.T) {
+				t.Helper()
 				t.Parallel()
 				vecs, err2 := validator.MakeVectors(query)
 				require.Error(t, err2)

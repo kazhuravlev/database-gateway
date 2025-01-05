@@ -160,7 +160,7 @@ func (s *Service) getServer(c echo.Context) error {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
-	formURL := "/servers/%s" + srv.ID.S()
+	formURL := "/servers/" + srv.ID.S()
 
 	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, ``, nil, nil))
 }
@@ -278,7 +278,7 @@ func (s *Service) runQuery(c echo.Context) error {
 
 	query := params.Get("query")
 	format := params.Get("format")
-	formURL := "/servers/%s" + srv.ID.S()
+	formURL := "/servers/" + srv.ID.S()
 
 	queryID, _, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
 	if err != nil {
@@ -313,7 +313,7 @@ func (s *Service) getQueryResults(c echo.Context) error {
 	}
 
 	format := params.Get("format")
-	formURL := "/servers/%s" + srv.ID.S()
+	formURL := "/servers/" + srv.ID.S()
 
 	switch format {
 	default:

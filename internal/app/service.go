@@ -113,7 +113,7 @@ func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Se
 }
 
 func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID config.TargetID) (*structs.Server, error) {
-	res, err := s.getTargetByID(ctx, uID, tID)
+	res, _, err := s.getTargetByID(ctx, uID, tID)
 	if err != nil {
 		return nil, fmt.Errorf("get target: %w", err)
 	}
@@ -127,7 +127,7 @@ func (s *Service) RunQuery(
 	srvID config.TargetID,
 	query string,
 ) (uuid6.UUID, *structs.QTable, error) {
-	srv, err := s.getTargetByID(ctx, userID, srvID)
+	srv, schema, err := s.getTargetByID(ctx, userID, srvID)
 	if err != nil {
 		return uuid6.Nil(), nil, fmt.Errorf("get target by id: %w", err)
 	}
@@ -141,7 +141,7 @@ func (s *Service) RunQuery(
 		)
 	}
 
-	if err := validator.IsAllowed(srv.Tables, haveAccess, query); err != nil {
+	if err := validator.IsAllowed(schema, haveAccess, query); err != nil {
 		log.Error("err", err.Error())
 
 		return uuid6.Nil(), nil, fmt.Errorf("preflight check: %w", err)
