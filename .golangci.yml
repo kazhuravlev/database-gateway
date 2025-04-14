@@ -64,9 +64,6 @@ linters:
     godox:
       keywords:
         - FIXME
-    gomoddirectives:
-      replace-allow-list:
-        - github.com/auxten/postgresql-parser
     govet:
       enable:
         - nilness
