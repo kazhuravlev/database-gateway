@@ -182,7 +182,7 @@ GROUP BY region, product;`
 		t.Parallel()
 		t.Run("simple_allowed", func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(vec validator.Vec) bool { return true }
+			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `select id, name from clients;`
 			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			require.NoError(t, err)

@@ -29,12 +29,10 @@ type UpdateVec struct { //nolint:recvcheck
 	Tbl    string
 	Target []string
 	Filter []string
-	Group  []string
-	Sort   []string
 }
 
 func (s *UpdateVec) Columns() []string {
-	columns := just.SliceUniq(just.SliceUnion(s.Target, s.Group, s.Sort, s.Filter))
+	columns := just.SliceUniq(slices.Concat(s.Target, s.Filter))
 
 	return columns
 }
@@ -200,6 +198,7 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo
 		vectors = append(vectors, UpdateVec{
 			Tbl:    tbl,
 			Target: cols.ListNames(),
+			Filter: nil, // TODO: impl
 		})
 	}
 

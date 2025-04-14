@@ -19,6 +19,7 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/kazhuravlev/just"
 	pg "github.com/pganalyze/pg_query_go/v6"
@@ -33,7 +34,7 @@ type SelectVec struct { //nolint:recvcheck
 }
 
 func (s *SelectVec) Columns() []string {
-	columns := just.SliceUniq(just.SliceUnion(s.Target, s.Group, s.Sort, s.Filter))
+	columns := just.SliceUniq(slices.Concat(s.Target, s.Group, s.Sort, s.Filter))
 
 	return columns
 }
@@ -235,6 +236,9 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		vectors = append(vectors, SelectVec{
 			Tbl:    tbl,
 			Target: cols.ListNames(),
+			Filter: nil, // TODO: impl
+			Group:  nil, // TODO: impl
+			Sort:   nil, // TODO: impl
 		})
 	}
 

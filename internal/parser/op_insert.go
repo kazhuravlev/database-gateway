@@ -27,13 +27,10 @@ import (
 type InsertVec struct { //nolint:recvcheck
 	Tbl    string
 	Target []string
-	Filter []string
-	Group  []string
-	Sort   []string
 }
 
 func (s *InsertVec) Columns() []string {
-	columns := just.SliceUniq(just.SliceUnion(s.Target, s.Group, s.Sort, s.Filter))
+	columns := just.SliceUniq(s.Target)
 
 	return columns
 }

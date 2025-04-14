@@ -28,12 +28,10 @@ type DeleteVec struct { //nolint:recvcheck
 	Tbl    string
 	Target []string
 	Filter []string
-	Group  []string
-	Sort   []string
 }
 
 func (s *DeleteVec) Columns() []string {
-	columns := just.SliceUniq(just.SliceUnion(s.Target, s.Group, s.Sort, s.Filter))
+	columns := just.SliceUniq(slices.Concat(s.Target, s.Filter))
 
 	return columns
 }
@@ -78,6 +76,7 @@ func handleDelete(req *pg.DeleteStmt) ([]Vector, error) { //nolint:gocyclo
 		vectors = append(vectors, DeleteVec{
 			Tbl:    tbl,
 			Target: cols.ListNames(),
+			Filter: nil, // TODO: impl
 		})
 	}
 
