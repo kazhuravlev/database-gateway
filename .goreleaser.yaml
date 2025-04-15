@@ -32,10 +32,26 @@ builds:
       - CGO_ENABLED=1
     goos: ['darwin']
     goarch: ['arm64']
+  
+  - id: 'build-linux'
+    binary: 'database-gateway'
+    main: ./cmd/gateway
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Summary}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    env:
+      - CGO_ENABLED=1
+    goos: ['linux']
+    goarch: ['amd64']
+
 brews:
   - name: 'database-gateway'
     goarm: "6"
     goamd64: v3
+    ids:
+      - build-darwin
     repository:
       owner: 'kazhuravlev'
       name: 'homebrew-database-gateway'
@@ -51,9 +67,31 @@ brews:
     license: "GPL-3.0"
     test: |
       system "#{bin}/gateway help"
+
+dockers:
+  - id: 'database-gateway'
+    goos: linux
+    goarch: amd64
+    ids:
+      - 'build-linux'
+    image_templates:
+      - "kazhuravlev/database-gateway:latest"
+      - "kazhuravlev/database-gateway:{{ .Tag }}"
+      - "kazhuravlev/database-gateway:v{{ .Major }}"
+      - "kazhuravlev/database-gateway:v{{ .Major }}.{{ .Minor }}"
+    dockerfile: 'Dockerfile'
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=CGO_ENABLED=1"
+
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - none*
+
 checksum:
   name_template: 'checksums.txt'
+
 snapshot:
-  version_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next" 
