@@ -20,7 +20,7 @@ before:
     - go mod tidy
 
 builds:
-  - id: 'database-gateway'
+  - id: 'build-linux'
     binary: 'database-gateway'
     main: ./cmd/gateway
     ldflags:
@@ -30,23 +30,26 @@ builds:
     mod_timestamp: '{{ .CommitTimestamp }}'
     env:
       - CGO_ENABLED=1
-    goos:
-      - linux
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    ignore:
-      - goos: linux
-        goarch: arm64
-      - goos: darwin
-        goarch: amd64
+    goos: ['linux']
+    goarch: ['amd64']
+  - id: 'build-darwin'
+    binary: 'database-gateway'
+    main: ./cmd/gateway
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Summary}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    env:
+      - CGO_ENABLED=1
+    goos: ['darwin']
+    goarch: ['arm64']
 dockers:
   - id: 'database-gateway'
     goos: linux
     goarch: amd64
     ids:
-      - 'database-gateway'
+      - 'build-linux'
     image_templates:
       - "kazhuravlev/database-gateway:latest"
       - "kazhuravlev/database-gateway:{{ .Tag }}"
