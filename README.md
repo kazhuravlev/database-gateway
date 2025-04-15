@@ -18,6 +18,19 @@ that each user's access is tailored to their role and responsibilities.
 This application acts as a secure gateway to multiple PostgreSQL instances, allowing authenticated users to run approved
 queries through a unified web interface, with fine-grained ACLs controlling access.
 
+
+```
+                     ┌───────────────────────────┐               
+                     │ PROD      ┌─────────────┐ │               
+                     │       ┌───┤  Postgres1  │ │               
+  ┌────────┐    ┌────────┐   │   └─────────────┘ │               
+  │  USER  │────│  DBGW  │───┼                   │               
+  └────────┘    └────────┘   │   ┌─────────────┐ │               
+                     │       └───┤  Postgres2  │ │               
+                     │           └─────────────┘ │               
+                     └───────────────────────────┘ 
+```
+
 ### Components
 
 1. **Local PostgreSQL Database**:
