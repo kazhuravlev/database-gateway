@@ -45,7 +45,7 @@ jobs:
           CGO_ENABLED: 1
 
       - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist-linux
           path: dist/
@@ -66,7 +66,7 @@ jobs:
           go-version: '1.24'
 
       - name: Download Linux artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist-linux
           path: dist/
