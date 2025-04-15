@@ -40,7 +40,7 @@ builds:
       - goos: linux
         goarch: arm64
       - goos: darwin
-        goarch: darwin
+        goarch: amd64
 dockers:
   - id: 'database-gateway'
     goos: linux
