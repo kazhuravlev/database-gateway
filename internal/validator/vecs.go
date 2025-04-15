@@ -50,7 +50,7 @@ func MakeVectors(query string) ([]Vec, error) { //nolint:cyclop
 	for i, res := range res {
 		switch expr := res.(type) {
 		default:
-			return nil, fmt.Errorf("unexpected type (%T)", expr)
+			return nil, fmt.Errorf("unexpected type (%T): %w", expr, ErrBadQuery)
 		case parser2.SelectVec:
 			vectors[i] = Vec{
 				Op:   config.OpSelect,

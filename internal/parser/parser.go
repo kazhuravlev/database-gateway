@@ -31,21 +31,21 @@ type Vector interface {
 	isVector()
 }
 
-func Parse(query string) ([]Vector, error) {
+func Parse(query string) ([]Vector, error) { //nolint:cyclop // this is not so complicated
 	result, err := pg.Parse(query)
 	if err != nil {
 		return nil, fmt.Errorf("parse error: %w", err)
 	}
 
 	if len(result.GetStmts()) != 1 {
-		return nil, errors.New("expected 1 statement")
+		return nil, errors.New("expected 1 statement") //nolint:err113
 	}
 
 	root := result.GetStmts()[0]
 
 	switch node := root.GetStmt().GetNode().(type) {
 	default:
-		return nil, errors.New("unsupported root node type")
+		return nil, fmt.Errorf("unsupported root node type (%T): %w", node, ErrNotImplemented)
 	case *pg.Node_SelectStmt:
 		res, err := handleSelect(node.SelectStmt)
 		if err != nil {
@@ -170,7 +170,7 @@ func (c Column) Table() string {
 
 func ParseColumn(tokens ...string) (Column, error) {
 	if len(tokens) == 0 || len(tokens) > 4 {
-		return Column{}, errors.New("expected 0-4 tokens")
+		return Column{}, errors.New("expected 0-4 tokens") //nolint:err113
 	}
 
 	return Column{

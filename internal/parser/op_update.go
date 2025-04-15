@@ -39,17 +39,17 @@ func (s *UpdateVec) Columns() []string {
 
 func (UpdateVec) isVector() {}
 
-func parseAexpr(node *pg.Node_AExpr) (Columns, error) {
+func parseAexpr(node *pg.Node_AExpr) (Columns, error) { //nolint:cyclop
 	var columns Columns
 
 	expr := node.AExpr
 
-	switch expr.GetKind() {
+	switch expr.GetKind() { //nolint:exhaustive // this is whitelist of allowed kinds
 	default:
 		return nil, fmt.Errorf("aexpr clause kind (%s): %w", expr.GetKind().String(), ErrNotImplemented)
 	case pg.A_Expr_Kind_AEXPR_OP, pg.A_Expr_Kind_AEXPR_IN, pg.A_Expr_Kind_AEXPR_LIKE, pg.A_Expr_Kind_AEXPR_ILIKE, pg.A_Expr_Kind_AEXPR_BETWEEN:
 		if len(expr.GetName()) != 1 {
-			return nil, errors.New("clause aexpr name len should be 1")
+			return nil, errors.New("clause aexpr name len should be 1") //nolint:err113
 		}
 
 		switch expr := expr.GetName()[0].GetNode().(type) {
@@ -102,7 +102,7 @@ func parseAexpr(node *pg.Node_AExpr) (Columns, error) {
 	return columns, nil
 }
 
-func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo
+func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclop,funlen
 	if req.FromClause != nil ||
 		req.GetWithClause() != nil {
 		return nil, fmt.Errorf("unknown clause: %w", ErrNotImplemented)
@@ -187,7 +187,7 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo
 	for _, column := range allColumns {
 		tbl, ok := tables.Get(column.Table())
 		if !ok {
-			return nil, fmt.Errorf("table not found: %s", column.Table())
+			return nil, fmt.Errorf("table not found: %s", column.Table()) //nolint:err113
 		}
 
 		table2target[tbl] = append(table2target[tbl], column)
@@ -205,7 +205,7 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo
 	return vectors, nil
 }
 
-func parseUpdateWhere(node *pg.Node) (Columns, error) {
+func parseUpdateWhere(node *pg.Node) (Columns, error) { //nolint:cyclop
 	var columns Columns
 
 	switch node := node.GetNode().(type) {

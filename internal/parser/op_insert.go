@@ -37,7 +37,7 @@ func (s *InsertVec) Columns() []string {
 
 func (InsertVec) isVector() {}
 
-func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocognit
+func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocognit,cyclop,funlen
 	if req.GetWithClause() != nil ||
 		req.GetOverride() != pg.OverridingKind_OVERRIDING_NOT_SET {
 		return nil, fmt.Errorf("unknown clause: %w", ErrNotImplemented)
@@ -114,12 +114,10 @@ func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	allColumns := slices.Concat(targetCols, retCols)
 
 	if confl := req.GetOnConflictClause(); confl != nil {
-		switch confl.GetAction() {
+		switch confl.GetAction() { //nolint:exhaustive
 		default:
 			return nil, fmt.Errorf("unknonw action on conflict: %w", ErrNotImplemented)
-		case pg.OnConflictAction_ONCONFLICT_NONE:
-		case pg.OnConflictAction_ONCONFLICT_NOTHING:
-		case pg.OnConflictAction_ONCONFLICT_UPDATE:
+		case pg.OnConflictAction_ONCONFLICT_NONE, pg.OnConflictAction_ONCONFLICT_NOTHING, pg.OnConflictAction_ONCONFLICT_UPDATE:
 		}
 
 		if confl.GetWhereClause() != nil ||
@@ -145,7 +143,7 @@ func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	for _, column := range allColumns {
 		tbl, ok := tables.Get(column.Table())
 		if !ok {
-			return nil, fmt.Errorf("table not found: %s", column.Table())
+			return nil, fmt.Errorf("table not found: %s", column.Table()) //nolint:err113
 		}
 
 		table2target[tbl] = append(table2target[tbl], column)
@@ -162,7 +160,7 @@ func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	return vectors, nil
 }
 
-func pNodes2Columns(nodes []*pg.Node, defaultTable string) (Columns, error) {
+func pNodes2Columns(nodes []*pg.Node, defaultTable string) (Columns, error) { //nolint:cyclop
 	var allColumns Columns
 
 	for _, ret := range nodes {

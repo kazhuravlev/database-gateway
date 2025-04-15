@@ -65,7 +65,7 @@ func pNodeColumnRef(node *pg.Node_ColumnRef) (Column, error) {
 	return column, nil
 }
 
-func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocognit
+func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocognit,cyclop,funlen,maintidx
 	if sel.DistinctClause != nil ||
 		sel.GetIntoClause() != nil ||
 		sel.GetHavingClause() != nil ||
@@ -82,7 +82,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	}
 
 	if len(sel.GetFromClause()) > 1 {
-		return nil, errors.New("from clause too big")
+		return nil, errors.New("from clause too big") //nolint:err113
 	}
 
 	tables := Tables{m: make(map[string]string)}
@@ -137,11 +137,11 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 
 				switch node := funcCall.GetFuncname()[0].GetNode().(type) {
 				default:
-					return nil, fmt.Errorf("unknown function name type: %T", node)
+					return nil, fmt.Errorf("unknown function name type (%T): %w", node, ErrNotImplemented)
 				case *pg.Node_String_:
 					switch name := node.String_.GetSval(); name {
 					default:
-						return nil, fmt.Errorf("unknown function name: %s", name)
+						return nil, fmt.Errorf("unknown function name (%s): %w", name, ErrNotImplemented)
 					case "count", "lower", "upper":
 						// NOTE: allowed function names
 					}
@@ -150,7 +150,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 				for _, node := range funcCall.GetArgs() {
 					switch node := node.GetNode().(type) {
 					default:
-						return nil, fmt.Errorf("unknown function argument type: %T", node)
+						return nil, fmt.Errorf("unknown function argument type (%T)", node) //nolint:err113
 					case *pg.Node_ColumnRef:
 						column, err := pNodeColumnRef(node)
 						if err != nil {
@@ -166,7 +166,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	if sel.GetWhereClause() != nil {
 		switch node := sel.GetWhereClause().GetNode().(type) { //nolint:gocritic
 		case *pg.Node_AExpr:
-			switch node.AExpr.GetKind() {
+			switch node.AExpr.GetKind() { //nolint:exhaustive // this is white list
 			default:
 				return nil, fmt.Errorf("where clause kind (%d): %w", node.AExpr.GetKind(), ErrNotImplemented)
 			case pg.A_Expr_Kind_AEXPR_OP:
@@ -225,7 +225,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	for _, column := range allColumns {
 		tbl, ok := tables.Get(column.Table())
 		if !ok {
-			return nil, fmt.Errorf("table not found: %s", column.Table())
+			return nil, fmt.Errorf("table not found: %s", column.Table()) //nolint:err113
 		}
 
 		table2target[tbl] = append(table2target[tbl], column)

@@ -65,7 +65,7 @@ func handleDelete(req *pg.DeleteStmt) ([]Vector, error) { //nolint:gocyclo
 	for _, column := range allColumns {
 		tbl, ok := tables.Get(column.Table())
 		if !ok {
-			return nil, fmt.Errorf("table not found: %s", column.Table())
+			return nil, fmt.Errorf("table not found: %s", column.Table()) //nolint:err113
 		}
 
 		table2target[tbl] = append(table2target[tbl], column)

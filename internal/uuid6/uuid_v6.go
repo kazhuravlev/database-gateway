@@ -53,12 +53,12 @@ func (u UUID) String() string {
 // Scan implements the Scanner interface.
 func (u *UUID) Scan(value any) error {
 	if value == nil {
-		return errors.New("bad ulid") //nolint:goerr113
+		return errors.New("bad ulid") //nolint:err113
 	}
 
 	switch val := value.(type) {
 	default:
-		return errors.New("bad input type") //nolint:goerr113
+		return errors.New("bad input type") //nolint:err113
 	case []byte:
 		if err := scanTo(val, u); err != nil {
 			return fmt.Errorf("scan uuid6 []byte: %w", err)
