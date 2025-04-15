@@ -44,7 +44,12 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
+      
+      - name: Install dependencies for cross-compilation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib
+      
       - name: Release and Publish
         uses: goreleaser/goreleaser-action@v6
         with:
