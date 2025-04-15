@@ -17,6 +17,7 @@
 services:
   dbgw:
     image: kazhuravlev/database-gateway:latest
+    pull_policy: always
     restart: on-failure
     depends_on:
       - "storage-postgres"
