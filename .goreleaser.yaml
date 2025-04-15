@@ -32,13 +32,8 @@ builds:
       - CGO_ENABLED=1
     goos:
       - linux
-      - darwin
     goarch:
       - amd64
-      - arm64
-    ignore:
-      - goos: linux
-        goarch: 386
 dockers:
   - id: 'database-gateway'
     goos: linux
