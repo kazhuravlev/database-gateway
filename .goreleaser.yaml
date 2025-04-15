@@ -20,19 +20,6 @@ before:
     - go mod tidy
 
 builds:
-  - id: 'build-darwin'
-    binary: 'database-gateway'
-    main: ./cmd/gateway
-    ldflags:
-      - -s
-      - -w
-      - -X main.version={{.Summary}}
-    mod_timestamp: '{{ .CommitTimestamp }}'
-    env:
-      - CGO_ENABLED=1
-    goos: ['darwin']
-    goarch: ['arm64']
-
   - id: 'build-linux'
     binary: 'database-gateway'
     main: ./cmd/gateway
