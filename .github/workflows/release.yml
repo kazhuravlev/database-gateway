@@ -35,9 +35,6 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Install GoReleaser
-        run: go install github.com/goreleaser/goreleaser/v2@latest
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -66,15 +63,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.24"
-
-      - name: Install GoReleaser
-        run: go install github.com/goreleaser/goreleaser/v2@latest
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Release and Publish
         uses: goreleaser/goreleaser-action@v6
