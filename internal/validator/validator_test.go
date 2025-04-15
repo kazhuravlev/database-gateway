@@ -19,20 +19,25 @@ package validator_test
 import (
 	"testing"
 
-	"github.com/auxten/postgresql-parser/pkg/sql/sem/tree"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/stretchr/testify/require"
 )
 
+func helpSchemaFromTables(tables []config.TargetTable) *validator.DbSchema {
+	return validator.NewDbSchema("public", tables)
+}
+
 func TestValidateSchema(t *testing.T) {
 	t.Parallel()
 	t.Run("happy_path", func(t *testing.T) {
 		t.Parallel()
-		test := func(name string, vecs []validator.Vec, tbls []config.TargetTable) {
+		test := func(name string, vecs []validator.Vec, schema *validator.DbSchema) {
+			t.Helper()
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
-				err := validator.ValidateSchema(vecs, tbls)
+				t.Helper()
+				err := validator.ValidateSchema(vecs, schema)
 				require.NoError(t, err)
 			})
 		}
@@ -44,20 +49,20 @@ func TestValidateSchema(t *testing.T) {
 				Tbl:  "tbl1",
 				Cols: []string{"col1", "col2"},
 			},
-		}, []config.TargetTable{
+		}, helpSchemaFromTables([]config.TargetTable{
 			{
 				Table:  "tbl1",
 				Fields: []string{"col1", "col2"},
 			},
-		})
+		}))
 	})
 
 	t.Run("bad_path", func(t *testing.T) {
 		t.Parallel()
-		test := func(name string, vecs []validator.Vec, tbls []config.TargetTable, err error) {
+		test := func(name string, vecs []validator.Vec, schema *validator.DbSchema, err error) {
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
-				err2 := validator.ValidateSchema(vecs, tbls)
+				err2 := validator.ValidateSchema(vecs, schema)
 				require.Error(t, err2)
 				require.ErrorIs(t, err2, err)
 			})
@@ -69,30 +74,31 @@ func TestValidateSchema(t *testing.T) {
 				Tbl:  "tbl1",
 				Cols: []string{"col1", "col2"},
 			},
-		}, nil, validator.ErrAccessDenied)
+		}, helpSchemaFromTables(nil), validator.ErrAccessDenied)
 		test("col_not_exists", []validator.Vec{
 			{
 				Op:   config.OpInsert,
 				Tbl:  "tbl1",
 				Cols: []string{"col1", "col2"},
 			},
-		}, []config.TargetTable{
+		}, helpSchemaFromTables([]config.TargetTable{
 			{
 				Table:  "tbl1",
 				Fields: []string{"col1"},
 			},
-		}, validator.ErrAccessDenied)
+		}), validator.ErrAccessDenied)
 	})
 }
 
 func TestValidator(t *testing.T) {
 	t.Parallel()
 	target := config.Target{
-		ID:          "t1",
-		Description: "",
-		Tags:        nil,
-		Type:        "postgres",
-		Connection:  config.Connection{}, //nolint:exhaustruct
+		ID:            "t1",
+		Description:   "",
+		Tags:          nil,
+		Type:          "postgres",
+		Connection:    config.Connection{}, //nolint:exhaustruct
+		DefaultSchema: "public",
 		Tables: []config.TargetTable{
 			{
 				Table:  "public.clients",
@@ -167,8 +173,8 @@ SELECT region,
 FROM orders
 WHERE region IN (SELECT region FROM top_regions)
 GROUP BY region, product;`
-			err := validator.IsAllowed(target.Tables, haveAccess, query)
-			require.ErrorIs(t, err, validator.ErrAccessDenied)
+			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
+			require.ErrorIs(t, err, validator.ErrComplicatedQuery)
 		})
 	})
 
@@ -178,7 +184,7 @@ GROUP BY region, product;`
 			t.Parallel()
 			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `select id, name from clients;`
-			err := validator.IsAllowed(target.Tables, haveAccess, query)
+			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			require.NoError(t, err)
 		})
 
@@ -186,7 +192,7 @@ GROUP BY region, product;`
 			t.Parallel()
 			haveAccess := func(_ validator.Vec) bool { return false }
 			query := `select id, name from clients;`
-			err := validator.IsAllowed(target.Tables, haveAccess, query)
+			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 
@@ -194,7 +200,7 @@ GROUP BY region, product;`
 			t.Parallel()
 			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `select id, name from (select id, name from clients)`
-			err := validator.IsAllowed(target.Tables, haveAccess, query)
+			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			// TODO: make it allowed. Actually this is legal query for this ACL.
 			require.ErrorIs(t, err, validator.ErrComplicatedQuery)
 		})
@@ -205,14 +211,14 @@ GROUP BY region, product;`
 		t.Run("simple_allowed", func(t *testing.T) {
 			t.Parallel()
 			haveAccess := func(_ validator.Vec) bool { return true }
-			query := `update clients set id=1 and name='john'`
-			require.NoError(t, validator.IsAllowed(target.Tables, haveAccess, query))
+			query := `update clients set id=1, name='john'`
+			require.NoError(t, validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query))
 		})
 		t.Run("simple_denied", func(t *testing.T) {
 			t.Parallel()
 			haveAccess := func(_ validator.Vec) bool { return false }
-			query := `update clients set id=1 and name='john'`
-			err := validator.IsAllowed(target.Tables, haveAccess, query)
+			query := `update clients set id=1, name='john'`
+			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 	})
@@ -223,13 +229,13 @@ GROUP BY region, product;`
 			t.Parallel()
 			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `delete from clients where id=42`
-			require.NoError(t, validator.IsAllowed(target.Tables, haveAccess, query))
+			require.NoError(t, validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query))
 		})
 		t.Run("simple_denied", func(t *testing.T) {
 			t.Parallel()
 			haveAccess := func(_ validator.Vec) bool { return false }
 			query := `delete from clients where id=42`
-			err := validator.IsAllowed(target.Tables, haveAccess, query)
+			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 	})
@@ -240,7 +246,7 @@ GROUP BY region, product;`
 			t.Parallel()
 			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `insert into clients(id) values (42)`
-			err := validator.IsAllowed(target.Tables, haveAccess, query)
+			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			require.NoError(t, err)
 		})
 
@@ -248,7 +254,7 @@ GROUP BY region, product;`
 			t.Parallel()
 			haveAccess := func(_ validator.Vec) bool { return false }
 			query := `insert into clients(id) values (42)`
-			err := validator.IsAllowed(target.Tables, haveAccess, query)
+			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 
@@ -256,95 +262,8 @@ GROUP BY region, product;`
 			t.Parallel()
 			haveAccess := func(_ validator.Vec) bool { return true }
 			query := `insert into clients(id, name, email) values('11', '22', '33')`
-			err := validator.IsAllowed(target.Tables, haveAccess, query)
+			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			require.NoError(t, err)
 		})
 	})
-}
-
-func TestVector(t *testing.T) {
-	t.Parallel()
-	req := &tree.Select{
-		With: nil,
-		Select: &tree.SelectClause{
-			Distinct: false,
-			DistinctOn: tree.DistinctOn{
-				tree.NewUnresolvedName("distinct_col"),
-			},
-			Exprs: tree.SelectExprs{
-				{
-					Expr: tree.NewUnresolvedName("col_1"),
-					As:   "alias_1",
-				},
-				{
-					Expr: tree.NewUnresolvedName("col_2"),
-					As:   "alias_2",
-				},
-			},
-			From: tree.From{
-				Tables: tree.TableExprs{
-					tree.NewTableName("", "clients"),
-				},
-				AsOf: tree.AsOfClause{
-					Expr: nil,
-				},
-			},
-			Where: &tree.Where{
-				Type: "",
-				Expr: tree.NewUnresolvedName("where_1"),
-			},
-			GroupBy: tree.GroupBy{
-				tree.NewUnresolvedName("group_1"),
-			},
-			Having: &tree.Where{
-				Type: "",
-				Expr: tree.NewUnresolvedName("having_1"),
-			},
-			Window: tree.Window{
-				{
-					Name:    "",
-					RefName: "",
-					Partitions: tree.Exprs{
-						tree.NewUnresolvedName("part_1"),
-					},
-					OrderBy: tree.OrderBy{
-						{
-							Expr: tree.NewUnresolvedName("part_order_col"),
-						},
-					},
-					Frame: nil,
-				},
-			},
-			TableSelect: false,
-		},
-		OrderBy: tree.OrderBy{
-			{
-				Expr: tree.NewUnresolvedName("order_col"),
-			},
-		},
-		Limit:   nil,
-		Locking: nil,
-	}
-	vec, err := validator.MakeSelectVec(req)
-	require.NoError(t, err)
-	expVec := validator.Vec{
-		Op:  config.OpSelect,
-		Tbl: "public.clients",
-		Cols: []string{
-			"col_1",
-			"col_2",
-			"distinct_col",
-			"group_1",
-			"having_1",
-			"order_col",
-			"part_1",
-			"part_order_col",
-			"where_1",
-		},
-	}
-	require.Equal(t, expVec, *vec)
-
-	res, err := validator.GetColumnNames(req)
-	require.NoError(t, err)
-	require.Equal(t, expVec.Cols, res)
 }

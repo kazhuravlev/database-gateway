@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/just"
 )
 
@@ -33,13 +32,13 @@ var (
 )
 
 // IsAllowed will tokenize query, validate schema and check access after all.
-func IsAllowed(tables []config.TargetTable, haveAccess func(Vec) bool, query string) error {
+func IsAllowed(schema *DbSchema, haveAccess func(Vec) bool, query string) error {
 	vectors, err := MakeVectors(query)
 	if err != nil {
 		return fmt.Errorf("make vectors: %w", err)
 	}
 
-	if err := ValidateSchema(vectors, tables); err != nil {
+	if err := ValidateSchema(vectors, schema); err != nil {
 		return fmt.Errorf("validate schema: %w", err)
 	}
 
@@ -50,13 +49,10 @@ func IsAllowed(tables []config.TargetTable, haveAccess func(Vec) bool, query str
 	return nil
 }
 
-// ValidateSchema will check that request contains only allowed columns.
-func ValidateSchema(vectors []Vec, tables []config.TargetTable) error {
-	tblMap := just.Slice2MapFn(tables, func(_ int, tbl config.TargetTable) (string, config.TargetTable) {
-		return tbl.Table, tbl
-	})
+// ValidateSchema will check that request contains only allowed(known) columns.
+func ValidateSchema(vectors []Vec, schema *DbSchema) error {
 	for _, vec := range vectors {
-		tbl, ok := tblMap[vec.Tbl]
+		tbl, ok := schema.GetTable(vec.Tbl)
 		if !ok {
 			return fmt.Errorf("not known table: %w", errors.Join(ErrUnknownTable, ErrAccessDenied))
 		}

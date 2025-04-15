@@ -24,6 +24,7 @@ type gooseMigrationsTable struct {
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type GooseMigrationsTable struct {
@@ -67,6 +68,7 @@ func newGooseMigrationsTableImpl(schemaName, tableName, alias string) gooseMigra
 		TstampColumn    = postgres.TimestampColumn("tstamp")
 		allColumns      = postgres.ColumnList{IDColumn, VersionIDColumn, IsAppliedColumn, TstampColumn}
 		mutableColumns  = postgres.ColumnList{VersionIDColumn, IsAppliedColumn, TstampColumn}
+		defaultColumns  = postgres.ColumnList{TstampColumn}
 	)
 
 	return gooseMigrationsTable{
@@ -80,5 +82,6 @@ func newGooseMigrationsTableImpl(schemaName, tableName, alias string) gooseMigra
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

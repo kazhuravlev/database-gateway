@@ -25,6 +25,7 @@ type queryResultsTable struct {
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
+	DefaultColumns postgres.ColumnList
 }
 
 type QueryResultsTable struct {
@@ -69,6 +70,7 @@ func newQueryResultsTableImpl(schemaName, tableName, alias string) queryResultsT
 		ResponseColumn  = postgres.StringColumn("response")
 		allColumns      = postgres.ColumnList{IDColumn, UserIDColumn, CreatedAtColumn, QueryColumn, ResponseColumn}
 		mutableColumns  = postgres.ColumnList{UserIDColumn, CreatedAtColumn, QueryColumn, ResponseColumn}
+		defaultColumns  = postgres.ColumnList{ResponseColumn}
 	)
 
 	return queryResultsTable{
@@ -83,5 +85,6 @@ func newQueryResultsTableImpl(schemaName, tableName, alias string) queryResultsT
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
+		DefaultColumns: defaultColumns,
 	}
 }

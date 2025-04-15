@@ -84,12 +84,13 @@ type Connection struct {
 }
 
 type Target struct {
-	ID          TargetID      `json:"id"`
-	Description string        `json:"description"`
-	Tags        []string      `json:"tags"`
-	Type        string        `json:"type"`
-	Connection  Connection    `json:"connection"`
-	Tables      []TargetTable `json:"tables"`
+	ID            TargetID      `json:"id"`
+	Description   string        `json:"description"`
+	Tags          []string      `json:"tags"`
+	Type          string        `json:"type"`
+	Connection    Connection    `json:"connection"`
+	DefaultSchema string        `json:"default_schema"`
+	Tables        []TargetTable `json:"tables"`
 }
 
 type User struct {
@@ -145,11 +146,11 @@ func (u *UsersConfig) UnmarshalJSON(data []byte) error {
 
 type UsersProviderConfig []User
 
-func (UsersProviderConfig) isProviderConfiguration() {}
-
 func (UsersProviderConfig) Type() AuthType {
 	return AuthTypeConfig
 }
+
+func (UsersProviderConfig) isProviderConfiguration() {}
 
 type UsersProviderOIDC struct {
 	ClientID     string   `json:"client_id"`
@@ -159,11 +160,11 @@ type UsersProviderOIDC struct {
 	Scopes       []string `json:"scopes"`
 }
 
-func (UsersProviderOIDC) isProviderConfiguration() {}
-
 func (UsersProviderOIDC) Type() AuthType {
 	return AuthTypeOIDC
 }
+
+func (UsersProviderOIDC) isProviderConfiguration() {}
 
 type FacadeConfig struct {
 	Port         int    `json:"port"`

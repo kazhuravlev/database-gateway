@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/kazhuravlev/just"
 )
 
@@ -82,15 +83,17 @@ func (s *Service) getConnection(ctx context.Context, target config.Target) (*pgx
 	return dbpool, nil
 }
 
-func (s *Service) getTargetByID(_ context.Context, uID config.UserID, tID config.TargetID) (*config.Target, error) {
+func (s *Service) getTargetByID(_ context.Context, uID config.UserID, tID config.TargetID) (*config.Target, *validator.DbSchema, error) {
 	for i := range s.opts.targets {
 		target := s.opts.targets[i]
 		if target.ID == tID {
 			if s.opts.acls.Allow(rules.ByUserID(uID.S()), rules.ByTargetID(target.ID.S())) {
-				return &target, nil
+				schema := validator.NewDbSchema(target.DefaultSchema, target.Tables)
+
+				return &target, schema, nil
 			}
 		}
 	}
 
-	return nil, fmt.Errorf("target not found: %w", ErrNotFound)
+	return nil, nil, fmt.Errorf("target not found: %w", ErrNotFound)
 }
