@@ -11,7 +11,7 @@ This service provides a unified web interface for secure, controlled access to c
 to run queries on `production` databases while enforcing access control (`ACL`) policies. For example, team leads may
 have permissions to execute both `SELECT` and `INSERT` queries on certain tables, while other team members are
 restricted to read-only (`SELECT`) access. This approach ensures that database interactions are managed safely and
-that each user’s access is tailored to their role and responsibilities.
+that each user's access is tailored to their role and responsibilities.
 
 ## Architecture Overview
 
@@ -70,17 +70,120 @@ Choose `local-1`, put this query `select id, name from clients` and click `Run` 
 
 ## Features
 
-- [x] Supports any PostgreSQL wire-protocol database, including PostgreSQL and CockroachDB
+- [x] Supports any PostgreSQL wire-protocol database
 - [x] Allows hardcoded user configuration via config file
 - [x] Integrates with OpenID Connect for user authentication
 - [x] Enforces access filtering through ACLs
 - [x] Provides query result output in HTML format
 - [x] Provides query result output in JSON format
 - [x] Unique links for query results (useful for debugging)
-- [ ] Output query results in CSV format
-- [ ] MySQL support
-- [ ] Query history tracking
-- [ ] API for test automation
+- [x] Fine-grained table-level permissions
+- [x] Column-level access control
+- [x] Connection pooling for performance optimization
+- [x] Query validation and sanitization
+- [x] SQL parsing to enforce query type restrictions (SELECT, INSERT, etc.)
+- [x] Interactive web UI with keyboard shortcuts (Shift+Enter to run queries)
+- [x] Session management with token expiration
+- [x] Secure cookie handling
+
+## Advanced Configuration
+
+### Authentication Options
+
+The service supports two authentication methods:
+
+1. **Config File Authentication**: For simple setups with hardcoded users
+   ```json
+   "users": {
+     "provider": "config",
+     "configuration": [
+       {
+         "id": "admin@example.com",
+         "username": "admin@example.com",
+         "password": "password"
+       }
+     ]
+   }
+   ```
+
+2. **OIDC Authentication**: For integration with identity providers
+   ```json
+   "users": {
+     "provider": "oidc",
+     "configuration": {
+       "client_id": "example-app",
+       "client_secret": "example-app-secret",
+       "issuer_url": "http://localhost:5556",
+       "redirect_url": "http://localhost:8080/auth/callback",
+       "scopes": ["email", "profile"]
+     }
+   }
+   ```
+
+### Access Control Configuration
+
+Access control lists define user permissions with fine-grained control:
+
+```json
+"acls": [
+  {
+    "user": "admin@example.com",
+    "op": "*",
+    "target": "*",
+    "tbl": "*",
+    "allow": true
+  },
+  {
+    "user": "user1@example.com",
+    "op": "select",
+    "target": "pg-5433",
+    "tbl": "*",
+    "allow": true
+  }
+]
+```
+
+Wildcards (`*`) allow all operations, targets, or tables. Specific permissions override broader ones.
+
+### Database Connection Settings
+
+Configure performance settings for each database connection:
+
+```json
+"connection": {
+  "host": "postgres1",
+  "port": 5432,
+  "user": "pg01",
+  "password": "pg01",
+  "db": "pg01",
+  "use_ssl": false,
+  "max_pool_size": 4
+}
+```
+
+## Performance Optimizations
+
+- **Connection Pooling**: Configurable connection pool sizes for each database target
+- **Query Result Caching**: Results are stored in the local database for later reference
+- **Efficient Query Execution**: Parsed and validated for optimal performance
+
+## Security Considerations
+
+- **SQL Injection Protection**: All queries are parsed and validated before execution
+- **No Direct Database Access**: Remote databases are only accessible through the gateway
+- **Column-Level Restrictions**: ACLs can limit which fields users can query
+- **Query Type Restrictions**: Limit users to specific operations (SELECT, INSERT, etc.)
+- **Session Security**: Secure cookie handling with configurable expiration
+- **Error Handling**: Error messages are sanitized to prevent information leakage
+
+## Edge Cases and Troubleshooting
+
+- **Multiple Schema Support**: Tables can be specified with schema names (`schema.table`)
+- **Complex Query Handling**: Some complex queries might be rejected by the parser
+- **Connection Failures**: The service gracefully handles database connection failures
+- **Authentication Edge Cases**: Fallback strategies when OIDC provider is unavailable
+- **Missing Tables/Fields**: Queries referencing unknown tables or fields are rejected
+- **ACL Conflicts**: When multiple ACL rules apply, the most specific rule takes precedence
 
 ## Interesting projects
 
@@ -93,4 +196,3 @@ Choose `local-1`, put this query `select id, name from clients` and click `Run` 
 - https://github.com/topics/sql-parser?l=go
 - https://github.com/vitessio/vitess
 - https://github.com/xwb1989/sqlparser
-- https://play.openpolicyagent.org/
