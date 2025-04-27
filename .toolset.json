@@ -27,13 +27,13 @@
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.1",
+			"module": "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.5",
 			"alias": null,
 			"tags": null
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.42.1",
+			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.49.0",
 			"alias": null,
 			"tags": null
 		}
