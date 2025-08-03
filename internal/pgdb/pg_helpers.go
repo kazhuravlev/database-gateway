@@ -17,6 +17,7 @@
 package pgdb
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
@@ -48,7 +49,7 @@ func ConnectToPg(cfg config.PostgresConfig) (*sql.DB, error) { //nolint:gocritic
 	dbConn.SetConnMaxLifetime(5 * time.Minute) //nolint:mnd
 	dbConn.SetMaxOpenConns(cfg.MaxPoolSize)
 
-	if err := dbConn.Ping(); err != nil {
+	if err := dbConn.PingContext(context.TODO()); err != nil {
 		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
 

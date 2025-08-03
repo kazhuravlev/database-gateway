@@ -31,7 +31,7 @@ func NewConn(ctx context.Context, db *sql.DB) *conn {
 }
 
 func (c *conn) Exec(query string, args ...any) (sql.Result, error) {
-	return c.db.Exec(query, args...) //nolint:wrapcheck
+	return c.db.Exec(query, args...) //nolint:wrapcheck,noctx
 }
 
 func (c *conn) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
@@ -39,7 +39,7 @@ func (c *conn) ExecContext(ctx context.Context, query string, args ...any) (sql.
 }
 
 func (c *conn) Query(query string, args ...any) (*sql.Rows, error) {
-	return c.db.Query(query, args...) //nolint:wrapcheck
+	return c.db.Query(query, args...) //nolint:wrapcheck,noctx
 }
 
 func (c *conn) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
