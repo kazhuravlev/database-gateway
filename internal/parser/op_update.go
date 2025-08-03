@@ -102,7 +102,7 @@ func parseAexpr(node *pg.Node_AExpr) (Columns, error) { //nolint:cyclop
 	return columns, nil
 }
 
-func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclop,funlen
+func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclop,funlen,gocognit
 	if req.FromClause != nil ||
 		req.GetWithClause() != nil {
 		return nil, fmt.Errorf("unknown clause: %w", ErrNotImplemented)
