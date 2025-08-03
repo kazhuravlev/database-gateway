@@ -109,9 +109,14 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclo
 	}
 
 	rel := req.GetRelation()
-	tables := Tables{m: make(map[string]string)}
-	fqTableName := tables.Put(rel.GetCatalogname(), rel.GetSchemaname(), rel.GetRelname(), rel.GetAlias().GetAliasname())
-	tables.Finalize()
+	tables := NewTables("public")
+	fqTableName, err := tables.Put(rel.GetCatalogname(), rel.GetSchemaname(), rel.GetRelname(), rel.GetAlias().GetAliasname())
+	if err != nil {
+		return nil, fmt.Errorf("failed to add table: %w", err)
+	}
+	if err := tables.Finalize(); err != nil {
+		return nil, fmt.Errorf("failed to finalize tables: %w", err)
+	}
 
 	var targetCols Columns
 	for _, node := range req.GetTargetList() {

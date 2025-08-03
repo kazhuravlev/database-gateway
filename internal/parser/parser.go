@@ -25,7 +25,11 @@ import (
 	pg "github.com/pganalyze/pg_query_go/v6"
 )
 
-var ErrNotImplemented = errors.New("not implemented")
+var (
+	ErrNotImplemented      = errors.New("not implemented")
+	ErrRelationEmpty       = errors.New("relation cannot be empty")
+	ErrInvalidTableMapping = errors.New("invalid table mapping")
+)
 
 type Vector interface {
 	isVector()
@@ -78,12 +82,20 @@ func Parse(query string) ([]Vector, error) { //nolint:cyclop // this is not so c
 }
 
 type Tables struct {
-	m map[string]string
+	m             map[string]string
+	defaultSchema string
 }
 
-func (t *Tables) Put(catalog, schema, relation, alias string) string {
+func NewTables(defaultSchema string) *Tables {
+	return &Tables{
+		m:             make(map[string]string),
+		defaultSchema: defaultSchema,
+	}
+}
+
+func (t *Tables) Put(catalog, schema, relation, alias string) (string, error) {
 	if relation == "" {
-		panic("relation is empty")
+		return "", ErrRelationEmpty
 	}
 
 	fqtnBuf := bytes.NewBuffer(nil)
@@ -103,15 +115,14 @@ func (t *Tables) Put(catalog, schema, relation, alias string) string {
 
 	t.m[relation] = fqtn
 	t.m[fqtn] = fqtn
-	if schema == "" {
-		// FIXME(zhuravlev): use default schema
-		t.m["public."+relation] = fqtn
+	if schema == "" && t.defaultSchema != "" {
+		t.m[t.defaultSchema+"."+relation] = fqtn
 	}
 	if alias != "" {
 		t.m[alias] = fqtn
 	}
 
-	return fqtn
+	return fqtn, nil
 }
 
 func (t *Tables) Get(name string) (string, bool) {
@@ -127,24 +138,46 @@ func (t *Tables) Get(name string) (string, bool) {
 	return t.Get(res)
 }
 
+// HasMapping returns true if a direct mapping exists for the given name (for testing).
+func (t *Tables) HasMapping(name string) bool {
+	_, exists := t.m[name]
+
+	return exists
+}
+
+// SetMapping sets a direct mapping for testing purposes.
+func (t *Tables) SetMapping(name, target string) {
+	t.m[name] = target
+}
+
 // Finalize will check the collected tables and in case of only one table exists - creates a new Empty mapping.
-func (t *Tables) Finalize() {
-	all := t.GetAll()
+func (t *Tables) Finalize() error {
+	all, err := t.GetAll()
+	if err != nil {
+		return fmt.Errorf("failed to get all tables: %w", err)
+	}
 	if len(all) == 1 {
 		t.m[""] = all[0]
 	}
+
+	return nil
 }
 
-func (t *Tables) Len() int {
-	return len(t.GetAll())
+func (t *Tables) Len() (int, error) {
+	all, err := t.GetAll()
+	if err != nil {
+		return 0, err
+	}
+
+	return len(all), nil
 }
 
-func (t *Tables) GetAll() []string {
+func (t *Tables) GetAll() ([]string, error) {
 	final := make(map[string]struct{})
 	for k := range t.m {
 		res, ok := t.Get(k)
 		if !ok {
-			panic("this is impossible")
+			return nil, fmt.Errorf("%w for key %q", ErrInvalidTableMapping, k)
 		}
 		final[res] = struct{}{}
 	}
@@ -156,7 +189,7 @@ func (t *Tables) GetAll() []string {
 		i++
 	}
 
-	return keys
+	return keys, nil
 }
 
 type Column struct {
