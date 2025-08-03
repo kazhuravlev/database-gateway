@@ -85,7 +85,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		return nil, errors.New("from clause too big") //nolint:err113
 	}
 
-	tables := Tables{m: make(map[string]string)}
+	tables := NewTables("public")
 	from := sel.GetFromClause()[0]
 	switch fromNode := from.GetNode().(type) {
 	default:
@@ -95,13 +95,21 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	case *pg.Node_RangeVar:
 		tbl := fromNode.RangeVar
 		if tbl.GetAlias() != nil {
-			tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), tbl.GetAlias().GetAliasname())
+			_, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), tbl.GetAlias().GetAliasname())
+			if err != nil {
+				return nil, fmt.Errorf("failed to add table: %w", err)
+			}
 		} else {
-			tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), "")
+			_, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), "")
+			if err != nil {
+				return nil, fmt.Errorf("failed to add table: %w", err)
+			}
 		}
 	}
 
-	tables.Finalize()
+	if err := tables.Finalize(); err != nil {
+		return nil, fmt.Errorf("failed to finalize tables: %w", err)
+	}
 
 	var allColumns Columns
 	// handle target fields

@@ -44,10 +44,15 @@ func handleDelete(req *pg.DeleteStmt) ([]Vector, error) { //nolint:gocyclo
 		return nil, fmt.Errorf("unknown clause: %w", ErrNotImplemented)
 	}
 
-	tables := Tables{m: make(map[string]string)}
+	tables := NewTables("public")
 	rel := req.GetRelation()
-	fqTableName := tables.Put(rel.GetCatalogname(), rel.GetSchemaname(), rel.GetRelname(), rel.GetAlias().GetAliasname())
-	tables.Finalize()
+	fqTableName, err := tables.Put(rel.GetCatalogname(), rel.GetSchemaname(), rel.GetRelname(), rel.GetAlias().GetAliasname())
+	if err != nil {
+		return nil, fmt.Errorf("failed to add table: %w", err)
+	}
+	if err := tables.Finalize(); err != nil {
+		return nil, fmt.Errorf("failed to finalize tables: %w", err)
+	}
 
 	retCols, err := pNodes2Columns(req.GetReturningList(), fqTableName)
 	if err != nil {
