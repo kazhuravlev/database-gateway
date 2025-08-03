@@ -21,6 +21,7 @@ vars:
   DEPS_COMPOSE_FILE: ./.cicd/local/docker-compose.yaml
   DOCKER_IMAGE_NAME: database-gateway
   GO_ENTRYPOINT: ./cmd/gateway
+  TOOLSET: "go run github.com/kazhuravlev/toolset/cmd/toolset@v0.30.2"
   GIT_TAG:
     sh: "gt t l -f tag"
 
@@ -53,21 +54,21 @@ tasks:
   tools:install:
     cmds:
       - echo '>>> Run install tools'
-      - toolset sync
+      - "{{ .TOOLSET }} sync"
 
   lint:
     desc: Run static analysis
     cmds:
       - echo '>>> Run lint'
-      - toolset run golangci-lint run
+      - "{{ .TOOLSET }} run golangci-lint run"
 
   fmt:
     desc: Safe formatting codebase
     cmds:
       - echo ">>> Run Code Formatter"
       - go fmt $(go list ./...)
-      - toolset run gofumpt -l -w .
-      - toolset run goimports -d -w $(find . -type f -name '*.go' -not -path './.cicd/*')
+      - "{{ .TOOLSET }} run gofumpt -l -w ."
+      - "{{ .TOOLSET }} run goimports -d -w $(find . -type f -name '*.go' -not -path './.cicd/*')"
 
   migrations:new:
     desc: Create new migration
@@ -84,7 +85,7 @@ tasks:
     cmds:
       - task: tools:install
       - echo ">>> Run lint"
-      - toolset run golangci-lint run
+      - "{{ .TOOLSET }} run golangci-lint run"
 
   generate:
     desc: Generate code
@@ -107,7 +108,7 @@ tasks:
 
   generate:license:
     cmds:
-      - toolset run addlicense -f LICENSE_gplv3_header.txt .
+      - "{{ .TOOLSET }} run addlicense -f LICENSE_gplv3_header.txt ."
 
   generate:tailwind:
     dir: './internal/facade'
@@ -125,7 +126,7 @@ tasks:
     dir: './internal/facade/templates'
     cmds:
       - echo ">>> Templ"
-      - toolset run templ generate
+      - "{{ .TOOLSET }} run templ generate"
 
   check:
     desc: Run all project checks
