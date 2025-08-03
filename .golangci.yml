@@ -25,6 +25,7 @@ linters:
     - wrapcheck
     - wsl
     - wsl_v5
+    - noinlineerr
   settings:
     depguard:
       rules:
