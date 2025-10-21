@@ -44,9 +44,10 @@ import (
 )
 
 const (
-	ctxUser    = "c-user"
-	keySession = "session"
-	keyUserID  = "uid"
+	ctxUser       = "c-user"
+	keySession    = "session"
+	keyUserID     = "uid"
+	keyOIDCState  = "oidc-state"
 )
 
 type Service struct {
@@ -173,9 +174,25 @@ func (s *Service) getAuth(c echo.Context) error {
 	case config.AuthTypeConfig:
 		return Render(c, http.StatusOK, templates.PageAuth(nil))
 	case config.AuthTypeOIDC:
-		authURL, err := s.opts.app.InitOIDC(c.Request().Context())
+		authURL, state, err := s.opts.app.InitOIDC(c.Request().Context())
 		if err != nil {
 			return fmt.Errorf("init oidc: %w", err)
+		}
+
+		// Store state in session to validate on callback
+		sess, err := session.Get(keySession, c)
+		if err != nil {
+			return fmt.Errorf("get session: %w", err)
+		}
+
+		sess.Options = &sessions.Options{ //nolint:exhaustruct
+			Path:     "/",
+			MaxAge:   300, // 5 minutes - state is short-lived
+			HttpOnly: true,
+		}
+		sess.Values[keyOIDCState] = state
+		if err := sess.Save(c.Request(), c.Response()); err != nil {
+			return fmt.Errorf("save session with state: %w", err)
 		}
 
 		return c.Redirect(http.StatusSeeOther, authURL)
@@ -187,23 +204,33 @@ func (s *Service) getAuthCallback(c echo.Context) error {
 		return errors.New("not available") //nolint:err113
 	}
 
+	// Retrieve state from session
+	sess, err := session.Get(keySession, c)
+	if err != nil {
+		return fmt.Errorf("get session: %w", err)
+	}
+
+	expectedState, ok := sess.Values[keyOIDCState].(string)
+	if !ok {
+		return errors.New("no state found in session - possible CSRF attack") //nolint:err113
+	}
+
+	// Get state and code from callback URL
+	receivedState := c.Request().URL.Query().Get("state")
 	code := c.Request().URL.Query().Get("code")
 
-	user, expiry, err := s.opts.app.CompleteOIDC(c.Request().Context(), code)
+	user, expiry, err := s.opts.app.CompleteOIDC(c.Request().Context(), code, expectedState, receivedState)
 	if err != nil {
 		return fmt.Errorf("complete oidc: %w", err)
 	}
 
-	sess, err := session.Get(keySession, c)
-	if err != nil {
-		return fmt.Errorf("have no session: %w", err)
-	}
-
+	// Clear the one-time state from session and set user session
 	sess.Options = &sessions.Options{ //nolint:exhaustruct
 		Path:     "/",
 		MaxAge:   int(time.Until(expiry).Seconds()),
 		HttpOnly: true,
 	}
+	delete(sess.Values, keyOIDCState) // Remove used state
 	sess.Values[keyUserID] = *user
 	if err := sess.Save(c.Request(), c.Response()); err != nil {
 		return fmt.Errorf("save session: %w", err)

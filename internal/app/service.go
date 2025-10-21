@@ -199,19 +199,24 @@ func (s *Service) AuthType() config.AuthType {
 	return s.opts.users.Provider.Type()
 }
 
-func (s *Service) InitOIDC(_ context.Context) (string, error) {
+func (s *Service) InitOIDC(_ context.Context) (authURL string, state string, err error) {
 	if s.oauthCfg == nil {
-		return "", errors.New("not available for this provider") //nolint:err113
+		return "", "", errors.New("not available for this provider") //nolint:err113
 	}
 
-	state := just.Must(uuid.NewUUID()).String()
+	state = just.Must(uuid.NewUUID()).String()
 
-	return s.oauthCfg.AuthCodeURL(state), nil
+	return s.oauthCfg.AuthCodeURL(state), state, nil
 }
 
-func (s *Service) CompleteOIDC(ctx context.Context, code string) (*structs.User, time.Time, error) {
+func (s *Service) CompleteOIDC(ctx context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, error) {
 	if s.oauthCfg == nil {
 		return nil, time.Time{}, errors.New("not available for this provider") //nolint:err113
+	}
+
+	// Validate state parameter to prevent CSRF attacks
+	if expectedState == "" || receivedState == "" || expectedState != receivedState {
+		return nil, time.Time{}, errors.New("invalid state parameter - possible CSRF attack") //nolint:err113
 	}
 
 	token, err := s.oauthCfg.Exchange(ctx, code)
