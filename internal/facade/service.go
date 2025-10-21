@@ -44,10 +44,10 @@ import (
 )
 
 const (
-	ctxUser       = "c-user"
-	keySession    = "session"
-	keyUserID     = "uid"
-	keyOIDCState  = "oidc-state"
+	ctxUser      = "c-user"
+	keySession   = "session"
+	keyUserID    = "uid"
+	keyOIDCState = "oidc-state"
 )
 
 type Service struct {
@@ -204,7 +204,6 @@ func (s *Service) getAuthCallback(c echo.Context) error {
 		return errors.New("not available") //nolint:err113
 	}
 
-	// Retrieve state from session
 	sess, err := session.Get(keySession, c)
 	if err != nil {
 		return fmt.Errorf("get session: %w", err)
