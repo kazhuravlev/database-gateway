@@ -31,18 +31,17 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/facade"
 	"github.com/kazhuravlev/database-gateway/internal/pgdb"
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
+	"github.com/kazhuravlev/database-gateway/internal/version"
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli/v2"
 )
 
 const keyConfig = "config"
 
-var version = "unknown-local-build"
-
 func main() {
 	application := &cli.App{ //nolint:exhaustruct
 		Name:    "gateway",
-		Version: version,
+		Version: version.GetVersion(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{ //nolint:exhaustruct
 				Aliases: []string{"c"},

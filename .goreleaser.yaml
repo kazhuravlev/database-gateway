@@ -26,7 +26,7 @@ builds:
     ldflags:
       - -s
       - -w
-      - -X main.version={{.Summary}}
+      - -X github.com/kazhuravlev/database-gateway/internal/version.version={{.Summary}}
     mod_timestamp: '{{ .CommitTimestamp }}'
     env:
       - CGO_ENABLED=1
@@ -59,4 +59,4 @@ checksum:
   name_template: 'checksums.txt'
 
 snapshot:
-  version_template: "{{ incpatch .Version }}-next" 
+  version_template: "{{ incpatch .Version }}-next"
