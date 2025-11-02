@@ -21,7 +21,7 @@ vars:
   DEPS_COMPOSE_FILE: ./.cicd/local/docker-compose.yaml
   DOCKER_IMAGE_NAME: database-gateway
   GO_ENTRYPOINT: ./cmd/gateway
-  TOOLSET: "go run github.com/kazhuravlev/toolset/cmd/toolset@v0.30.2"
+  TOOLSET: "go run github.com/kazhuravlev/toolset/cmd/toolset@v0.40.0"
   GIT_TAG:
     sh: "gt t l -f tag"
 
