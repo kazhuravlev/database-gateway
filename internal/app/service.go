@@ -199,12 +199,12 @@ func (s *Service) AuthType() config.AuthType {
 	return s.opts.users.Provider.Type()
 }
 
-func (s *Service) InitOIDC(_ context.Context) (authURL string, state string, err error) {
+func (s *Service) InitOIDC(_ context.Context) (string, string, error) { //nolint:gocritic
 	if s.oauthCfg == nil {
 		return "", "", errors.New("not available for this provider") //nolint:err113
 	}
 
-	state = just.Must(uuid.NewUUID()).String()
+	state := just.Must(uuid.NewUUID()).String()
 
 	return s.oauthCfg.AuthCodeURL(state), state, nil
 }

@@ -17,6 +17,7 @@
 package validator
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
@@ -44,10 +45,8 @@ func (s *DbSchema) GetTable(tblName string) (config.TargetTable, bool) {
 	}
 
 	for _, t := range s.tables {
-		for _, targetTbl := range tblNamesForLookup {
-			if t.Table == targetTbl {
-				return t, true
-			}
+		if slices.Contains(tblNamesForLookup, t.Table) {
+			return t, true
 		}
 	}
 

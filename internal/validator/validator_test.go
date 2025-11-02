@@ -132,7 +132,7 @@ func TestValidator(t *testing.T) {
 
 		t.Run("star_select", func(t *testing.T) {
 			t.Parallel()
-			query := `select * from table`
+			query := `select * from table` //nolint:unqueryvet
 			err := validator.IsAllowed(nil, nil, query)
 			require.Error(t, err)
 		})

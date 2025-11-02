@@ -92,11 +92,11 @@ func TestParseSelectInvalid(t *testing.T) {
 		})
 	}
 
-	fInvalid("SELECT * FROM clients", "star_expression")
+	fInvalid("SELECT * FROM clients", "star_expression") //nolint:unqueryvet
 	fInvalid("SELECT clients.* FROM clients", "star_expression")
 	fInvalid("SELECT public.clients.* FROM clients", "star_expression")
 
-	fInvalid("SELECT * FROM public.clients", "star_expression_scm")
+	fInvalid("SELECT * FROM public.clients", "star_expression_scm") //nolint:unqueryvet
 	fInvalid("SELECT clients.* FROM public.clients", "star_expression_scm")
 	fInvalid("SELECT public.clients.* FROM public.clients", "star_expression_scm")
 

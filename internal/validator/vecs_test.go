@@ -90,7 +90,7 @@ func TestMakeVectors(t *testing.T) {
 		}
 
 		test("select_star",
-			`select * from clients`,
+			`select * from clients`, //nolint:unqueryvet
 			validator.ErrComplicatedQuery)
 		test("insert_star",
 			`insert into clients(f1, f3) values(1,2) returning *`,
