@@ -16,7 +16,7 @@
 
 services:
   dex:
-    image: bitnami/dex
+    image: dexidp/dex
     ports:
       - '127.0.0.1:5556:5556'
     volumes:
