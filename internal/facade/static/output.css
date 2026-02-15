@@ -124,25 +124,7 @@
   --tw-contain-style:  ;
 }
 
-/*! tailwindcss v3.4.14 | MIT License | https://tailwindcss.com
- */
-
-/**
- * Database Gateway provides access to servers with ACL for safe and restricted database interactions.
- * Copyright (C) 2024  Kirill Zhuravlev
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+/*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com
  */
 
 /*
@@ -685,7 +667,7 @@ video {
 
 .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
   --tw-divide-opacity: 1;
-  border-color: rgb(229 231 235 / var(--tw-divide-opacity));
+  border-color: rgb(229 231 235 / var(--tw-divide-opacity, 1));
 }
 
 .overflow-hidden {
@@ -730,37 +712,37 @@ video {
 
 .border-gray-200 {
   --tw-border-opacity: 1;
-  border-color: rgb(229 231 235 / var(--tw-border-opacity));
+  border-color: rgb(229 231 235 / var(--tw-border-opacity, 1));
 }
 
 .border-orange-400 {
   --tw-border-opacity: 1;
-  border-color: rgb(251 146 60 / var(--tw-border-opacity));
+  border-color: rgb(251 146 60 / var(--tw-border-opacity, 1));
 }
 
 .border-orange-500 {
   --tw-border-opacity: 1;
-  border-color: rgb(249 115 22 / var(--tw-border-opacity));
+  border-color: rgb(249 115 22 / var(--tw-border-opacity, 1));
 }
 
 .border-red-500 {
   --tw-border-opacity: 1;
-  border-color: rgb(239 68 68 / var(--tw-border-opacity));
+  border-color: rgb(239 68 68 / var(--tw-border-opacity, 1));
 }
 
 .bg-gray-50 {
   --tw-bg-opacity: 1;
-  background-color: rgb(249 250 251 / var(--tw-bg-opacity));
+  background-color: rgb(249 250 251 / var(--tw-bg-opacity, 1));
 }
 
 .bg-orange-500 {
   --tw-bg-opacity: 1;
-  background-color: rgb(249 115 22 / var(--tw-bg-opacity));
+  background-color: rgb(249 115 22 / var(--tw-bg-opacity, 1));
 }
 
 .bg-white {
   --tw-bg-opacity: 1;
-  background-color: rgb(255 255 255 / var(--tw-bg-opacity));
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
 
 .object-cover {
@@ -851,27 +833,27 @@ video {
 
 .text-black {
   --tw-text-opacity: 1;
-  color: rgb(0 0 0 / var(--tw-text-opacity));
+  color: rgb(0 0 0 / var(--tw-text-opacity, 1));
 }
 
 .text-gray-500 {
   --tw-text-opacity: 1;
-  color: rgb(107 114 128 / var(--tw-text-opacity));
+  color: rgb(107 114 128 / var(--tw-text-opacity, 1));
 }
 
 .text-gray-700 {
   --tw-text-opacity: 1;
-  color: rgb(55 65 81 / var(--tw-text-opacity));
+  color: rgb(55 65 81 / var(--tw-text-opacity, 1));
 }
 
 .text-gray-900 {
   --tw-text-opacity: 1;
-  color: rgb(17 24 39 / var(--tw-text-opacity));
+  color: rgb(17 24 39 / var(--tw-text-opacity, 1));
 }
 
 .text-neutral-900 {
   --tw-text-opacity: 1;
-  color: rgb(23 23 23 / var(--tw-text-opacity));
+  color: rgb(23 23 23 / var(--tw-text-opacity, 1));
 }
 
 .shadow-md {
@@ -892,57 +874,57 @@ video {
 
 .hover\:bg-gray-100:hover {
   --tw-bg-opacity: 1;
-  background-color: rgb(243 244 246 / var(--tw-bg-opacity));
+  background-color: rgb(243 244 246 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:bg-orange-600:hover {
   --tw-bg-opacity: 1;
-  background-color: rgb(234 88 12 / var(--tw-bg-opacity));
+  background-color: rgb(234 88 12 / var(--tw-bg-opacity, 1));
 }
 
 @media (prefers-color-scheme: dark) {
   .dark\:divide-gray-700 > :not([hidden]) ~ :not([hidden]) {
     --tw-divide-opacity: 1;
-    border-color: rgb(55 65 81 / var(--tw-divide-opacity));
+    border-color: rgb(55 65 81 / var(--tw-divide-opacity, 1));
   }
 
   .dark\:border-gray-700 {
     --tw-border-opacity: 1;
-    border-color: rgb(55 65 81 / var(--tw-border-opacity));
+    border-color: rgb(55 65 81 / var(--tw-border-opacity, 1));
   }
 
   .dark\:bg-gray-800 {
     --tw-bg-opacity: 1;
-    background-color: rgb(31 41 55 / var(--tw-bg-opacity));
+    background-color: rgb(31 41 55 / var(--tw-bg-opacity, 1));
   }
 
   .dark\:bg-gray-900 {
     --tw-bg-opacity: 1;
-    background-color: rgb(17 24 39 / var(--tw-bg-opacity));
+    background-color: rgb(17 24 39 / var(--tw-bg-opacity, 1));
   }
 
   .dark\:bg-neutral-900 {
     --tw-bg-opacity: 1;
-    background-color: rgb(23 23 23 / var(--tw-bg-opacity));
+    background-color: rgb(23 23 23 / var(--tw-bg-opacity, 1));
   }
 
   .dark\:text-gray-300 {
     --tw-text-opacity: 1;
-    color: rgb(209 213 219 / var(--tw-text-opacity));
+    color: rgb(209 213 219 / var(--tw-text-opacity, 1));
   }
 
   .dark\:text-gray-400 {
     --tw-text-opacity: 1;
-    color: rgb(156 163 175 / var(--tw-text-opacity));
+    color: rgb(156 163 175 / var(--tw-text-opacity, 1));
   }
 
   .dark\:text-neutral-300 {
     --tw-text-opacity: 1;
-    color: rgb(212 212 212 / var(--tw-text-opacity));
+    color: rgb(212 212 212 / var(--tw-text-opacity, 1));
   }
 
   .dark\:hover\:bg-gray-700:hover {
     --tw-bg-opacity: 1;
-    background-color: rgb(55 65 81 / var(--tw-bg-opacity));
+    background-color: rgb(55 65 81 / var(--tw-bg-opacity, 1));
   }
 }

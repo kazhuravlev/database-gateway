@@ -16,12 +16,12 @@
 
 services:
   dex:
-    image: bitnami/dex
+    image: dexidp/dex:v2.44.0
     ports:
       - '127.0.0.1:5556:5556'
     volumes:
       - './dex-config.yaml:/etc/dex/config.yaml'
-    command: [ 'serve', '/etc/dex/config.yaml' ]
+    command: [ 'dex', 'serve', '/etc/dex/config.yaml' ]
 
   # This is a primary application storage
   storage-postgres:

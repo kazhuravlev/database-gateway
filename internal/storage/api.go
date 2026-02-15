@@ -44,6 +44,7 @@ func (*Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) error
 		Query:     req.Query,
 		Response:  req.Response,
 	}
+	//nolint:unqueryvet // ok while reading into model
 	res, err := tbl.QueryResults.
 		INSERT(tbl.QueryResults.AllColumns).
 		MODEL(obj).
@@ -55,12 +56,13 @@ func (*Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) error
 	return nil
 }
 
-func (*Service) GetQueryResults(conn qrm.DB, uid config.UserID, id uuid6.UUID) (*model.QueryResults, error) {
+func (*Service) GetQueryResults(conn qrm.DB, uid config.UserID, queryID uuid6.UUID) (*model.QueryResults, error) {
 	var obj model.QueryResults
+	//nolint:unqueryvet // ok while reading into model
 	err := tbl.QueryResults.
 		SELECT(tbl.QueryResults.AllColumns).
 		WHERE(postgres.AND(
-			tbl.QueryResults.ID.EQ(postgres.UUID(id.ToUUID())),
+			tbl.QueryResults.ID.EQ(postgres.UUID(queryID.ToUUID())),
 			tbl.QueryResults.UserID.EQ(postgres.String(uid.S())),
 		)).
 		LIMIT(1).

@@ -69,14 +69,46 @@ func (s *Service) Run(_ context.Context) error {
 	echoInst := echo.New()
 	echoInst.HideBanner = true
 	echoInst.Use(middleware.Recover())
-	echoInst.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-		Skipper: middleware.DefaultSkipper,
-		Format: `${time_rfc3339_nano} ${error} ` +
-			`${method} ${uri} ` +
-			`${status} ${latency_human} ` + "\n",
-		CustomTimeFormat: "2006-01-02 15:04:05.00000",
-		CustomTagFunc:    nil,
-		Output:           nil,
+	echoInst.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		Skipper:        middleware.DefaultSkipper,
+		BeforeNextFunc: nil,
+		LogValuesFunc: func(_ echo.Context, reqVals middleware.RequestLoggerValues) error {
+			logFn := s.opts.logger.Info
+
+			if reqVals.Error != nil {
+				logFn = s.opts.logger.Error
+			}
+
+			logFn("req",
+				slog.Time("start", reqVals.StartTime),
+				slog.String("method", reqVals.Method),
+				slog.String("uri", reqVals.URI),
+				slog.Int("status", reqVals.Status),
+				slog.Duration("dur", reqVals.Latency),
+				slog.String("err", reqVals.Error.Error()),
+			)
+
+			return nil
+		},
+		HandleError:      false,
+		LogLatency:       true,
+		LogProtocol:      false,
+		LogRemoteIP:      false,
+		LogHost:          false,
+		LogMethod:        true,
+		LogURI:           true,
+		LogURIPath:       false,
+		LogRoutePath:     false,
+		LogRequestID:     false,
+		LogReferer:       false,
+		LogUserAgent:     false,
+		LogStatus:        true,
+		LogError:         true,
+		LogContentLength: false,
+		LogResponseSize:  false,
+		LogHeaders:       nil,
+		LogQueryParams:   nil,
+		LogFormValues:    nil,
 	}))
 	echoInst.Use(session.Middleware(sessions.NewCookieStore([]byte(s.opts.cookieSecret))))
 
