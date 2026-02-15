@@ -2,7 +2,7 @@
 	"tools": [
 		{
 			"runtime": "go",
-			"module": "golang.org/x/tools/cmd/goimports@v0.38.0",
+			"module": "golang.org/x/tools/cmd/goimports@v0.42.0",
 			"alias": null,
 			"tags": null
 		},
@@ -20,19 +20,19 @@
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/a-h/templ/cmd/templ@v0.3.960",
+			"module": "github.com/a-h/templ/cmd/templ@v0.3.977",
 			"alias": null,
 			"tags": null
 		},
 		{
 			"runtime": "gh",
-			"module": "golangci/golangci-lint@v2.5.0",
+			"module": "golangci/golangci-lint@v2.9.0",
 			"alias": null,
 			"tags": null
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.55.3",
+			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.55.4",
 			"alias": null,
 			"tags": null
 		}
