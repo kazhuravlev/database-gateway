@@ -132,6 +132,8 @@ tasks:
     desc: Run all project checks
     cmds:
       - task: "tools:install"
+      - task: "deps:run"
+      - task: "migrations:up"
       - task: "generate"
       - task: "fmt"
       - task: "lint"
