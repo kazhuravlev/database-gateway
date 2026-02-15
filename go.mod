@@ -9,8 +9,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/sessions v1.4.0
 	github.com/jackc/pgx/v5 v5.8.0
-	github.com/kazhuravlev/just v0.72.2
-	github.com/kazhuravlev/options-gen v0.55.3
+	github.com/kazhuravlev/just v0.73.0
+	github.com/kazhuravlev/options-gen v0.55.5
 	github.com/labstack/echo-contrib v0.50.1
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/labstack/gommon v0.4.2
