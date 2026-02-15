@@ -118,7 +118,7 @@ func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID conf
 		return nil, fmt.Errorf("get target: %w", err)
 	}
 
-	return just.Pointer(adaptTarget(*res)), nil
+	return just.Pointer(adaptTarget(*res)), nil //nolint:modernize // false positive
 }
 
 func (s *Service) RunQuery(
