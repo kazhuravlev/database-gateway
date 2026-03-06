@@ -2,6 +2,7 @@ package templates
 
 import (
 	"fmt"
+	"strings"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/just"
 )
@@ -48,6 +49,49 @@ templ targetLine(item structs.Server) {
 								}
 							</div>
 						}
+					</div>
+				}
+			</div>
+		</div>
+	</div>
+}
+
+templ targetLineWithQuickSelect(item structs.Server, formURL string) {
+	<div class="flex flex-row gap-3 items-start">
+		<div class="shrink-0">
+			@targetImage(item.Type)
+		</div>
+		<div class="flex flex-col gap-1 min-w-0 w-full">
+			<div class="flex flex-wrap items-center gap-1">
+				<div class="text-xs font-semibold uppercase tracking-wide muted">{ item.Type }</div>
+				<div class="text-xs font-mono bg-[#2a2a2a] border border-[#4a4a4a] rounded px-1.5 py-0.5">{ string(item.ID) }</div>
+				if item.Description != "" {
+					<div class="text-xs muted">{ item.Description }</div>
+				}
+				<div class="flex flex-wrap gap-1">
+					for _, tag := range item.Tags {
+						<div class="tag-chip">{ tag.Name }</div>
+					}
+				</div>
+			</div>
+			<div class="flex flex-col gap-1">
+				for _, tbl := range item.Tables {
+					<div class="tbl-chip flex flex-wrap gap-2 items-center justify-between">
+						<div class="flex flex-wrap gap-1.5 items-center">
+							<div class="font-semibold">{ tbl.Table }</div>
+							for  iter, elem := range just.SliceIter(tbl.Fields) {
+								<div class="text-xs muted">
+									{ elem }
+									if !iter.IsLast() {
+										,
+									}
+								</div>
+							}
+						</div>
+						<form action={ templ.SafeURL(formURL) } method="post" class="m-0">
+							<input type="hidden" name="query" value={ fmt.Sprintf("select %s from %s", strings.Join(tbl.Fields, ", "), tbl.Table) }/>
+							<button type="submit" name="format" value="html" class="btn text-xs leading-none" style="padding:4px 8px">sel *</button>
+						</form>
 					</div>
 				}
 			</div>

@@ -80,7 +80,7 @@ templ PageTarget(user structs.User, target structs.Server, formUrl,query string,
 	@l_app() {
 		@header(user)
 		@w_appline() {
-			@targetLine(target)
+			@targetLineWithQuickSelect(target, formUrl)
 		}
 		@w_appline() {
 			@sqlForm(formUrl,query)

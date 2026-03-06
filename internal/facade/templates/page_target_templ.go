@@ -295,7 +295,7 @@ func PageTarget(user structs.User, target structs.Server, formUrl, query string,
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = targetLine(target).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = targetLineWithQuickSelect(target, formUrl).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

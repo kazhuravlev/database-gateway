@@ -583,6 +583,10 @@ video {
   z-index: 10;
 }
 
+.m-0 {
+  margin: 0px;
+}
+
 .block {
   display: block;
 }
@@ -601,6 +605,10 @@ video {
 
 .grid {
   display: grid;
+}
+
+.hidden {
+  display: none;
 }
 
 .h-10 {
@@ -857,6 +865,10 @@ video {
 
 .uppercase {
   text-transform: uppercase;
+}
+
+.leading-none {
+  line-height: 1;
 }
 
 .tracking-wide {
