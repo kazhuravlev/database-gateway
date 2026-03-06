@@ -18,7 +18,7 @@ type OptOptionsSetter func(o *Options)
 func NewOptions(
 	logger *slog.Logger,
 	targets []config.Target,
-	users config.UsersConfig,
+	users config.UsersProviderOIDC,
 	acls *rules.ACLs,
 	storage *storage.Service,
 	options ...OptOptionsSetter,

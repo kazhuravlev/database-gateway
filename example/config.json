@@ -98,18 +98,13 @@
 		}
 	],
 	"users": {
-		"provider": "config",
-		"configuration": [
-			{
-				"id": "admin@example.com",
-				"username": "admin@example.com",
-				"password": "password"
-			},
-			{
-				"id": "user1@example.com",
-				"username": "user1@example.com",
-				"password": "password"
-			}
+		"client_id": "example-app",
+		"client_secret": "example-app-secret",
+		"issuer_url": "http://host.docker.internal:5556",
+		"redirect_url": "http://localhost:8080/auth/callback",
+		"scopes": [
+			"email",
+			"profile"
 		]
 	},
 	"acls": [

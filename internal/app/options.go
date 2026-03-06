@@ -26,9 +26,9 @@ import (
 
 //go:generate toolset run options-gen -from-struct=Options
 type Options struct {
-	logger  *slog.Logger       `option:"mandatory" validate:"required"`
-	targets []config.Target    `option:"mandatory" validate:"required"`
-	users   config.UsersConfig `option:"mandatory" validate:"required"`
-	acls    *rules.ACLs        `option:"mandatory" validate:"required"`
-	storage *storage.Service   `option:"mandatory" validate:"required"`
+	logger  *slog.Logger             `option:"mandatory" validate:"required"`
+	targets []config.Target          `option:"mandatory" validate:"required"`
+	users   config.UsersProviderOIDC `option:"mandatory" validate:"required"`
+	acls    *rules.ACLs              `option:"mandatory" validate:"required"`
+	storage *storage.Service         `option:"mandatory" validate:"required"`
 }

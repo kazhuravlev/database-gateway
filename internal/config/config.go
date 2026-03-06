@@ -17,20 +17,10 @@
 package config
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
-	"github.com/kazhuravlev/just"
-)
-
-type AuthType string
-
-const (
-	AuthTypeConfig AuthType = "config"
-	AuthTypeOIDC   AuthType = "oidc"
 )
 
 type UserID string
@@ -93,65 +83,6 @@ type Target struct {
 	Tables        []TargetTable `json:"tables"`
 }
 
-type User struct {
-	ID       UserID `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type IProvider interface {
-	isProviderConfiguration()
-	Type() AuthType
-}
-
-type UsersConfig struct {
-	Provider IProvider
-}
-
-func (u *UsersConfig) UnmarshalJSON(data []byte) error {
-	var cfg struct {
-		Provider string `json:"provider"`
-	}
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("unmarshal users config: %w", err)
-	}
-
-	switch AuthType(cfg.Provider) {
-	default:
-		return errors.New("unknown users provider") //nolint:err113
-	case AuthTypeConfig:
-		var res struct {
-			Configuration UsersProviderConfig `json:"configuration"`
-		}
-		if err := json.Unmarshal(data, &res); err != nil {
-			return fmt.Errorf("unmarshal users config: %w", err)
-		}
-		*u = UsersConfig{
-			Provider: res.Configuration,
-		}
-	case AuthTypeOIDC:
-		var res struct {
-			Configuration UsersProviderOIDC `json:"configuration"`
-		}
-		if err := json.Unmarshal(data, &res); err != nil {
-			return fmt.Errorf("unmarshal users oidc: %w", err)
-		}
-		*u = UsersConfig{
-			Provider: res.Configuration,
-		}
-	}
-
-	return nil
-}
-
-type UsersProviderConfig []User
-
-func (UsersProviderConfig) Type() AuthType {
-	return AuthTypeConfig
-}
-
-func (UsersProviderConfig) isProviderConfiguration() {}
-
 type UsersProviderOIDC struct {
 	ClientID     string   `json:"client_id"`
 	ClientSecret string   `json:"client_secret"`
@@ -160,23 +91,17 @@ type UsersProviderOIDC struct {
 	Scopes       []string `json:"scopes"`
 }
 
-func (UsersProviderOIDC) Type() AuthType {
-	return AuthTypeOIDC
-}
-
-func (UsersProviderOIDC) isProviderConfiguration() {}
-
 type FacadeConfig struct {
 	Port         int    `json:"port"`
 	CookieSecret string `json:"cookie_secret"`
 }
 
 type Config struct {
-	Targets []Target       `json:"targets"`
-	Users   UsersConfig    `json:"users"`
-	ACLs    []rules.ACL    `json:"acls"`
-	Facade  FacadeConfig   `json:"facade"`
-	Storage PostgresConfig `json:"storage"`
+	Targets []Target          `json:"targets"`
+	Users   UsersProviderOIDC `json:"users"`
+	ACLs    []rules.ACL       `json:"acls"`
+	Facade  FacadeConfig      `json:"facade"`
+	Storage PostgresConfig    `json:"storage"`
 }
 
 func (c *Config) Validate() error { //nolint:cyclop
@@ -214,19 +139,6 @@ func (c *Config) Validate() error { //nolint:cyclop
 		}
 		if _, ok := idx[key]; !ok {
 			return fmt.Errorf("ACL (%#v) references for not existent table", acl) //nolint:err113
-		}
-	}
-
-	// Check that acl relates to exists user (for config-based provider)
-	if users, ok := c.Users.Provider.(UsersProviderConfig); ok {
-		userMap := just.Slice2MapFn(users, func(_ int, user User) (UserID, struct{}) {
-			return user.ID, struct{}{}
-		})
-
-		for _, acl := range c.ACLs {
-			if !just.MapContainsKey(userMap, UserID(acl.User)) {
-				return fmt.Errorf("ACL (%#v) targets to unknown user", acl) //nolint:err113
-			}
 		}
 	}
 

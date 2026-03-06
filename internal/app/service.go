@@ -45,9 +45,8 @@ var ErrNotFound = errors.New("not found")
 type Service struct {
 	opts Options
 
-	connsMu *sync.RWMutex
-	conns   map[config.TargetID]*pgxpool.Pool
-	// NOTE: can be nil (depends on [Options.cfg.Users.Provider])
+	connsMu      *sync.RWMutex
+	conns        map[config.TargetID]*pgxpool.Pool
 	oauthCfg     *oauth2.Config
 	oidcProvider *oidc.Provider
 }
@@ -57,25 +56,22 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 		return nil, fmt.Errorf("bad configuration: %w", err)
 	}
 
-	var oidcProvider *oidc.Provider
-	var oauthCfg *oauth2.Config
-	if oidcCfg, ok := opts.users.Provider.(config.UsersProviderOIDC); ok {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:mnd
-		defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:mnd
+	defer cancel()
 
-		provider, err := oidc.NewProvider(ctx, oidcCfg.IssuerURL)
-		if err != nil {
-			return nil, fmt.Errorf("init provider: %w", err)
-		}
+	oidcCfg := opts.users
 
-		oauthCfg = &oauth2.Config{
-			ClientID:     oidcCfg.ClientID,
-			ClientSecret: oidcCfg.ClientSecret,
-			Endpoint:     provider.Endpoint(),
-			RedirectURL:  oidcCfg.RedirectURL,
-			Scopes:       append([]string{oidc.ScopeOpenID}, oidcCfg.Scopes...),
-		}
-		oidcProvider = provider
+	oidcProvider, err := oidc.NewProvider(ctx, oidcCfg.IssuerURL)
+	if err != nil {
+		return nil, fmt.Errorf("init provider: %w", err)
+	}
+
+	oauthCfg := &oauth2.Config{
+		ClientID:     oidcCfg.ClientID,
+		ClientSecret: oidcCfg.ClientSecret,
+		Endpoint:     oidcProvider.Endpoint(),
+		RedirectURL:  oidcCfg.RedirectURL,
+		Scopes:       append([]string{oidc.ScopeOpenID}, oidcCfg.Scopes...),
 	}
 
 	return &Service{
@@ -84,20 +80,6 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 		conns:        make(map[config.TargetID]*pgxpool.Pool),
 		oidcProvider: oidcProvider,
 		oauthCfg:     oauthCfg,
-	}, nil
-}
-
-func (s *Service) AuthUser(_ context.Context, username, password string) (*structs.User, error) {
-	user, err := s.findUser(func(user config.User) bool {
-		return user.Username == username && user.Password == password
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &structs.User{
-		ID:       user.ID,
-		Username: user.Username,
 	}, nil
 }
 
@@ -195,25 +177,13 @@ func (s *Service) RunQuery(
 	return req.ID, &qTable, nil
 }
 
-func (s *Service) AuthType() config.AuthType {
-	return s.opts.users.Provider.Type()
-}
-
 func (s *Service) InitOIDC(_ context.Context) (string, string, error) { //nolint:gocritic
-	if s.oauthCfg == nil {
-		return "", "", errors.New("not available for this provider") //nolint:err113
-	}
-
 	state := just.Must(uuid.NewUUID()).String()
 
 	return s.oauthCfg.AuthCodeURL(state), state, nil
 }
 
 func (s *Service) CompleteOIDC(ctx context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, error) {
-	if s.oauthCfg == nil {
-		return nil, time.Time{}, errors.New("not available for this provider") //nolint:err113
-	}
-
 	// Validate state parameter to prevent CSRF attacks
 	if expectedState == "" || receivedState == "" || expectedState != receivedState {
 		return nil, time.Time{}, errors.New("invalid state parameter - possible CSRF attack") //nolint:err113

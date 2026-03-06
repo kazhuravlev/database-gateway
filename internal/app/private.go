@@ -18,7 +18,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -28,23 +27,6 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/kazhuravlev/just"
 )
-
-func (s *Service) findUser(fn func(user config.User) bool) (*config.User, error) {
-	users, ok := s.opts.users.Provider.(config.UsersProviderConfig)
-	if !ok {
-		return nil, errors.New("not implemented") //nolint:err113
-	}
-
-	user := just.SliceFindFirst(users, func(_ int, user config.User) bool {
-		return fn(user)
-	})
-
-	if user, ok := user.ValueOk(); ok {
-		return &user, nil
-	}
-
-	return nil, fmt.Errorf("user not exists: %w", ErrNotFound)
-}
 
 func (s *Service) getConnection(ctx context.Context, target config.Target) (*pgxpool.Pool, error) { //nolint:gocritic
 	{
