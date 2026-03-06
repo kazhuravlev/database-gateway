@@ -20,7 +20,7 @@
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/a-h/templ/cmd/templ@v0.3.977",
+			"module": "github.com/a-h/templ/cmd/templ@v0.3.1001",
 			"alias": null,
 			"tags": null
 		},
