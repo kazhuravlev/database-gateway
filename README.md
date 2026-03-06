@@ -75,8 +75,8 @@ open 'http://127.0.0.1:8080'
 # User1: user1@example.com password
 ```
 
-You will see only 2 instances from 3 postgres instances (`local-1`, `local-2`,`local-3`) because ACL is applied to test
-user. ACLs stored in [config.json](example/config.json).
+The example setup uses Dex (OIDC) for login. Open `http://127.0.0.1:8080`, click the OIDC provider, and continue.
+ACLs are stored in [config.json](example/config.json).
 
 ![pic1_instances.png](example/list_instances.png)
 
@@ -85,7 +85,6 @@ Choose `local-1`, put this query `select id, name from clients` and click `Run` 
 ## Features
 
 - [x] Supports any PostgreSQL wire-protocol database
-- [x] Allows hardcoded user configuration via config file
 - [x] Integrates with OpenID Connect for user authentication
 - [x] Enforces access filtering through ACLs
 - [x] Provides query result output in HTML format
@@ -102,37 +101,22 @@ Choose `local-1`, put this query `select id, name from clients` and click `Run` 
 
 ## Advanced Configuration
 
-### Authentication Options
+### Authentication
 
-The service supports two authentication methods:
+The service uses OIDC authentication:
 
-1. **Config File Authentication**: For simple setups with hardcoded users
-   ```json
-   "users": {
-     "provider": "config",
-     "configuration": [
-       {
-         "id": "admin@example.com",
-         "username": "admin@example.com",
-         "password": "password"
-       }
-     ]
-   }
-   ```
-
-2. **OIDC Authentication**: For integration with identity providers
-   ```json
-   "users": {
-     "provider": "oidc",
-     "configuration": {
-       "client_id": "example-app",
-       "client_secret": "example-app-secret",
-       "issuer_url": "http://localhost:5556",
-       "redirect_url": "http://localhost:8080/auth/callback",
-       "scopes": ["email", "profile"]
-     }
-   }
-   ```
+```json
+"users": {
+  "provider": "oidc",
+  "configuration": {
+    "client_id": "example-app",
+    "client_secret": "example-app-secret",
+    "issuer_url": "http://localhost:5556",
+    "redirect_url": "http://localhost:8080/auth/callback",
+    "scopes": ["email", "profile"]
+  }
+}
+```
 
 ### Access Control Configuration
 
@@ -195,7 +179,6 @@ Configure performance settings for each database connection:
 - **Multiple Schema Support**: Tables can be specified with schema names (`schema.table`)
 - **Complex Query Handling**: Some complex queries might be rejected by the parser
 - **Connection Failures**: The service gracefully handles database connection failures
-- **Authentication Edge Cases**: Fallback strategies when OIDC provider is unavailable
 - **Missing Tables/Fields**: Queries referencing unknown tables or fields are rejected
 - **ACL Conflicts**: When multiple ACL rules apply, the most specific rule takes precedence
 
