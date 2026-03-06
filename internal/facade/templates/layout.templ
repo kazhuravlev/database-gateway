@@ -79,6 +79,55 @@ templ htmlHeader() {
 		.muted {
 			color: var(--muted);
 		}
+		.result-wrap {
+			width: 100%;
+			overflow-x: auto;
+			border: 1px solid #4a4a4a;
+			border-radius: 10px;
+			background: #323232;
+		}
+		.result-table {
+			width: 100%;
+			min-width: 100%;
+			border-collapse: collapse;
+		}
+		.result-table thead {
+			position: sticky;
+			top: 0;
+			z-index: 10;
+			background: #2a2a2a;
+		}
+		.result-table th {
+			padding: 8px 12px;
+			text-align: left;
+			font-size: 11px;
+			font-weight: 600;
+			text-transform: uppercase;
+			letter-spacing: .04em;
+			white-space: nowrap;
+			color: #b7b79f;
+			border-bottom: 1px solid #454545;
+		}
+		.result-table td {
+			padding: 6px 12px;
+			font-size: 14px;
+			white-space: nowrap;
+			color: #ececdf;
+			border-bottom: 1px solid #3f3f3f;
+		}
+		.result-table tbody tr:nth-child(even) {
+			background: #2d2d2d;
+		}
+		.result-table tbody tr:hover {
+			background: #3b3b3b;
+		}
+		.result-meta {
+			background: #2a2a2a;
+			border-top: 1px solid #454545;
+			padding: 6px 12px;
+			font-size: 11px;
+			color: #b7b79f;
+		}
 	</style>
 }
 

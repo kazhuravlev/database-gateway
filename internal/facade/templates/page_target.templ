@@ -37,41 +37,27 @@ templ queryResult(tbl structs.QTable) {
 }
 
 templ smallQueryResult(tbl structs.QTable) {
-	<div class="w-full overflow-x-auto rounded-lg border border-[#4a4a4a] bg-[#323232]">
-		<div class="inline-block min-w-full align-middle">
-			<div class="overflow-hidden">
-				<table class="min-w-full divide-y divide-[#454545] table-auto">
-					<thead class="bg-[#2a2a2a] sticky top-0 z-10">
-						<tr>
-							for _, hdr := range tbl.Headers {
-								<th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-[#b7b79f] uppercase tracking-wider whitespace-nowrap">
-									{ hdr }
-								</th>
-							}
-						</tr>
-					</thead>
-					<tbody class="bg-[#323232] divide-y divide-[#3f3f3f]">
-						for i, row := range tbl.Rows {
-							<tr class={ templ.KV("bg-[#2d2d2d]", i%2 == 1), "hover:bg-[#3b3b3b] transition-colors duration-150" }>
-								for _, cell := range row {
-									<td class="px-3 py-1.5 text-sm text-[#ececdf] whitespace-nowrap">
-										<div class="overflow-visible" title={ cell }>
-											{ cell }
-										</div>
-									</td>
-								}
-							</tr>
+	<div class="result-wrap">
+		<table class="result-table">
+			<thead>
+				<tr>
+					for _, hdr := range tbl.Headers {
+						<th scope="col">{ hdr }</th>
+					}
+				</tr>
+			</thead>
+			<tbody>
+				for _, row := range tbl.Rows {
+					<tr>
+						for _, cell := range row {
+							<td title={ cell }>{ cell }</td>
 						}
-					</tbody>
-				</table>
-			</div>
-		</div>
+					</tr>
+				}
+			</tbody>
+		</table>
 		if len(tbl.Rows) > 0 {
-			<div class="bg-[#2a2a2a] px-3 py-1.5 border-t border-[#454545]">
-				<p class="text-xs text-[#b7b79f]">
-					Showing { len(tbl.Rows) } rows
-				</p>
-			</div>
+			<div class="result-meta">Showing { len(tbl.Rows) } rows</div>
 		}
 	</div>
 }
