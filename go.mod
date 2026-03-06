@@ -3,7 +3,7 @@ module github.com/kazhuravlev/database-gateway
 go 1.26
 
 require (
-	github.com/a-h/templ v0.3.977
+	github.com/a-h/templ v0.3.1001
 	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/go-jet/jet/v2 v2.14.1
 	github.com/google/uuid v1.6.0
@@ -12,12 +12,12 @@ require (
 	github.com/kazhuravlev/just v0.73.0
 	github.com/kazhuravlev/options-gen v0.55.5
 	github.com/labstack/echo-contrib v0.50.1
-	github.com/labstack/echo/v4 v4.15.0
+	github.com/labstack/echo/v4 v4.15.1
 	github.com/labstack/gommon v0.4.2
 	github.com/lib/pq v1.11.2
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/pganalyze/pg_query_go/v6 v6.2.2
-	github.com/pressly/goose/v3 v3.26.0
+	github.com/pressly/goose/v3 v3.27.0
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.27.7
 	golang.org/x/oauth2 v0.35.0
@@ -55,8 +55,8 @@ require (
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/exp v0.0.0-20260212183809-81e46e3db34a // indirect
-	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
+	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
