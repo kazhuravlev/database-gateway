@@ -175,20 +175,11 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	}
 
 	if sel.GetWhereClause() != nil {
-		switch node := sel.GetWhereClause().GetNode().(type) { //nolint:gocritic
-		case *pg.Node_AExpr:
-			switch node.AExpr.GetKind() { //nolint:exhaustive // this is white list
-			default:
-				return nil, fmt.Errorf("where clause kind (%d): %w", node.AExpr.GetKind(), ErrNotImplemented)
-			case pg.A_Expr_Kind_AEXPR_OP:
-				columns, err := parseAexpr(node)
-				if err != nil {
-					return nil, fmt.Errorf("parse where clause aexpr: %w", err)
-				}
-
-				allColumns = append(allColumns, columns...)
-			}
+		whereColumns, err := parseWhereClause(sel.GetWhereClause())
+		if err != nil {
+			return nil, fmt.Errorf("parse where clause: %w", err)
 		}
+		allColumns = append(allColumns, whereColumns...)
 	}
 
 	for _, node := range sel.GetSortClause() {
