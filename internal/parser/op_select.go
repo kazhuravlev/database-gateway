@@ -81,8 +81,8 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		return nil, fmt.Errorf("unknown clause: %w", ErrNotImplemented)
 	}
 
-	if len(sel.GetFromClause()) > 1 {
-		return nil, errors.New("from clause too big") //nolint:err113
+	if len(sel.GetFromClause()) != 1 {
+		return nil, errors.New("from clause must contains only one expression") //nolint:err113
 	}
 
 	tables := NewTables("public")

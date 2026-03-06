@@ -28,7 +28,7 @@ func TestParseSelectValid(t *testing.T) {
 
 	fValid := func(input string) {
 		t.Helper()
-		t.Run("", func(t *testing.T) {
+		t.Run(input, func(t *testing.T) {
 			t.Helper()
 			_, err := parser.Parse(input)
 			require.NoError(t, err)
@@ -92,6 +92,7 @@ func TestParseSelectInvalid(t *testing.T) {
 		})
 	}
 
+	fInvalid("SELECT 1", "select_without_from")
 	fInvalid("SELECT * FROM clients", "star_expression")         //nolint:unqueryvet
 	fInvalid("SELECT clients.* FROM clients", "star_expression") //nolint:unqueryvet
 	fInvalid("SELECT public.clients.* FROM clients", "star_expression")
