@@ -6,18 +6,26 @@ import (
 )
 
 templ listServers(servers []structs.Server) {
-	for _, item := range servers {
-		@w_appline() {
-			<a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) }>
-				@targetLine(item)
+	<div class="grid gap-2 w-full">
+		for _, item := range servers {
+			<a href={ templ.URL(fmt.Sprintf("/servers/%s", item.ID)) } class="block no-underline text-current">
+				@w_appline() {
+					@targetLine(item)
+				}
 			</a>
 		}
-	}
+	</div>
 }
 
 templ PageTargetsList(user structs.User, servers []structs.Server) {
 	@l_app() {
 		@header(user)
+		@w_appline() {
+			<div class="flex items-center justify-between gap-2">
+				<div class="text-sm font-semibold">Servers</div>
+				<div class="text-xs muted">{ len(servers) } total</div>
+			</div>
+		}
 		@listServers(servers)
 	}
 }

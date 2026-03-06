@@ -7,15 +7,11 @@ import (
 templ sqlForm(formUrl, query string) {
 	<div class="w-full">
 		<form action={templ.SafeURL(formUrl)} method="post" id="myForm" style="margin:0">
-			<div class="flex flex-col items-start gap-1">
-				<textarea id="textInput" name="query" placeholder="select col1, col2 from some_table limit 1" class="w-full p-1 h-24 border border-2 border-orange-400 text-neutral-900">{ query }</textarea>
-				<div class="flex flex-row items-start gap-2">
-					<div>
-						<button type="submit" name="format" value="html" id="submit" class="bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1">Run (Shift + Enter)</button>
-					</div>
-					<div>
-						<button type="submit" name="format" value="json" class="bg-orange-500 text-neutral-900 rounded-sm hover:bg-orange-600 px-2 py-1">Get JSON</button>
-					</div>
+			<div class="flex flex-col items-start gap-2">
+				<textarea id="textInput" name="query" placeholder="select col1, col2 from some_table limit 1" class="w-full px-2 py-1.5 h-24 border border-[#505050] rounded-md text-[#f1f1e8] bg-[#1f1f1c] placeholder:text-[#8d8d7f] focus:outline-none focus:ring-2 focus:ring-[#fcff7488]">{ query }</textarea>
+				<div class="flex flex-row items-start gap-2 flex-wrap">
+					<button type="submit" name="format" value="html" id="submit" class="btn">Run (Shift + Enter)</button>
+					<button type="submit" name="format" value="json" class="btn">Get JSON</button>
 				</div>
 			</div>
 		</form>
@@ -41,24 +37,24 @@ templ queryResult(tbl structs.QTable) {
 }
 
 templ smallQueryResult(tbl structs.QTable) {
-	<div class="w-full overflow-x-auto shadow-md rounded-lg">
+	<div class="w-full overflow-x-auto rounded-lg border border-[#4a4a4a] bg-[#323232]">
 		<div class="inline-block min-w-full align-middle">
 			<div class="overflow-hidden">
-				<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-					<thead class="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
+				<table class="min-w-full divide-y divide-[#454545]">
+					<thead class="bg-[#2a2a2a] sticky top-0 z-10">
 						<tr>
 							for _, hdr := range tbl.Headers {
-								<th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+								<th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-[#b7b79f] uppercase tracking-wider whitespace-nowrap">
 									{ hdr }
 								</th>
 							}
 						</tr>
 					</thead>
-					<tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+					<tbody class="bg-[#323232] divide-y divide-[#3f3f3f]">
 						for i, row := range tbl.Rows {
-							<tr class={ templ.KV("bg-gray-50 dark:bg-gray-800", i%2 == 1), "hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150" }>
+							<tr class={ templ.KV("bg-[#2d2d2d]", i%2 == 1), "hover:bg-[#3b3b3b] transition-colors duration-150" }>
 								for _, cell := range row {
-									<td class="px-3 py-2 text-sm text-gray-900 dark:text-gray-300">
+									<td class="px-3 py-1.5 text-sm text-[#ececdf]">
 										<div class="max-w-xs overflow-hidden text-ellipsis" title={ cell }>
 											{ cell }
 										</div>
@@ -71,8 +67,8 @@ templ smallQueryResult(tbl structs.QTable) {
 			</div>
 		</div>
 		if len(tbl.Rows) > 0 {
-			<div class="bg-gray-50 dark:bg-gray-800 px-3 py-2 border-t border-gray-200 dark:border-gray-700">
-				<p class="text-sm text-gray-700 dark:text-gray-300">
+			<div class="bg-[#2a2a2a] px-3 py-1.5 border-t border-[#454545]">
+				<p class="text-xs text-[#b7b79f]">
 					Showing { len(tbl.Rows) } rows
 				</p>
 			</div>
