@@ -623,10 +623,6 @@ video {
   min-width: 0px;
 }
 
-.max-w-\[320px\] {
-  max-width: 320px;
-}
-
 .shrink-0 {
   flex-shrink: 0;
 }
@@ -657,10 +653,6 @@ video {
 
 .items-center {
   align-items: center;
-}
-
-.justify-center {
-  justify-content: center;
 }
 
 .justify-between {
