@@ -12,21 +12,21 @@ templ htmlHeader() {
 	<link href="/static/output.css" rel="stylesheet"/>
 	<style>
 		:root {
-			--bg: #f4f7f8;
-			--bg-soft: #e9eff0;
-			--surface: #ffffff;
-			--surface-alt: #f6fbfc;
-			--text: #102127;
-			--muted: #54707a;
-			--accent: #0f9aa8;
-			--accent-strong: #0c7f8b;
-			--border: #d6e4e6;
+			--bg: rgb(31, 31, 28);
+			--bg-soft: #272724;
+			--surface: #323232;
+			--surface-alt: #2b2b2b;
+			--text: #f1f1e8;
+			--muted: #b7b79f;
+			--accent: #fcff74;
+			--accent-strong: #e8eb58;
+			--border: #4a4a4a;
 		}
 		* {
 			font-family: "Space Grotesk", "IBM Plex Sans", "Source Sans 3", sans-serif !important;
 		}
 		body.app-root {
-			background: radial-gradient(circle at 0 0, #dff5f8 0%, var(--bg) 45%, #edf3f4 100%);
+			background: var(--bg);
 			color: var(--text);
 			margin: 0;
 		}
@@ -43,7 +43,7 @@ templ htmlHeader() {
 			border: 1px solid var(--border);
 			border-radius: 10px;
 			padding: 8px;
-			box-shadow: 0 10px 26px rgba(16, 33, 39, 0.04);
+			box-shadow: 0 10px 18px rgba(0, 0, 0, 0.28);
 		}
 		.btn {
 			display: inline-flex;
@@ -54,7 +54,7 @@ templ htmlHeader() {
 			font-size: 13px;
 			text-decoration: none;
 			background: var(--accent);
-			color: #fff;
+			color: #1f1f1c;
 			transition: background-color .15s ease, transform .15s ease;
 		}
 		.btn:hover {
@@ -62,9 +62,9 @@ templ htmlHeader() {
 			transform: translateY(-1px);
 		}
 		.tag-chip {
-			border: 1px solid #bfe5eb;
-			background: #ebf8fa;
-			color: #145965;
+			border: 1px solid #908f4b;
+			background: #484834;
+			color: #fcff74;
 			padding: 1px 6px;
 			border-radius: 999px;
 			font-size: 11px;
@@ -72,7 +72,7 @@ templ htmlHeader() {
 		}
 		.tbl-chip {
 			background: var(--surface-alt);
-			border: 1px solid #deebed;
+			border: 1px solid #434343;
 			border-radius: 8px;
 			padding: 2px 6px;
 			font-size: 12px;

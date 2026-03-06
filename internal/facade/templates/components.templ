@@ -8,9 +8,9 @@ import (
 
 templ targetImage(typ string) {
 	if typ == "postgres" {
-		<img alt={ typ } src="/static/postgres.png" class="h-10 w-10 rounded-md border border-neutral-200 object-cover bg-white"/>
+		<img alt={ typ } src="/static/postgres.png" class="h-10 w-10 rounded-md border border-[#4a4a4a] object-cover bg-[#2a2a2a]"/>
 	} else {
-		<img alt={ typ } src={ fmt.Sprintf("/static/%s.png", typ) } class="h-10 w-10 rounded-md border border-neutral-200 object-cover bg-white"/>
+		<img alt={ typ } src={ fmt.Sprintf("/static/%s.png", typ) } class="h-10 w-10 rounded-md border border-[#4a4a4a] object-cover bg-[#2a2a2a]"/>
 	}
 }
 
@@ -26,7 +26,7 @@ templ targetLine(item structs.Server) {
 		<div class="flex flex-col gap-1 min-w-0">
 			<div class="flex flex-wrap items-center gap-1">
 				<div class="text-xs font-semibold uppercase tracking-wide muted">{ item.Type }</div>
-				<div class="text-xs font-mono bg-neutral-100 rounded px-1.5 py-0.5">{ string(item.ID) }</div>
+				<div class="text-xs font-mono bg-[#2a2a2a] border border-[#4a4a4a] rounded px-1.5 py-0.5">{ string(item.ID) }</div>
 				if item.Description != "" {
 					<div class="text-xs muted">{ item.Description }</div>
 				}
@@ -74,5 +74,5 @@ templ button(text string, url templ.SafeURL) {
 }
 
 templ showError(err error) {
-	<div class="w-full border border-red-300 bg-red-50 text-red-700 rounded-md px-2 py-1.5 text-xs">{ err.Error() }</div>
+	<div class="w-full border border-[#a24545] bg-[#4a2929] text-[#ffd4d4] rounded-md px-2 py-1.5 text-xs">{ err.Error() }</div>
 }

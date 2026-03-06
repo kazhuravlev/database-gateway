@@ -31,7 +31,7 @@ func authForm() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"w-full\"><form action=\"/auth\" method=\"POST\"><div class=\"flex justify-center\"><div class=\"panel w-full max-w-[320px] flex flex-col items-start gap-2\"><div class=\"text-sm font-semibold\">Sign In</div><input class=\"w-full px-2 py-1.5 border border-[#cfe0e3] rounded-md text-black bg-[#fbfeff]\" name=\"username\" type=\"text\" placeholder=\"username\"> <input class=\"w-full px-2 py-1.5 border border-[#cfe0e3] rounded-md text-black bg-[#fbfeff]\" name=\"password\" type=\"password\" placeholder=\"password\"> <button type=\"submit\" class=\"btn\">Login</button></div></div></form></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"w-full\"><form action=\"/auth\" method=\"POST\"><div class=\"flex justify-center\"><div class=\"panel w-full max-w-[320px] flex flex-col items-start gap-2\"><div class=\"text-sm font-semibold\">Sign In</div><input class=\"w-full px-2 py-1.5 border border-[#505050] rounded-md text-[#f1f1e8] bg-[#1f1f1c] placeholder:text-[#8d8d7f]\" name=\"username\" type=\"text\" placeholder=\"username\"> <input class=\"w-full px-2 py-1.5 border border-[#505050] rounded-md text-[#f1f1e8] bg-[#1f1f1c] placeholder:text-[#8d8d7f]\" name=\"password\" type=\"password\" placeholder=\"password\"> <button type=\"submit\" class=\"btn\">Login</button></div></div></form></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

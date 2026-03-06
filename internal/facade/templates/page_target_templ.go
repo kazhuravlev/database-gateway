@@ -45,14 +45,14 @@ func sqlForm(formUrl, query string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" method=\"post\" id=\"myForm\" style=\"margin:0\"><div class=\"flex flex-col items-start gap-2\"><textarea id=\"textInput\" name=\"query\" placeholder=\"select col1, col2 from some_table limit 1\" class=\"w-full px-2 py-1.5 h-24 border border-[#8cd0d8] rounded-md text-neutral-900 bg-[#fbfeff] focus:outline-none focus:ring-2 focus:ring-[#0f9aa84d]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" method=\"post\" id=\"myForm\" style=\"margin:0\"><div class=\"flex flex-col items-start gap-2\"><textarea id=\"textInput\" name=\"query\" placeholder=\"select col1, col2 from some_table limit 1\" class=\"w-full px-2 py-1.5 h-24 border border-[#505050] rounded-md text-[#f1f1e8] bg-[#1f1f1c] placeholder:text-[#8d8d7f] focus:outline-none focus:ring-2 focus:ring-[#fcff7488]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 11, Col: 257}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 11, Col: 282}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -124,12 +124,12 @@ func smallQueryResult(tbl structs.QTable) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"w-full overflow-x-auto rounded-lg border border-[#d7e5e7] bg-white\"><div class=\"inline-block min-w-full align-middle\"><div class=\"overflow-hidden\"><table class=\"min-w-full divide-y divide-[#e3ecee]\"><thead class=\"bg-[#f3f9fa] sticky top-0 z-10\"><tr>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"w-full overflow-x-auto rounded-lg border border-[#4a4a4a] bg-[#323232]\"><div class=\"inline-block min-w-full align-middle\"><div class=\"overflow-hidden\"><table class=\"min-w-full divide-y divide-[#454545]\"><thead class=\"bg-[#2a2a2a] sticky top-0 z-10\"><tr>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for _, hdr := range tbl.Headers {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<th scope=\"col\" class=\"px-3 py-2 text-left text-xs font-semibold text-[#4e6b74] uppercase tracking-wider whitespace-nowrap\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<th scope=\"col\" class=\"px-3 py-2 text-left text-xs font-semibold text-[#b7b79f] uppercase tracking-wider whitespace-nowrap\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -147,12 +147,12 @@ func smallQueryResult(tbl structs.QTable) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</tr></thead> <tbody class=\"bg-white divide-y divide-[#edf3f4]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</tr></thead> <tbody class=\"bg-[#323232] divide-y divide-[#3f3f3f]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for i, row := range tbl.Rows {
-			var templ_7745c5c3_Var7 = []any{templ.KV("bg-[#f8fcfd]", i%2 == 1), "hover:bg-[#eef8fa] transition-colors duration-150"}
+			var templ_7745c5c3_Var7 = []any{templ.KV("bg-[#2d2d2d]", i%2 == 1), "hover:bg-[#3b3b3b] transition-colors duration-150"}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var7...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -175,7 +175,7 @@ func smallQueryResult(tbl structs.QTable) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			for _, cell := range row {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<td class=\"px-3 py-1.5 text-sm text-[#1a3138]\"><div class=\"max-w-xs overflow-hidden text-ellipsis\" title=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<td class=\"px-3 py-1.5 text-sm text-[#ececdf]\"><div class=\"max-w-xs overflow-hidden text-ellipsis\" title=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -216,7 +216,7 @@ func smallQueryResult(tbl structs.QTable) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if len(tbl.Rows) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<div class=\"bg-[#f3f9fa] px-3 py-1.5 border-t border-[#d7e5e7]\"><p class=\"text-xs text-[#4e6b74]\">Showing ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<div class=\"bg-[#2a2a2a] px-3 py-1.5 border-t border-[#454545]\"><p class=\"text-xs text-[#b7b79f]\">Showing ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
