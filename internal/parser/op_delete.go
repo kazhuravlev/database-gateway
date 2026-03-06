@@ -59,7 +59,7 @@ func handleDelete(req *pg.DeleteStmt) ([]Vector, error) { //nolint:gocyclo
 		return nil, fmt.Errorf("parse returning: %w", err)
 	}
 
-	whereColumns, err := parseUpdateWhere(req.GetWhereClause())
+	whereColumns, err := parseWhereClause(req.GetWhereClause())
 	if err != nil {
 		return nil, fmt.Errorf("parse where: %w", err)
 	}
