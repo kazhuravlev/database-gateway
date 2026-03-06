@@ -160,7 +160,6 @@ func (s *Service) Run(_ context.Context) error {
 
 	echoInst.GET("/auth", s.getAuth)
 	echoInst.GET("/auth/callback", s.getAuthCallback)
-	echoInst.POST("/auth", s.postAuth)
 
 	echoInst.GET("/logout", s.logout)
 
@@ -201,43 +200,31 @@ func (s *Service) getServer(c echo.Context) error {
 }
 
 func (s *Service) getAuth(c echo.Context) error {
-	switch s.opts.app.AuthType() {
-	default:
-		// TODO: choose a better way to show an error
-		return fmt.Errorf("unknown auth type: %s", s.opts.app.AuthType()) //nolint:err113
-	case config.AuthTypeConfig:
-		return Render(c, http.StatusOK, templates.PageAuth(nil))
-	case config.AuthTypeOIDC:
-		authURL, state, err := s.opts.app.InitOIDC(c.Request().Context())
-		if err != nil {
-			return fmt.Errorf("init oidc: %w", err)
-		}
-
-		// Store state in session to validate on callback
-		sess, err := session.Get(keySession, c)
-		if err != nil {
-			return fmt.Errorf("get session: %w", err)
-		}
-
-		sess.Options = &sessions.Options{ //nolint:exhaustruct
-			Path:     "/",
-			MaxAge:   300, // 5 minutes - state is short-lived
-			HttpOnly: true,
-		}
-		sess.Values[keyOIDCState] = state
-		if err := sess.Save(c.Request(), c.Response()); err != nil {
-			return fmt.Errorf("save session with state: %w", err)
-		}
-
-		return c.Redirect(http.StatusSeeOther, authURL)
+	authURL, state, err := s.opts.app.InitOIDC(c.Request().Context())
+	if err != nil {
+		return fmt.Errorf("init oidc: %w", err)
 	}
+
+	// Store state in session to validate on callback.
+	sess, err := session.Get(keySession, c)
+	if err != nil {
+		return fmt.Errorf("get session: %w", err)
+	}
+
+	sess.Options = &sessions.Options{ //nolint:exhaustruct
+		Path:     "/",
+		MaxAge:   300, // 5 minutes - state is short-lived
+		HttpOnly: true,
+	}
+	sess.Values[keyOIDCState] = state
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
+		return fmt.Errorf("save session with state: %w", err)
+	}
+
+	return c.Redirect(http.StatusSeeOther, authURL)
 }
 
 func (s *Service) getAuthCallback(c echo.Context) error {
-	if s.opts.app.AuthType() != config.AuthTypeOIDC {
-		return errors.New("not available") //nolint:err113
-	}
-
 	sess, err := session.Get(keySession, c)
 	if err != nil {
 		return fmt.Errorf("get session: %w", err)
