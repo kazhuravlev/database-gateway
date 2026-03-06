@@ -68,6 +68,11 @@ func parseAexpr(node *pg.Node_AExpr) (Columns, error) { //nolint:cyclop
 		default:
 			return nil, fmt.Errorf("aexpr clause left expr (%T): %w", left, ErrNotImplemented)
 		case *pg.Node_AExpr:
+			nested, err := parseAexpr(left)
+			if err != nil {
+				return nil, fmt.Errorf("aexpr clause left nested expr: %w", err)
+			}
+			columns = append(columns, nested...)
 		case *pg.Node_ColumnRef:
 			column, err := pNodeColumnRef(left)
 			if err != nil {
@@ -181,7 +186,7 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclo
 		return nil, fmt.Errorf("parse returning columns: %w", err)
 	}
 
-	whereColumns, err := parseUpdateWhere(req.GetWhereClause())
+	whereColumns, err := parseWhereClause(req.GetWhereClause())
 	if err != nil {
 		return nil, fmt.Errorf("parse where clause: %w", err)
 	}
@@ -210,8 +215,11 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclo
 	return vectors, nil
 }
 
-func parseUpdateWhere(node *pg.Node) (Columns, error) { //nolint:cyclop
+func parseWhereClause(node *pg.Node) (Columns, error) { //nolint:cyclop
 	var columns Columns
+	if node == nil {
+		return columns, nil
+	}
 
 	switch node := node.GetNode().(type) {
 	default:
@@ -222,14 +230,15 @@ func parseUpdateWhere(node *pg.Node) (Columns, error) { //nolint:cyclop
 			switch node.GetNode().(type) {
 			default:
 				return nil, fmt.Errorf("bool expr argument (%T): %w", node.GetNode(), ErrNotImplemented)
+			case *pg.Node_NullTest:
 			case *pg.Node_BoolExpr:
-				cols, err := parseUpdateWhere(node)
+				cols, err := parseWhereClause(node)
 				if err != nil {
 					return nil, fmt.Errorf("parse update where bool: %w", err)
 				}
 				columns = append(columns, cols...)
 			case *pg.Node_AExpr:
-				cols, err := parseUpdateWhere(node)
+				cols, err := parseWhereClause(node)
 				if err != nil {
 					return nil, fmt.Errorf("parse update where bool 2: %w", err)
 				}

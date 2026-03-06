@@ -81,11 +81,12 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		return nil, fmt.Errorf("unknown clause: %w", ErrNotImplemented)
 	}
 
-	if len(sel.GetFromClause()) > 1 {
-		return nil, errors.New("from clause too big") //nolint:err113
+	if len(sel.GetFromClause()) != 1 {
+		return nil, errors.New("from clause must contains only one expression") //nolint:err113
 	}
 
 	tables := NewTables("public")
+	var fqTableName string
 	from := sel.GetFromClause()[0]
 	switch fromNode := from.GetNode().(type) {
 	default:
@@ -95,15 +96,17 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	case *pg.Node_RangeVar:
 		tbl := fromNode.RangeVar
 		if tbl.GetAlias() != nil {
-			_, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), tbl.GetAlias().GetAliasname())
+			fqtn, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), tbl.GetAlias().GetAliasname())
 			if err != nil {
 				return nil, fmt.Errorf("failed to add table: %w", err)
 			}
+			fqTableName = fqtn
 		} else {
-			_, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), "")
+			fqtn, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), "")
 			if err != nil {
 				return nil, fmt.Errorf("failed to add table: %w", err)
 			}
+			fqTableName = fqtn
 		}
 	}
 
@@ -172,20 +175,11 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	}
 
 	if sel.GetWhereClause() != nil {
-		switch node := sel.GetWhereClause().GetNode().(type) { //nolint:gocritic
-		case *pg.Node_AExpr:
-			switch node.AExpr.GetKind() { //nolint:exhaustive // this is white list
-			default:
-				return nil, fmt.Errorf("where clause kind (%d): %w", node.AExpr.GetKind(), ErrNotImplemented)
-			case pg.A_Expr_Kind_AEXPR_OP:
-				columns, err := parseAexpr(node)
-				if err != nil {
-					return nil, fmt.Errorf("parse where clause aexpr: %w", err)
-				}
-
-				allColumns = append(allColumns, columns...)
-			}
+		whereColumns, err := parseWhereClause(sel.GetWhereClause())
+		if err != nil {
+			return nil, fmt.Errorf("parse where clause: %w", err)
 		}
+		allColumns = append(allColumns, whereColumns...)
 	}
 
 	for _, node := range sel.GetSortClause() {
@@ -230,6 +224,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	}
 
 	table2target := make(map[string]Columns, len(allColumns))
+	table2target[fqTableName] = nil
 	for _, column := range allColumns {
 		tbl, ok := tables.Get(column.Table())
 		if !ok {
