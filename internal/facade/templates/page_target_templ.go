@@ -124,7 +124,7 @@ func smallQueryResult(tbl structs.QTable) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"w-full overflow-x-auto rounded-lg border border-[#4a4a4a] bg-[#323232]\"><div class=\"inline-block min-w-full align-middle\"><div class=\"overflow-hidden\"><table class=\"min-w-full divide-y divide-[#454545]\"><thead class=\"bg-[#2a2a2a] sticky top-0 z-10\"><tr>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"w-full overflow-x-auto rounded-lg border border-[#4a4a4a] bg-[#323232]\"><div class=\"inline-block min-w-full align-middle\"><div class=\"overflow-hidden\"><table class=\"divide-y divide-[#454545]\" style=\"width:200%;min-width:200%\"><thead class=\"bg-[#2a2a2a] sticky top-0 z-10\"><tr>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

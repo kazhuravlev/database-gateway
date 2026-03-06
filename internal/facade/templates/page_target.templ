@@ -40,7 +40,7 @@ templ smallQueryResult(tbl structs.QTable) {
 	<div class="w-full overflow-x-auto rounded-lg border border-[#4a4a4a] bg-[#323232]">
 		<div class="inline-block min-w-full align-middle">
 			<div class="overflow-hidden">
-				<table class="min-w-full divide-y divide-[#454545]">
+				<table class="divide-y divide-[#454545]" style="width:200%;min-width:200%">
 					<thead class="bg-[#2a2a2a] sticky top-0 z-10">
 						<tr>
 							for _, hdr := range tbl.Headers {
