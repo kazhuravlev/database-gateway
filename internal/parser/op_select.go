@@ -42,7 +42,7 @@ func (s *SelectVec) Columns() []string {
 
 func (SelectVec) isVector() {}
 
-var allowedSelectFunctions = map[string]struct{}{
+var allowedSelectFunctions = map[string]struct{}{ //nolint:gochecknoglobals
 	"count": {},
 	"lower": {},
 	"upper": {},
