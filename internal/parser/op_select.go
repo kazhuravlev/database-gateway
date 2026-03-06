@@ -86,6 +86,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	}
 
 	tables := NewTables("public")
+	var fqTableName string
 	from := sel.GetFromClause()[0]
 	switch fromNode := from.GetNode().(type) {
 	default:
@@ -95,15 +96,17 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	case *pg.Node_RangeVar:
 		tbl := fromNode.RangeVar
 		if tbl.GetAlias() != nil {
-			_, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), tbl.GetAlias().GetAliasname())
+			fqtn, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), tbl.GetAlias().GetAliasname())
 			if err != nil {
 				return nil, fmt.Errorf("failed to add table: %w", err)
 			}
+			fqTableName = fqtn
 		} else {
-			_, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), "")
+			fqtn, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), "")
 			if err != nil {
 				return nil, fmt.Errorf("failed to add table: %w", err)
 			}
+			fqTableName = fqtn
 		}
 	}
 

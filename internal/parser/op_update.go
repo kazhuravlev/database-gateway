@@ -217,6 +217,9 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclo
 
 func parseUpdateWhere(node *pg.Node) (Columns, error) { //nolint:cyclop
 	var columns Columns
+	if node == nil {
+		return columns, nil
+	}
 
 	switch node := node.GetNode().(type) {
 	default:
@@ -227,6 +230,7 @@ func parseUpdateWhere(node *pg.Node) (Columns, error) { //nolint:cyclop
 			switch node.GetNode().(type) {
 			default:
 				return nil, fmt.Errorf("bool expr argument (%T): %w", node.GetNode(), ErrNotImplemented)
+			case *pg.Node_NullTest:
 			case *pg.Node_BoolExpr:
 				cols, err := parseUpdateWhere(node)
 				if err != nil {
