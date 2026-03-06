@@ -124,7 +124,7 @@ func smallQueryResult(tbl structs.QTable) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"w-full overflow-x-auto rounded-lg border border-[#4a4a4a] bg-[#323232]\"><div class=\"inline-block min-w-full align-middle\"><div class=\"overflow-hidden\"><table class=\"divide-y divide-[#454545]\" style=\"width:200%;min-width:200%\"><thead class=\"bg-[#2a2a2a] sticky top-0 z-10\"><tr>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"w-full overflow-x-auto rounded-lg border border-[#4a4a4a] bg-[#323232]\"><div class=\"inline-block min-w-full align-middle\"><div class=\"overflow-hidden\"><table class=\"min-w-full divide-y divide-[#454545] table-auto\"><thead class=\"bg-[#2a2a2a] sticky top-0 z-10\"><tr>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -175,14 +175,14 @@ func smallQueryResult(tbl structs.QTable) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			for _, cell := range row {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<td class=\"px-3 py-1.5 text-sm text-[#ececdf]\"><div class=\"max-w-xs overflow-hidden text-ellipsis\" title=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<td class=\"px-3 py-1.5 text-sm text-[#ececdf] whitespace-nowrap\"><div class=\"overflow-visible\" title=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var9 string
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(cell)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 58, Col: 74}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `page_target.templ`, Line: 58, Col: 52}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
