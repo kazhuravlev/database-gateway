@@ -57,25 +57,25 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 		return nil, fmt.Errorf("bad configuration: %w", err)
 	}
 
-	var oidcProvider *oidc.Provider
-	var oauthCfg *oauth2.Config
-	if oidcCfg, ok := opts.users.Provider.(config.UsersProviderOIDC); ok {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:mnd
-		defer cancel()
+	oidcCfg, ok := opts.users.Provider.(config.UsersProviderOIDC)
+	if !ok {
+		return nil, errors.New("users provider should be oidc") //nolint:err113
+	}
 
-		provider, err := oidc.NewProvider(ctx, oidcCfg.IssuerURL)
-		if err != nil {
-			return nil, fmt.Errorf("init provider: %w", err)
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) //nolint:mnd
+	defer cancel()
 
-		oauthCfg = &oauth2.Config{
-			ClientID:     oidcCfg.ClientID,
-			ClientSecret: oidcCfg.ClientSecret,
-			Endpoint:     provider.Endpoint(),
-			RedirectURL:  oidcCfg.RedirectURL,
-			Scopes:       append([]string{oidc.ScopeOpenID}, oidcCfg.Scopes...),
-		}
-		oidcProvider = provider
+	oidcProvider, err := oidc.NewProvider(ctx, oidcCfg.IssuerURL)
+	if err != nil {
+		return nil, fmt.Errorf("init provider: %w", err)
+	}
+
+	oauthCfg := &oauth2.Config{
+		ClientID:     oidcCfg.ClientID,
+		ClientSecret: oidcCfg.ClientSecret,
+		Endpoint:     oidcProvider.Endpoint(),
+		RedirectURL:  oidcCfg.RedirectURL,
+		Scopes:       append([]string{oidc.ScopeOpenID}, oidcCfg.Scopes...),
 	}
 
 	return &Service{
@@ -84,20 +84,6 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 		conns:        make(map[config.TargetID]*pgxpool.Pool),
 		oidcProvider: oidcProvider,
 		oauthCfg:     oauthCfg,
-	}, nil
-}
-
-func (s *Service) AuthUser(_ context.Context, username, password string) (*structs.User, error) {
-	user, err := s.findUser(func(user config.User) bool {
-		return user.Username == username && user.Password == password
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &structs.User{
-		ID:       user.ID,
-		Username: user.Username,
 	}, nil
 }
 
@@ -193,10 +179,6 @@ func (s *Service) RunQuery(
 	}
 
 	return req.ID, &qTable, nil
-}
-
-func (s *Service) AuthType() config.AuthType {
-	return s.opts.users.Provider.Type()
 }
 
 func (s *Service) InitOIDC(_ context.Context) (string, string, error) { //nolint:gocritic
