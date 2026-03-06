@@ -17,7 +17,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -84,39 +83,6 @@ type Target struct {
 	Tables        []TargetTable `json:"tables"`
 }
 
-type IProvider interface {
-	isProviderConfiguration()
-}
-
-type UsersConfig struct {
-	Provider IProvider
-}
-
-func (u *UsersConfig) UnmarshalJSON(data []byte) error {
-	var cfg struct {
-		Provider string `json:"provider"`
-	}
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("unmarshal users config: %w", err)
-	}
-
-	if cfg.Provider != "oidc" {
-		return fmt.Errorf("unknown users provider: %s", cfg.Provider) //nolint:err113
-	}
-
-	var res struct {
-		Configuration UsersProviderOIDC `json:"configuration"`
-	}
-	if err := json.Unmarshal(data, &res); err != nil {
-		return fmt.Errorf("unmarshal users oidc: %w", err)
-	}
-	*u = UsersConfig{
-		Provider: res.Configuration,
-	}
-
-	return nil
-}
-
 type UsersProviderOIDC struct {
 	ClientID     string   `json:"client_id"`
 	ClientSecret string   `json:"client_secret"`
@@ -125,19 +91,17 @@ type UsersProviderOIDC struct {
 	Scopes       []string `json:"scopes"`
 }
 
-func (UsersProviderOIDC) isProviderConfiguration() {}
-
 type FacadeConfig struct {
 	Port         int    `json:"port"`
 	CookieSecret string `json:"cookie_secret"`
 }
 
 type Config struct {
-	Targets []Target       `json:"targets"`
-	Users   UsersConfig    `json:"users"`
-	ACLs    []rules.ACL    `json:"acls"`
-	Facade  FacadeConfig   `json:"facade"`
-	Storage PostgresConfig `json:"storage"`
+	Targets []Target          `json:"targets"`
+	Users   UsersProviderOIDC `json:"users"`
+	ACLs    []rules.ACL       `json:"acls"`
+	Facade  FacadeConfig      `json:"facade"`
+	Storage PostgresConfig    `json:"storage"`
 }
 
 func (c *Config) Validate() error { //nolint:cyclop

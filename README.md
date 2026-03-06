@@ -107,14 +107,11 @@ The service uses OIDC authentication:
 
 ```json
 "users": {
-  "provider": "oidc",
-  "configuration": {
-    "client_id": "example-app",
-    "client_secret": "example-app-secret",
-    "issuer_url": "http://localhost:5556",
-    "redirect_url": "http://localhost:8080/auth/callback",
-    "scopes": ["email", "profile"]
-  }
+  "client_id": "example-app",
+  "client_secret": "example-app-secret",
+  "issuer_url": "http://localhost:5556",
+  "redirect_url": "http://localhost:8080/auth/callback",
+  "scopes": ["email", "profile"]
 }
 ```
 
