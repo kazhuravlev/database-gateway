@@ -67,6 +67,7 @@ func handleDelete(req *pg.DeleteStmt) ([]Vector, error) { //nolint:gocyclo
 	allColumns := slices.Concat(retCols, whereColumns)
 
 	table2target := make(map[string]Columns, len(allColumns))
+	table2target[fqTableName] = nil
 	for _, column := range allColumns {
 		tbl, ok := tables.Get(column.Table())
 		if !ok {

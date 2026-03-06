@@ -68,6 +68,11 @@ func parseAexpr(node *pg.Node_AExpr) (Columns, error) { //nolint:cyclop
 		default:
 			return nil, fmt.Errorf("aexpr clause left expr (%T): %w", left, ErrNotImplemented)
 		case *pg.Node_AExpr:
+			nested, err := parseAexpr(left)
+			if err != nil {
+				return nil, fmt.Errorf("aexpr clause left nested expr: %w", err)
+			}
+			columns = append(columns, nested...)
 		case *pg.Node_ColumnRef:
 			column, err := pNodeColumnRef(left)
 			if err != nil {
