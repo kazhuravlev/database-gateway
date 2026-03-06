@@ -74,9 +74,11 @@ func (s *Service) Run(_ context.Context) error {
 		BeforeNextFunc: nil,
 		LogValuesFunc: func(_ echo.Context, reqVals middleware.RequestLoggerValues) error {
 			logFn := s.opts.logger.Info
+			errMsg := ""
 
 			if reqVals.Error != nil {
 				logFn = s.opts.logger.Error
+				errMsg = reqVals.Error.Error()
 			}
 
 			logFn("req",
@@ -85,7 +87,7 @@ func (s *Service) Run(_ context.Context) error {
 				slog.String("uri", reqVals.URI),
 				slog.Int("status", reqVals.Status),
 				slog.Duration("dur", reqVals.Latency),
-				slog.String("err", reqVals.Error.Error()),
+				slog.String("err", errMsg),
 			)
 
 			return nil
