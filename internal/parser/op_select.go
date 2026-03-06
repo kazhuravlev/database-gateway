@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/kazhuravlev/just"
 	pg "github.com/pganalyze/pg_query_go/v6"
@@ -40,6 +41,15 @@ func (s *SelectVec) Columns() []string {
 }
 
 func (SelectVec) isVector() {}
+
+var allowedSelectFunctions = map[string]struct{}{
+	"count": {},
+	"lower": {},
+	"upper": {},
+	"sum":   {},
+	"min":   {},
+	"max":   {},
+}
 
 func pNodeColumnRef(node *pg.Node_ColumnRef) (Column, error) {
 	var fqdnSlice []string
@@ -150,11 +160,9 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 				default:
 					return nil, fmt.Errorf("unknown function name type (%T): %w", node, ErrNotImplemented)
 				case *pg.Node_String_:
-					switch name := node.String_.GetSval(); name {
-					default:
+					name := strings.ToLower(node.String_.GetSval())
+					if _, ok := allowedSelectFunctions[name]; !ok {
 						return nil, fmt.Errorf("unknown function name (%s): %w", name, ErrNotImplemented)
-					case "count", "lower", "upper":
-						// NOTE: allowed function names
 					}
 				}
 

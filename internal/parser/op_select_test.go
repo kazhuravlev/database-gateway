@@ -77,6 +77,7 @@ func TestParseSelectValid(t *testing.T) {
 
 	fValid(`SELECT lower(id) from clients`)
 	fValid(`SELECT count(*) from clients`)
+	fValid(`SELECT sum(total_sales) from sales_olap_42`)
 }
 
 // TestParseSelectInvalid is just a list of special cases that is not supported (yet).
