@@ -15,17 +15,21 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 issuer: http://localhost:5556
+
 storage:
   type: memory
 
 web:
   http: 0.0.0.0:5556
 
+oauth2:
+  skipApprovalScreen: true
+
 staticClients:
   - id: example-app
     redirectURIs:
       - http://localhost:8080/auth/callback
-    name: "Example App"
+    name: DB Gateway
     secret: example-app-secret
 
 enablePasswordDB: true
