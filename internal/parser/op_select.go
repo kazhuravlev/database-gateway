@@ -230,6 +230,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	}
 
 	table2target := make(map[string]Columns, len(allColumns))
+	table2target[fqTableName] = nil
 	for _, column := range allColumns {
 		tbl, ok := tables.Get(column.Table())
 		if !ok {
