@@ -21,12 +21,25 @@ services:
     restart: on-failure
     depends_on:
       - "storage-postgres"
+      - "dex"
     ports:
       - '127.0.0.1:8080:8080'
     volumes:
       - './config.json:/app/config.json'
     command:
       - "run" 
+
+  dex:
+    image: ghcr.io/dexidp/dex:v2.42.0
+    restart: on-failure
+    command:
+      - dex
+      - serve
+      - /etc/dex/config.yaml
+    volumes:
+      - "./dex-config.yaml:/etc/dex/config.yaml:ro"
+    ports:
+      - "127.0.0.1:5556:5556"
 
   storage-postgres:
     image: postgres:16
