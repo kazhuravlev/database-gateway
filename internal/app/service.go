@@ -202,6 +202,7 @@ func (s *Service) RunQuery(
 	req := storage.InsertQueryResultsReq{
 		ID:        uuid6.New(),
 		UserID:    userID,
+		TargetID:  srvID,
 		CreatedAt: queryStartedAt,
 		Query:     query,
 		Response:  buf,
@@ -358,6 +359,34 @@ func (s *Service) ListAllBookmarks(ctx context.Context, uid config.UserID) ([]st
 			Query:    item.Query,
 		}
 	})
+
+	return out, nil
+}
+
+func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limit int64) ([]structs.RecentQuery, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	items, err := s.opts.storage.ListQueryResultsByUser(s.opts.storage.Conn(ctx), uid, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list query results by user: %w", err)
+	}
+
+	out := make([]structs.RecentQuery, 0, len(items))
+	for _, item := range items {
+		var payload storedQueryResultPayload
+		if err := json.Unmarshal(item.Response, &payload); err != nil {
+			continue
+		}
+
+		out = append(out, structs.RecentQuery{
+			ID:        item.ID.S(),
+			TargetID:  item.TargetID,
+			Query:     item.Query,
+			CreatedAt: item.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
 
 	return out, nil
 }

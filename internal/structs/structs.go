@@ -56,3 +56,10 @@ type Bookmark struct {
 	Title    string
 	Query    string
 }
+
+type RecentQuery struct {
+	ID        string
+	TargetID  config.TargetID
+	Query     string
+	CreatedAt string
+}

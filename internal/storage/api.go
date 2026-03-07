@@ -31,6 +31,7 @@ import (
 type InsertQueryResultsReq struct {
 	ID        uuid6.UUID
 	UserID    config.UserID
+	TargetID  config.TargetID
 	CreatedAt time.Time
 	Query     string
 	Response  json.RawMessage
@@ -40,6 +41,7 @@ func (*Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) error
 	obj := model.QueryResults{
 		ID:        req.ID,
 		UserID:    req.UserID,
+		TargetID:  req.TargetID,
 		CreatedAt: req.CreatedAt,
 		Query:     req.Query,
 		Response:  req.Response,
@@ -72,6 +74,38 @@ func (*Service) GetQueryResults(conn qrm.DB, uid config.UserID, queryID uuid6.UU
 	}
 
 	return &obj, nil
+}
+
+func (*Service) ListQueryResultsByUser(conn qrm.DB, uid config.UserID, limit int64) ([]QueryResult, error) {
+	var items []model.QueryResults
+	//nolint:unqueryvet // ok while reading into model
+	err := tbl.QueryResults.
+		SELECT(tbl.QueryResults.AllColumns).
+		WHERE(tbl.QueryResults.UserID.EQ(postgres.String(uid.S()))).
+		ORDER_BY(tbl.QueryResults.CreatedAt.DESC()).
+		LIMIT(limit).
+		Query(conn, &items)
+	if err := handleError("list query results by user", err, nil); err != nil {
+		return nil, err
+	}
+
+	if items == nil {
+		return []QueryResult{}, nil
+	}
+
+	out := make([]QueryResult, 0, len(items))
+	for _, item := range items {
+		out = append(out, QueryResult{
+			ID:        item.ID,
+			UserID:    item.UserID,
+			TargetID:  item.TargetID,
+			CreatedAt: item.CreatedAt,
+			Query:     item.Query,
+			Response:  item.Response,
+		})
+	}
+
+	return out, nil
 }
 
 type InsertBookmarkReq struct {

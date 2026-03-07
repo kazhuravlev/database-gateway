@@ -109,9 +109,10 @@ func cmdGenerateModels(_ *cli.Context, cfg config.Config) error { //nolint:gocri
 	// map[TABLE_NAME]map[FIELD_NAME]FIELD_TYPE
 	customFields := map[string]map[string]template.Type{
 		"query_results": {
-			"id":       template.NewType(uuid6.Nil()),
-			"user_id":  template.NewType(config.UserID("")),
-			"response": template.NewType([]byte{}),
+			"id":        template.NewType(uuid6.Nil()),
+			"user_id":   template.NewType(config.UserID("")),
+			"target_id": template.NewType(config.TargetID("")),
+			"response":  template.NewType([]byte{}),
 		},
 	}
 

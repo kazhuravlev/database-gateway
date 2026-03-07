@@ -31,3 +31,12 @@ type Bookmark struct {
 	Query     string
 	CreatedAt time.Time
 }
+
+type QueryResult struct {
+	ID        uuid6.UUID
+	UserID    config.UserID
+	TargetID  config.TargetID
+	CreatedAt time.Time
+	Query     string
+	Response  []byte
+}

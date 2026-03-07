@@ -20,4 +20,5 @@ type QueryResults struct {
 	CreatedAt time.Time
 	Query     string
 	Response  []byte
+	TargetID  config.TargetID
 }
