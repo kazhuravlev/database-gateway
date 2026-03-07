@@ -153,3 +153,34 @@ func (*Service) ListBookmarks(conn qrm.DB, uid config.UserID, targetID config.Ta
 
 	return out, nil
 }
+
+func (*Service) ListBookmarksByUser(conn qrm.DB, uid config.UserID) ([]Bookmark, error) {
+	var items []model.Bookmarks
+	//nolint:unqueryvet // ok while reading into model
+	err := tbl.Bookmarks.
+		SELECT(tbl.Bookmarks.AllColumns).
+		WHERE(tbl.Bookmarks.UserID.EQ(postgres.String(uid.S()))).
+		ORDER_BY(tbl.Bookmarks.CreatedAt.DESC()).
+		Query(conn, &items)
+	if err := handleError("list bookmarks by user", err, nil); err != nil {
+		return nil, err
+	}
+
+	if items == nil {
+		return []Bookmark{}, nil
+	}
+
+	out := make([]Bookmark, 0, len(items))
+	for _, item := range items {
+		out = append(out, Bookmark{
+			ID:        uuid6.FromUUID(item.ID),
+			UserID:    config.UserID(item.UserID),
+			TargetID:  config.TargetID(item.TargetID),
+			Title:     item.Title,
+			Query:     item.Query,
+			CreatedAt: item.CreatedAt,
+		})
+	}
+
+	return out, nil
+}

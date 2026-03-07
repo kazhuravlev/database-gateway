@@ -307,3 +307,21 @@ func (s *Service) ListBookmarks(ctx context.Context, uid config.UserID, targetID
 
 	return out, nil
 }
+
+func (s *Service) ListAllBookmarks(ctx context.Context, uid config.UserID) ([]structs.Bookmark, error) {
+	items, err := s.opts.storage.ListBookmarksByUser(s.opts.storage.Conn(ctx), uid)
+	if err != nil {
+		return nil, fmt.Errorf("list bookmarks by user: %w", err)
+	}
+
+	out := just.SliceMap(items, func(item storage.Bookmark) structs.Bookmark {
+		return structs.Bookmark{
+			ID:       item.ID.S(),
+			TargetID: item.TargetID,
+			Title:    item.Title,
+			Query:    item.Query,
+		}
+	})
+
+	return out, nil
+}
