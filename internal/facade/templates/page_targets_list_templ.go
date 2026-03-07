@@ -201,7 +201,7 @@ func listBookmarks(bookmarks []structs.Bookmark) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\" method=\"post\" class=\"m-0\"><button type=\"submit\" class=\"btn text-xs leading-none\" style=\"padding:3px 7px\">Delete</button></form></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\" method=\"post\" class=\"m-0\"><input type=\"hidden\" name=\"return_to\" value=\"/servers\"> <button type=\"submit\" class=\"btn text-xs leading-none\" style=\"padding:3px 7px\">Delete</button></form></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

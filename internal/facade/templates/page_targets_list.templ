@@ -35,6 +35,7 @@ templ listBookmarks(bookmarks []structs.Bookmark) {
 					<button type="submit" name="format" value="html" class="btn text-xs leading-none" style="padding:3px 7px">Run</button>
 				</form>
 				<form action={ templ.SafeURL("/servers/" + item.TargetID.S() + "/bookmarks/" + item.ID + "/delete") } method="post" class="m-0">
+					<input type="hidden" name="return_to" value="/servers"/>
 					<button type="submit" class="btn text-xs leading-none" style="padding:3px 7px">Delete</button>
 				</form>
 			</div>

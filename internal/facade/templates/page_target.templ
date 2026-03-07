@@ -54,6 +54,7 @@ templ bookmarksList(formUrl string, items []structs.Bookmark) {
 					<div class="flex items-start justify-between gap-2">
 						<div class="text-sm font-semibold">{ item.Title }</div>
 						<form action={ templ.SafeURL(formUrl + "/bookmarks/" + item.ID + "/delete") } method="post" class="m-0">
+							<input type="hidden" name="return_to" value={ formUrl }/>
 							<button type="submit" class="btn text-xs leading-none" style="padding:4px 8px">Delete</button>
 						</form>
 					</div>

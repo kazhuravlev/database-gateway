@@ -354,7 +354,12 @@ func (s *Service) deleteBookmark(c echo.Context) error {
 		return fmt.Errorf("delete bookmark: %w", err)
 	}
 
-	return c.Redirect(http.StatusSeeOther, "/servers/"+tID.S())
+	returnTo := c.FormValue("return_to")
+	if returnTo == "" || !strings.HasPrefix(returnTo, "/") || strings.HasPrefix(returnTo, "//") {
+		returnTo = "/servers/" + tID.S()
+	}
+
+	return c.Redirect(http.StatusSeeOther, returnTo)
 }
 
 func (s *Service) getQueryResults(c echo.Context) error {
