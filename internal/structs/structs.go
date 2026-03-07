@@ -40,3 +40,10 @@ type User struct {
 	ID       config.UserID
 	Username string
 }
+
+type Bookmark struct {
+	ID       string
+	TargetID config.TargetID
+	Title    string
+	Query    string
+}

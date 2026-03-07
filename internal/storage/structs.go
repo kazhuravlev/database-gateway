@@ -15,3 +15,19 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package storage
+
+import (
+	"time"
+
+	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
+)
+
+type Bookmark struct {
+	ID        uuid6.UUID
+	UserID    config.UserID
+	TargetID  config.TargetID
+	Title     string
+	Query     string
+	CreatedAt time.Time
+}
