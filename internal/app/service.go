@@ -43,6 +43,11 @@ import (
 
 var ErrNotFound = errors.New("not found")
 
+type storedQueryResultPayload struct {
+	Table structs.QTable `json:"table"`
+	Meta  structs.QMeta  `json:"meta"`
+}
+
 type Service struct {
 	opts Options
 
@@ -110,6 +115,8 @@ func (s *Service) RunQuery(
 	srvID config.TargetID,
 	query string,
 ) (uuid6.UUID, *structs.QTable, error) {
+	fullRoundTripStartedAt := time.Now()
+
 	srv, schema, err := s.getTargetByID(ctx, userID, srvID)
 	if err != nil {
 		return uuid6.Nil(), nil, fmt.Errorf("get target by id: %w", err)
@@ -124,10 +131,25 @@ func (s *Service) RunQuery(
 		)
 	}
 
-	if err := validator.IsAllowed(schema, haveAccess, query); err != nil {
+	parsingStartedAt := time.Now()
+	vectors, err := validator.MakeVectors(query)
+	parsingDuration := time.Since(parsingStartedAt)
+	if err != nil {
 		log.Error("err", err.Error())
 
-		return uuid6.Nil(), nil, fmt.Errorf("preflight check: %w", err)
+		return uuid6.Nil(), nil, fmt.Errorf("preflight check: make vectors: %w", err)
+	}
+
+	if err := validator.ValidateSchema(vectors, schema); err != nil {
+		log.Error("err", err.Error())
+
+		return uuid6.Nil(), nil, fmt.Errorf("preflight check: validate schema: %w", err)
+	}
+
+	if err := validator.ValidateAccess(vectors, haveAccess); err != nil {
+		log.Error("err", err.Error())
+
+		return uuid6.Nil(), nil, fmt.Errorf("preflight check: validate access: %w", err)
 	}
 
 	conn, err := s.getConnection(ctx, *srv)
@@ -135,8 +157,9 @@ func (s *Service) RunQuery(
 		return uuid6.Nil(), nil, fmt.Errorf("get connection by id: %w", err)
 	}
 
-	queryStart := time.Now()
+	queryStartedAt := time.Now()
 	res, err := conn.Query(ctx, query)
+	networkRoundTripDuration := time.Since(queryStartedAt)
 	if err != nil {
 		return uuid6.Nil(), nil, fmt.Errorf("query: %w", err)
 	}
@@ -159,7 +182,19 @@ func (s *Service) RunQuery(
 		}),
 	}
 
-	buf, err := json.Marshal(qTable)
+	meta := structs.QMeta{
+		ExecutionTimeMS:    time.Since(fullRoundTripStartedAt).Milliseconds(),
+		ParsingTimeMS:      parsingDuration.Milliseconds(),
+		NetworkRoundTripMS: networkRoundTripDuration.Milliseconds(),
+		RowsCount:          len(rows),
+		ColumnsCount:       len(cols),
+		VectorsCount:       len(vectors),
+	}
+
+	buf, err := json.Marshal(storedQueryResultPayload{
+		Table: qTable,
+		Meta:  meta,
+	})
 	if err != nil {
 		return uuid6.Nil(), nil, fmt.Errorf("marshal qtable: %w", err)
 	}
@@ -167,7 +202,7 @@ func (s *Service) RunQuery(
 	req := storage.InsertQueryResultsReq{
 		ID:        uuid6.New(),
 		UserID:    userID,
-		CreatedAt: queryStart,
+		CreatedAt: queryStartedAt,
 		Query:     query,
 		Response:  buf,
 	}
@@ -234,15 +269,33 @@ func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uu
 		return nil, fmt.Errorf("get query results: %w", err)
 	}
 
-	var qTable structs.QTable
-	if err := json.Unmarshal(res.Response, &qTable); err != nil {
+	var responseObj map[string]json.RawMessage
+	if err := json.Unmarshal(res.Response, &responseObj); err == nil {
+		if _, ok := responseObj["table"]; ok {
+			var payload storedQueryResultPayload
+			if err := json.Unmarshal(res.Response, &payload); err != nil {
+				return nil, fmt.Errorf("unmarshal query results: %w", err)
+			}
+
+			return &QueryResults{
+				CreatedAt: res.CreatedAt,
+				Query:     res.Query,
+				QTable:    payload.Table,
+				Meta:      payload.Meta,
+			}, nil
+		}
+	}
+
+	var legacyQTable structs.QTable
+	if err := json.Unmarshal(res.Response, &legacyQTable); err != nil {
 		return nil, fmt.Errorf("unmarshal query results: %w", err)
 	}
 
 	return &QueryResults{
 		CreatedAt: res.CreatedAt,
 		Query:     res.Query,
-		QTable:    qTable,
+		QTable:    legacyQTable,
+		Meta:      structs.QMeta{},
 	}, nil
 }
 

@@ -209,7 +209,7 @@ func (s *Service) getServer(c echo.Context) error {
 		return fmt.Errorf("list bookmarks: %w", err)
 	}
 
-	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, ``, bookmarks, nil, nil))
+	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, ``, bookmarks, nil, nil, nil))
 }
 
 func (s *Service) getAuth(c echo.Context) error {
@@ -315,7 +315,7 @@ func (s *Service) runQuery(c echo.Context) error {
 
 	queryID, _, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
 	if err != nil {
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, query, bookmarks, nil, err)) //nolint:err113
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, query, bookmarks, nil, nil, err)) //nolint:err113
 	}
 
 	params2 := url.Values{}
@@ -395,7 +395,7 @@ func (s *Service) getQueryResults(c echo.Context) error {
 
 		return c.Redirect(http.StatusSeeOther, correctedURL)
 	case "html":
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, &qRes.QTable, nil))
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, &qRes.QTable, &qRes.Meta, nil))
 	case "json":
 		qTbl2 := just.SliceMap(qRes.QTable.Rows, func(row []string) map[string]any {
 			m := make(map[string]any, len(qRes.QTable.Headers))
@@ -406,9 +406,15 @@ func (s *Service) getQueryResults(c echo.Context) error {
 			return m
 		})
 
-		resBuf, err := json.Marshal(qTbl2)
+		resBuf, err := json.Marshal(struct {
+			Meta structs.QMeta    `json:"meta"`
+			Rows []map[string]any `json:"rows"`
+		}{
+			Meta: qRes.Meta,
+			Rows: qTbl2,
+		})
 		if err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, nil, err))
+			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, nil, nil, err))
 		}
 
 		c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json")) //nolint

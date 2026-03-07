@@ -26,4 +26,5 @@ type QueryResults struct {
 	CreatedAt time.Time
 	Query     string
 	QTable    structs.QTable
+	Meta      structs.QMeta
 }
