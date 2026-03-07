@@ -14,6 +14,24 @@ have permissions to execute both `SELECT` and `INSERT` queries on certain tables
 restricted to read-only (`SELECT`) access. This approach ensures that database interactions are managed safely and
 that each user's access is tailored to their role and responsibilities.
 
+## TL;DR
+
+- Run approved SQL against multiple PostgreSQL targets from one web UI.
+- Authenticate users via OIDC and enforce ACL rules by user, target, operation, and table/column.
+- Store query results (with shareable links and execution metadata) for debugging and auditing.
+
+## Table of Contents
+
+- [TL;DR](#tldr)
+- [Architecture Overview](#architecture-overview)
+- [Quickstart with example setup](#quickstart-with-example-setup)
+- [Features](#features)
+- [Advanced Configuration](#advanced-configuration)
+- [Performance Optimizations](#performance-optimizations)
+- [Security Considerations](#security-considerations)
+- [Edge Cases and Troubleshooting](#edge-cases-and-troubleshooting)
+- [Interesting projects](#interesting-projects)
+
 ## Architecture Overview
 
 This application acts as a secure gateway to multiple PostgreSQL instances, allowing authenticated users to run approved
@@ -64,7 +82,7 @@ This architecture ensures secure, controlled access to production data, balancin
 
 ## Quickstart with example setup
 
-Run commands to get a local dbgw instance with 3 postgres.
+Run commands to get a local dbgw instance with 3 PostgreSQL instances.
 
 ```shell
 git clone https://github.com/kazhuravlev/database-gateway.git
@@ -80,24 +98,35 @@ ACLs are stored in [config.json](example/config.json).
 
 ![pic1_instances.png](example/list_instances.png)
 
-Choose `local-1`, put this query `select id, name from clients` and click `Run` ![pic2_run.png](example/instance.png)
+Choose `local-1`, run this query `select id, name from clients`, then click `Run`. ![pic2_run.png](example/instance.png)
 
 ## Features
 
-- [x] Supports any PostgreSQL wire-protocol database
+### Security & Access Control
+
 - [x] Integrates with OpenID Connect for user authentication
 - [x] Enforces access filtering through ACLs
-- [x] Provides query result output in HTML format
-- [x] Provides query result output in JSON format
-- [x] Unique links for query results (useful for debugging)
 - [x] Fine-grained table-level permissions
 - [x] Column-level access control
-- [x] Connection pooling for performance optimization
-- [x] Query validation and sanitization
 - [x] SQL parsing to enforce query type restrictions (SELECT, INSERT, etc.)
-- [x] Interactive web UI with keyboard shortcuts (Shift+Enter to run queries)
+- [x] Query validation and sanitization
 - [x] Session management with token expiration
 - [x] Secure cookie handling
+
+### Query UX
+
+- [x] Supports any PostgreSQL wire-protocol database
+- [x] Interactive web UI with keyboard shortcuts (Shift+Enter to run queries)
+- [x] Provides query result output in HTML format
+- [x] Provides query result output in JSON format
+- [x] Query bookmarks (save, list, run, delete)
+- [x] Recent queries feed on the main page (last 50 per user) with quick result access
+- [x] Unique links for query results (useful for debugging)
+
+### Observability & Performance
+
+- [x] Includes query execution stats in results (full round trip, parsing time, network round trip)
+- [x] Connection pooling for performance optimization
 
 ## Advanced Configuration
 
@@ -106,12 +135,14 @@ Choose `local-1`, put this query `select id, name from clients` and click `Run` 
 The service uses OIDC authentication:
 
 ```json
-"users": {
-  "client_id": "example-app",
-  "client_secret": "example-app-secret",
-  "issuer_url": "http://localhost:5556",
-  "redirect_url": "http://localhost:8080/auth/callback",
-  "scopes": ["email", "profile"]
+{
+  "users": {
+    "client_id": "example-app",
+    "client_secret": "example-app-secret",
+    "issuer_url": "http://localhost:5556",
+    "redirect_url": "http://localhost:8080/auth/callback",
+    "scopes": ["email", "profile"]
+  }
 }
 ```
 
@@ -120,22 +151,24 @@ The service uses OIDC authentication:
 Access control lists define user permissions with fine-grained control:
 
 ```json
-"acls": [
-  {
-    "user": "admin@example.com",
-    "op": "*",
-    "target": "*",
-    "tbl": "*",
-    "allow": true
-  },
-  {
-    "user": "user1@example.com",
-    "op": "select",
-    "target": "pg-5433",
-    "tbl": "*",
-    "allow": true
-  }
-]
+{
+  "acls": [
+    {
+      "user": "admin@example.com",
+      "op": "*",
+      "target": "*",
+      "tbl": "*",
+      "allow": true
+    },
+    {
+      "user": "user1@example.com",
+      "op": "select",
+      "target": "pg-5433",
+      "tbl": "*",
+      "allow": true
+    }
+  ]
+}
 ```
 
 Wildcards (`*`) allow all operations, targets, or tables. Specific permissions override broader ones.
@@ -145,16 +178,20 @@ Wildcards (`*`) allow all operations, targets, or tables. Specific permissions o
 Configure performance settings for each database connection:
 
 ```json
-"connection": {
-  "host": "postgres1",
-  "port": 5432,
-  "user": "pg01",
-  "password": "pg01",
-  "db": "pg01",
-  "use_ssl": false,
-  "max_pool_size": 4
+{
+  "connection": {
+    "host": "postgres1",
+    "port": 5432,
+    "user": "pg01",
+    "password": "pg01",
+    "db": "pg01",
+    "use_ssl": false,
+    "max_pool_size": 4
+  }
 }
 ```
+
+For a complete working config, see [example/config.json](example/config.json).
 
 ## Performance Optimizations
 
