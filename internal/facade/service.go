@@ -19,6 +19,7 @@ package facade
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/gob"
 	"encoding/json"
 	"errors"
@@ -427,6 +428,24 @@ func (s *Service) getQueryResults(c echo.Context) error {
 
 		c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json")) //nolint
 		http.ServeContent(c.Response(), c.Request(), "response.json", time.Now(), bytes.NewReader(resBuf))
+
+		return nil
+	case "csv":
+		var csvBuf bytes.Buffer
+		csvWriter := csv.NewWriter(&csvBuf)
+		if err := csvWriter.Write(qRes.QTable.Headers); err != nil {
+			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, nil, nil, err))
+		}
+		if err := csvWriter.WriteAll(qRes.QTable.Rows); err != nil {
+			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, nil, nil, err))
+		}
+		csvWriter.Flush()
+		if err := csvWriter.Error(); err != nil {
+			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, nil, nil, err))
+		}
+
+		c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.csv")) //nolint
+		http.ServeContent(c.Response(), c.Request(), "response.csv", time.Now(), bytes.NewReader(csvBuf.Bytes()))
 
 		return nil
 	}
