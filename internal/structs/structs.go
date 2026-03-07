@@ -36,6 +36,15 @@ type QTable struct {
 	Rows    [][]string `json:"rows"`
 }
 
+type QMeta struct {
+	ExecutionTimeMS    int64 `json:"execution_time_ms"`
+	ParsingTimeMS      int64 `json:"parsing_time_ms"`
+	NetworkRoundTripMS int64 `json:"network_round_trip_ms"`
+	RowsCount          int   `json:"rows_count,omitempty"`
+	ColumnsCount       int   `json:"columns_count,omitempty"`
+	VectorsCount       int   `json:"vectors_count,omitempty"`
+}
+
 type User struct {
 	ID       config.UserID
 	Username string

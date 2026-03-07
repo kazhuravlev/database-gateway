@@ -69,14 +69,27 @@ templ bookmarksList(formUrl string, items []structs.Bookmark) {
 	</div>
 }
 
-templ queryResult(tbl structs.QTable) {
+templ queryResult(tbl structs.QTable, meta *structs.QMeta) {
 	<div class="w-full">
-		@smallQueryResult(tbl)
+		@smallQueryResult(tbl, meta)
 	</div>
 }
 
-templ smallQueryResult(tbl structs.QTable) {
+templ smallQueryResult(tbl structs.QTable, meta *structs.QMeta) {
 	<div class="result-wrap">
+		if len(tbl.Rows) > 0 || meta != nil {
+			<div class="result-meta">
+				<span>Showing { len(tbl.Rows) } rows</span>
+				if meta != nil {
+					<span> | full: { meta.ExecutionTimeMS }ms</span>
+					<span> | parsing: { meta.ParsingTimeMS }ms</span>
+					<span> | network: { meta.NetworkRoundTripMS }ms</span>
+					if meta.ColumnsCount > 0 {
+						<span> | cols: { meta.ColumnsCount }</span>
+					}
+				}
+			</div>
+		}
 		<table class="result-table">
 			<thead>
 				<tr>
@@ -95,13 +108,10 @@ templ smallQueryResult(tbl structs.QTable) {
 				}
 			</tbody>
 		</table>
-		if len(tbl.Rows) > 0 {
-			<div class="result-meta">Showing { len(tbl.Rows) } rows</div>
-		}
 	</div>
 }
 
-templ PageTarget(user structs.User, target structs.Server, formUrl,query string, bookmarks []structs.Bookmark, qTbl *structs.QTable, err error) {
+templ PageTarget(user structs.User, target structs.Server, formUrl,query string, bookmarks []structs.Bookmark, qTbl *structs.QTable, qMeta *structs.QMeta, err error) {
 	@l_app() {
 		@header(user)
 		@w_appline() {
@@ -120,7 +130,7 @@ templ PageTarget(user structs.User, target structs.Server, formUrl,query string,
 			@showError(err)
 		}
 		if qTbl != nil {
-			@queryResult(*qTbl)
+			@queryResult(*qTbl, qMeta)
 		}
 	}
 }
