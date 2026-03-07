@@ -191,7 +191,14 @@ func (s *Service) getServers(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "the sky was falling")
 	}
 
-	return Render(c, http.StatusOK, templates.PageTargetsList(user, servers, bookmarks))
+	recentQueries, err := s.opts.app.ListRecentQueries(c.Request().Context(), user.ID, 50)
+	if err != nil {
+		s.opts.logger.Error("list recent queries", slog.String("error", err.Error()))
+
+		return c.String(http.StatusInternalServerError, "the sky was falling")
+	}
+
+	return Render(c, http.StatusOK, templates.PageTargetsList(user, servers, bookmarks, recentQueries))
 }
 
 func (s *Service) getServer(c echo.Context) error {

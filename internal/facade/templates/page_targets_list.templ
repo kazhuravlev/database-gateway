@@ -44,15 +44,35 @@ templ listBookmarks(bookmarks []structs.Bookmark) {
 	</div>
 }
 
-templ PageTargetsList(user structs.User, servers []structs.Server, bookmarks []structs.Bookmark) {
+templ listRecentQueries(items []structs.RecentQuery) {
+	<div class="grid gap-1.5 w-full">
+		if len(items) == 0 {
+			<div class="panel text-xs muted">No recent queries yet</div>
+		}
+		for _, item := range items {
+			<div class="panel" style="padding:6px 8px">
+				<div class="flex items-center justify-between gap-2">
+					<div class="text-[11px] muted">{ item.CreatedAt } | { item.TargetID.S() }</div>
+					<a class="btn text-xs leading-none" style="padding:3px 7px" href={ templ.URL("/servers/" + item.TargetID.S() + "/" + item.ID + "?format=html") }>View</a>
+				</div>
+				<div class="text-xs" style="margin-top:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{ item.Query }</div>
+			</div>
+		}
+	</div>
+}
+
+templ PageTargetsList(user structs.User, servers []structs.Server, bookmarks []structs.Bookmark, recentQueries []structs.RecentQuery) {
 	@l_app() {
 		@header(user)
 		<div class="flex flex-col lg:flex-row gap-2 w-full items-start">
-			<div class="w-full lg:w-1/2">
+			<div class="w-full lg:w-1/3">
 				@listServers(servers)
 			</div>
-			<div class="w-full lg:w-1/2">
+			<div class="w-full lg:w-1/3">
 				@listBookmarks(bookmarks)
+			</div>
+			<div class="w-full lg:w-1/3">
+				@listRecentQueries(recentQueries)
 			</div>
 		</div>
 	}
