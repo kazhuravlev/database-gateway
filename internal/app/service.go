@@ -295,7 +295,7 @@ func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uu
 		CreatedAt: res.CreatedAt,
 		Query:     res.Query,
 		QTable:    legacyQTable,
-		Meta:      structs.QMeta{},
+		Meta:      *new(structs.QMeta),
 	}, nil
 }
 
