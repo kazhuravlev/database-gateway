@@ -89,7 +89,10 @@ Choose `local-1`, put this query `select id, name from clients` and click `Run` 
 - [x] Enforces access filtering through ACLs
 - [x] Provides query result output in HTML format
 - [x] Provides query result output in JSON format
+- [x] Includes query execution stats in results (full round trip, parsing time, network round trip)
 - [x] Unique links for query results (useful for debugging)
+- [x] Query bookmarks (save, list, run, delete)
+- [x] Recent queries feed on the main page (last 50 per user) with quick result access
 - [x] Fine-grained table-level permissions
 - [x] Column-level access control
 - [x] Connection pooling for performance optimization
