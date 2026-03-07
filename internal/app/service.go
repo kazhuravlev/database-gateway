@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -243,4 +244,66 @@ func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uu
 		Query:     res.Query,
 		QTable:    qTable,
 	}, nil
+}
+
+func (s *Service) AddBookmark(
+	ctx context.Context,
+	uid config.UserID,
+	targetID config.TargetID,
+	title string,
+	query string,
+) error {
+	trimmedTitle := strings.TrimSpace(title)
+	trimmedQuery := strings.TrimSpace(query)
+	if trimmedTitle == "" || trimmedQuery == "" {
+		return errors.New("title and query are required") //nolint:err113
+	}
+
+	if _, _, err := s.getTargetByID(ctx, uid, targetID); err != nil {
+		return fmt.Errorf("validate target access: %w", err)
+	}
+
+	req := storage.InsertBookmarkReq{
+		ID:        uuid6.New(),
+		UserID:    uid,
+		TargetID:  targetID,
+		Title:     trimmedTitle,
+		Query:     trimmedQuery,
+		CreatedAt: time.Now(),
+	}
+	if err := s.opts.storage.InsertBookmark(s.opts.storage.Conn(ctx), req); err != nil {
+		return fmt.Errorf("insert bookmark: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) DeleteBookmark(ctx context.Context, uid config.UserID, bookmarkID uuid6.UUID) error {
+	if err := s.opts.storage.DeleteBookmark(s.opts.storage.Conn(ctx), uid, bookmarkID); err != nil {
+		return fmt.Errorf("delete bookmark: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) ListBookmarks(ctx context.Context, uid config.UserID, targetID config.TargetID) ([]structs.Bookmark, error) {
+	if _, _, err := s.getTargetByID(ctx, uid, targetID); err != nil {
+		return nil, fmt.Errorf("validate target access: %w", err)
+	}
+
+	items, err := s.opts.storage.ListBookmarks(s.opts.storage.Conn(ctx), uid, targetID)
+	if err != nil {
+		return nil, fmt.Errorf("list bookmarks: %w", err)
+	}
+
+	out := just.SliceMap(items, func(item storage.Bookmark) structs.Bookmark {
+		return structs.Bookmark{
+			ID:       item.ID.S(),
+			TargetID: item.TargetID,
+			Title:    item.Title,
+			Query:    item.Query,
+		}
+	})
+
+	return out, nil
 }

@@ -156,6 +156,8 @@ func (s *Service) Run(_ context.Context) error {
 	echoInst.GET("/servers", s.getServers)
 	echoInst.GET("/servers/:id", s.getServer)
 	echoInst.POST("/servers/:id", s.runQuery)
+	echoInst.POST("/servers/:id/bookmarks", s.addBookmark)
+	echoInst.POST("/servers/:id/bookmarks/:bid/delete", s.deleteBookmark)
 	echoInst.GET("/servers/:id/:qid", s.getQueryResults)
 
 	echoInst.GET("/auth", s.getAuth)
@@ -195,8 +197,12 @@ func (s *Service) getServer(c echo.Context) error {
 	}
 
 	formURL := "/servers/" + srv.ID.S()
+	bookmarks, err := s.opts.app.ListBookmarks(c.Request().Context(), user.ID, srv.ID)
+	if err != nil {
+		return fmt.Errorf("list bookmarks: %w", err)
+	}
 
-	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, ``, nil, nil))
+	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, ``, bookmarks, nil, nil))
 }
 
 func (s *Service) getAuth(c echo.Context) error {
@@ -295,10 +301,14 @@ func (s *Service) runQuery(c echo.Context) error {
 	query := params.Get("query")
 	format := params.Get("format")
 	formURL := "/servers/" + srv.ID.S()
+	bookmarks, bErr := s.opts.app.ListBookmarks(c.Request().Context(), user.ID, srv.ID)
+	if bErr != nil {
+		return fmt.Errorf("list bookmarks: %w", bErr)
+	}
 
 	queryID, _, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
 	if err != nil {
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, query, nil, err)) //nolint:err113
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, query, bookmarks, nil, err)) //nolint:err113
 	}
 
 	params2 := url.Values{}
@@ -306,6 +316,38 @@ func (s *Service) runQuery(c echo.Context) error {
 	targetURL := fmt.Sprintf("/servers/%s/%s?%s", srv.ID, queryID.S(), params2.Encode())
 
 	return c.Redirect(http.StatusSeeOther, targetURL)
+}
+
+func (s *Service) addBookmark(c echo.Context) error {
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
+
+	tID := config.TargetID(c.Param("id"))
+	if err := s.opts.app.AddBookmark(
+		c.Request().Context(),
+		user.ID,
+		tID,
+		c.FormValue("title"),
+		c.FormValue("query"),
+	); err != nil {
+		return fmt.Errorf("add bookmark: %w", err)
+	}
+
+	return c.Redirect(http.StatusSeeOther, "/servers/"+tID.S())
+}
+
+func (s *Service) deleteBookmark(c echo.Context) error {
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
+
+	tID := config.TargetID(c.Param("id"))
+	bookmarkID, err := uuid6.ParseStr(c.Param("bid"))
+	if err != nil {
+		return fmt.Errorf("parse bookmark id: %w", err)
+	}
+	if err := s.opts.app.DeleteBookmark(c.Request().Context(), user.ID, bookmarkID); err != nil {
+		return fmt.Errorf("delete bookmark: %w", err)
+	}
+
+	return c.Redirect(http.StatusSeeOther, "/servers/"+tID.S())
 }
 
 func (s *Service) getQueryResults(c echo.Context) error {
@@ -330,6 +372,10 @@ func (s *Service) getQueryResults(c echo.Context) error {
 
 	format := params.Get("format")
 	formURL := "/servers/" + srv.ID.S()
+	bookmarks, bErr := s.opts.app.ListBookmarks(c.Request().Context(), user.ID, srv.ID)
+	if bErr != nil {
+		return fmt.Errorf("list bookmarks: %w", bErr)
+	}
 
 	switch format {
 	default:
@@ -337,7 +383,7 @@ func (s *Service) getQueryResults(c echo.Context) error {
 
 		return c.Redirect(http.StatusSeeOther, correctedURL)
 	case "html":
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, &qRes.QTable, nil))
+		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, &qRes.QTable, nil))
 	case "json":
 		qTbl2 := just.SliceMap(qRes.QTable.Rows, func(row []string) map[string]any {
 			m := make(map[string]any, len(qRes.QTable.Headers))
@@ -350,7 +396,7 @@ func (s *Service) getQueryResults(c echo.Context) error {
 
 		resBuf, err := json.Marshal(qTbl2)
 		if err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, nil, err))
+			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, nil, err))
 		}
 
 		c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json")) //nolint

@@ -73,3 +73,83 @@ func (*Service) GetQueryResults(conn qrm.DB, uid config.UserID, queryID uuid6.UU
 
 	return &obj, nil
 }
+
+type InsertBookmarkReq struct {
+	ID        uuid6.UUID
+	UserID    config.UserID
+	TargetID  config.TargetID
+	Title     string
+	Query     string
+	CreatedAt time.Time
+}
+
+func (*Service) InsertBookmark(conn qrm.DB, req InsertBookmarkReq) error { //nolint:gocritic
+	obj := model.Bookmarks{
+		ID:        req.ID.ToUUID(),
+		UserID:    req.UserID.S(),
+		TargetID:  req.TargetID.S(),
+		Title:     req.Title,
+		Query:     req.Query,
+		CreatedAt: req.CreatedAt,
+	}
+	//nolint:unqueryvet // ok while reading into model
+	res, err := tbl.Bookmarks.
+		INSERT(tbl.Bookmarks.AllColumns).
+		MODEL(obj).
+		Exec(conn)
+	if err := handleError("insert bookmark", err, res); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (*Service) DeleteBookmark(conn qrm.DB, uid config.UserID, bookmarkID uuid6.UUID) error {
+	//nolint:unqueryvet // ok while reading into model
+	res, err := tbl.Bookmarks.
+		DELETE().
+		WHERE(postgres.AND(
+			tbl.Bookmarks.ID.EQ(postgres.UUID(bookmarkID.ToUUID())),
+			tbl.Bookmarks.UserID.EQ(postgres.String(uid.S())),
+		)).
+		Exec(conn)
+	if err := handleError("delete bookmark", err, res); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (*Service) ListBookmarks(conn qrm.DB, uid config.UserID, targetID config.TargetID) ([]Bookmark, error) {
+	var items []model.Bookmarks
+	//nolint:unqueryvet // ok while reading into model
+	err := tbl.Bookmarks.
+		SELECT(tbl.Bookmarks.AllColumns).
+		WHERE(postgres.AND(
+			tbl.Bookmarks.UserID.EQ(postgres.String(uid.S())),
+			tbl.Bookmarks.TargetID.EQ(postgres.String(targetID.S())),
+		)).
+		ORDER_BY(tbl.Bookmarks.CreatedAt.DESC()).
+		Query(conn, &items)
+	if err := handleError("list bookmarks", err, nil); err != nil {
+		return nil, err
+	}
+
+	if items == nil {
+		return []Bookmark{}, nil
+	}
+
+	out := make([]Bookmark, 0, len(items))
+	for _, item := range items {
+		out = append(out, Bookmark{
+			ID:        uuid6.FromUUID(item.ID),
+			UserID:    config.UserID(item.UserID),
+			TargetID:  config.TargetID(item.TargetID),
+			Title:     item.Title,
+			Query:     item.Query,
+			CreatedAt: item.CreatedAt,
+		})
+	}
+
+	return out, nil
+}
