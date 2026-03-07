@@ -33,11 +33,10 @@ templ sqlForm(formUrl, query string) {
 templ bookmarkForm(formUrl, query string) {
 	<div class="w-full">
 		<form action={ templ.SafeURL(formUrl + "/bookmarks") } method="post" style="margin:0">
-			<div class="panel w-full flex flex-col gap-2">
-				<div class="text-sm font-semibold">Bookmark query</div>
-				<input class="w-full px-2 py-1.5 border border-[#505050] rounded-md text-[#f1f1e8] bg-[#1f1f1c] placeholder:text-[#8d8d7f]" name="title" type="text" placeholder="bookmark title"/>
+			<div class="w-full flex flex-row items-center gap-2">
+				<input class="flex-1 min-w-[180px] px-2 py-1.5 border border-[#505050] rounded-md text-[#f1f1e8] bg-[#1f1f1c] placeholder:text-[#8d8d7f]" name="title" type="text" placeholder="Bookmark title"/>
 				<input type="hidden" name="query" value={ query }/>
-				<button type="submit" class="btn">Save bookmark</button>
+				<button type="submit" class="btn whitespace-nowrap">Save</button>
 			</div>
 		</form>
 	</div>
@@ -45,7 +44,7 @@ templ bookmarkForm(formUrl, query string) {
 
 templ bookmarksList(formUrl string, items []structs.Bookmark) {
 	<div class="w-full">
-		<div class="panel w-full flex flex-col gap-2">
+		<div class=" w-full flex flex-col gap-2">
 			<div class="text-sm font-semibold">Bookmarks</div>
 			if len(items) == 0 {
 				<div class="text-xs muted">No bookmarks yet</div>
