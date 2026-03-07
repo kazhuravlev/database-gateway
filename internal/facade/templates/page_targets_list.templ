@@ -50,13 +50,13 @@ templ listRecentQueries(items []structs.RecentQuery) {
 			<div class="panel text-xs muted">No recent queries yet</div>
 		}
 		for _, item := range items {
-			<div class="panel" style="padding:6px 8px">
-				<div class="flex items-center justify-between gap-2">
-					<div class="text-[11px] muted">{ item.CreatedAt } | { item.TargetID.S() }</div>
-					<a class="btn text-xs leading-none" style="padding:3px 7px" href={ templ.URL("/servers/" + item.TargetID.S() + "/" + item.ID + "?format=html") }>View</a>
-				</div>
-				<div class="text-xs" style="margin-top:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{ item.Query }</div>
+		  <div class="flex flex-col min-w-0 panel">
+			<div class="flex items-center justify-between gap-2">
+			  <div class="text-[11px] muted">{ item.CreatedAt } | { item.TargetID.S() }</div>
+			  <a class="btn text-xs leading-none px-2 py-1" href={ templ.URL("/servers/" + item.TargetID.S() + "/" + item.ID + "?format=html") }>View</a>
 			</div>
+			<div class="tbl-chip text-xs break-all mt-1">{ item.Query }</div>
+		  </div>
 		}
 	</div>
 }

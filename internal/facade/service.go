@@ -371,17 +371,18 @@ func (s *Service) deleteBookmark(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, returnTo)
 }
 
-func (s *Service) getQueryResults(c echo.Context) error {
+func (s *Service) getQueryResults(c echo.Context) error { //nolint:cyclop
+	ctx := c.Request().Context()
 	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
 	tID := config.TargetID(c.Param("id"))
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), user.ID, tID)
+	srv, err := s.opts.app.GetTargetByID(ctx, user.ID, tID)
 	if err != nil {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
 	qID := uuid6.FromStr(c.Param("qid"))
-	qRes, err := s.opts.app.GetQueryResults(c.Request().Context(), user.ID, qID)
+	qRes, err := s.opts.app.GetQueryResults(ctx, user.ID, qID)
 	if err != nil {
 		return fmt.Errorf("get query results: %w", err)
 	}
@@ -393,7 +394,7 @@ func (s *Service) getQueryResults(c echo.Context) error {
 
 	format := params.Get("format")
 	formURL := "/servers/" + srv.ID.S()
-	bookmarks, bErr := s.opts.app.ListBookmarks(c.Request().Context(), user.ID, srv.ID)
+	bookmarks, bErr := s.opts.app.ListBookmarks(ctx, user.ID, srv.ID)
 	if bErr != nil {
 		return fmt.Errorf("list bookmarks: %w", bErr)
 	}
