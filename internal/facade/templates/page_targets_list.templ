@@ -22,30 +22,32 @@ templ listBookmarks(bookmarks []structs.Bookmark) {
 		if len(bookmarks) == 0 {
 			<div class="panel text-xs muted">No bookmarks yet</div>
 		}
-		for _, item := range bookmarks {
-			@w_appline() {
-				<div class="flex flex-col gap-2">
-					<div class="flex items-center justify-between gap-2">
-						<div class="text-sm font-semibold">{ item.Title }</div>
-						<div class="text-xs font-mono bg-[#2a2a2a] border border-[#4a4a4a] rounded px-1.5 py-0.5">{ item.TargetID.S() }</div>
-					</div>
-					<div class="text-xs muted" style="white-space: pre-wrap; word-break: break-word">{ item.Query }</div>
-					<form action={ templ.SafeURL("/servers/" + item.TargetID.S()) } method="post" class="m-0">
-						<input type="hidden" name="query" value={ item.Query }/>
-						<button type="submit" name="format" value="html" class="btn text-xs leading-none" style="padding:4px 8px">Run</button>
-					</form>
-				</div>
-			}
-		}
+	for _, item := range bookmarks {
+		<div class="tbl-chip flex flex-col gap-1.5">
+			<div class="flex items-center justify-between gap-2">
+				<div class="text-sm font-semibold">{ item.Title }</div>
+				<div class="text-xs font-mono bg-[#2a2a2a] border border-[#4a4a4a] rounded px-1.5 py-0.5">{ item.TargetID.S() }</div>
+			</div>
+			<div class="text-xs muted" style="white-space: pre-wrap; word-break: break-word">{ item.Query }</div>
+			<form action={ templ.SafeURL("/servers/" + item.TargetID.S()) } method="post" class="m-0">
+				<input type="hidden" name="query" value={ item.Query }/>
+				<button type="submit" name="format" value="html" class="btn text-xs leading-none" style="padding:3px 7px">Run</button>
+			</form>
+		</div>
+	}
 	</div>
 }
 
 templ PageTargetsList(user structs.User, servers []structs.Server, bookmarks []structs.Bookmark) {
 	@l_app() {
 		@header(user)
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-2 w-full">
-			@listServers(servers)
-			@listBookmarks(bookmarks)
+		<div class="flex flex-col lg:flex-row gap-2 w-full items-start">
+			<div class="w-full lg:w-1/2">
+				@listServers(servers)
+			</div>
+			<div class="w-full lg:w-1/2">
+				@listBookmarks(bookmarks)
+			</div>
 		</div>
 	}
 }
