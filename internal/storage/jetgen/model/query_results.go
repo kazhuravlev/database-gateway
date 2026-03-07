@@ -8,9 +8,10 @@
 package model
 
 import (
+	"time"
+
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
-	"time"
 )
 
 type QueryResults struct {

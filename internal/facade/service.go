@@ -191,7 +191,8 @@ func (s *Service) getServers(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "the sky was falling")
 	}
 
-	recentQueries, err := s.opts.app.ListRecentQueries(c.Request().Context(), user.ID, 50)
+	const maxLastQueries = 50
+	recentQueries, err := s.opts.app.ListRecentQueries(c.Request().Context(), user.ID, maxLastQueries)
 	if err != nil {
 		s.opts.logger.Error("list recent queries", slog.String("error", err.Error()))
 
