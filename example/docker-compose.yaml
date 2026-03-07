@@ -21,7 +21,7 @@ services:
     restart: on-failure
     depends_on:
       - "storage-postgres"
-      - "dex"
+      - "authentik-server"
     ports:
       - '127.0.0.1:8080:8080'
     volumes:
@@ -29,17 +29,53 @@ services:
     command:
       - "run" 
 
-  dex:
-    image: ghcr.io/dexidp/dex:v2.42.0
+  authentik-postgres:
+    image: postgres:16-alpine
+    restart: on-failure
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: authentik
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2026.2.1
     restart: on-failure
     command:
-      - dex
-      - serve
-      - /etc/dex/config.yaml
-    volumes:
-      - "./dex-config.yaml:/etc/dex/config.yaml:ro"
+      - server
+    depends_on:
+      - "authentik-postgres"
+    environment:
+      AUTHENTIK_SECRET_KEY: "dbgw-local-authentik-secret-key-please-change-in-prod"
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_BOOTSTRAP_EMAIL: "akadmin@example.com"
+      AUTHENTIK_BOOTSTRAP_PASSWORD: "password"
+      AUTHENTIK_BLUEPRINTS_DIR: "/blueprints"
     ports:
-      - "127.0.0.1:5556:5556"
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - "./authentik-blueprint.yaml:/blueprints/custom/dbgw.yaml:ro"
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2026.2.1
+    restart: on-failure
+    command:
+      - worker
+    depends_on:
+      - "authentik-postgres"
+    environment:
+      AUTHENTIK_SECRET_KEY: "dbgw-local-authentik-secret-key-please-change-in-prod"
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_BOOTSTRAP_EMAIL: "akadmin@example.com"
+      AUTHENTIK_BOOTSTRAP_PASSWORD: "password"
+      AUTHENTIK_BLUEPRINTS_DIR: "/blueprints"
+    volumes:
+      - "./authentik-blueprint.yaml:/blueprints/custom/dbgw.yaml:ro"
 
   storage-postgres:
     image: postgres:16

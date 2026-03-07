@@ -15,13 +15,52 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 services:
-  dex:
-    image: dexidp/dex:v2.44.0
+  authentik-postgres:
+    image: postgres:16-alpine
     ports:
-      - '127.0.0.1:5556:5556'
+      - '127.0.0.1:5436:5432'
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: authentik
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2026.2.1
+    depends_on:
+      - authentik-postgres
+    command:
+      - server
+    ports:
+      - '127.0.0.1:9000:9000'
+    environment:
+      AUTHENTIK_SECRET_KEY: "dbgw-local-authentik-secret-key-please-change-in-prod"
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_BOOTSTRAP_EMAIL: "akadmin@example.com"
+      AUTHENTIK_BOOTSTRAP_PASSWORD: "password"
+      AUTHENTIK_BLUEPRINTS_DIR: "/blueprints"
     volumes:
-      - './dex-config.yaml:/etc/dex/config.yaml'
-    command: [ 'dex', 'serve', '/etc/dex/config.yaml' ]
+      - './authentik-blueprint.yaml:/blueprints/custom/dbgw.yaml:ro'
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2026.2.1
+    depends_on:
+      - authentik-postgres
+    command:
+      - worker
+    environment:
+      AUTHENTIK_SECRET_KEY: "dbgw-local-authentik-secret-key-please-change-in-prod"
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_BOOTSTRAP_EMAIL: "akadmin@example.com"
+      AUTHENTIK_BOOTSTRAP_PASSWORD: "password"
+      AUTHENTIK_BLUEPRINTS_DIR: "/blueprints"
+    volumes:
+      - './authentik-blueprint.yaml:/blueprints/custom/dbgw.yaml:ro'
 
   # This is a primary application storage
   storage-postgres:

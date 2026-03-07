@@ -103,9 +103,9 @@
 		}
 	],
 	"users": {
-		"client_id": "example-app",
-		"client_secret": "example-app-secret",
-		"issuer_url": "http://localhost:5556",
+		"client_id": "db-gateway",
+		"client_secret": "db-gateway-secret",
+		"issuer_url": "http://localhost:9000/application/o/db-gateway/",
 		"redirect_url": "http://localhost:8080/auth/callback",
 		"scopes": [
 			"email",

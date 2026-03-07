@@ -89,12 +89,21 @@ git clone https://github.com/kazhuravlev/database-gateway.git
 cd database-gateway/example
 docker compose up --pull always --force-recreate -d
 open 'http://127.0.0.1:8080'
-# Admin: admin@example.com password
-# User1: user1@example.com password
+# Authentik and test users are bootstrapped automatically.
 ```
 
-The example setup uses Dex (OIDC) for login. Open `http://127.0.0.1:8080`, click the OIDC provider, and continue.
+The example setup uses self-hosted Authentik as the OIDC provider.
 ACLs are stored in [config.json](example/config.json).
+
+Bootstrap details for local Authentik:
+
+1. OIDC app is created from `example/authentik-blueprint.yaml`.
+2. Static users are created with password `password`:
+   - `admin@example.com`
+   - `user1@example.com`
+3. Both users are members of group `dbgw-users`.
+4. Authentik admin user:
+   - `akadmin@example.com` / `password`
 
 ![pic1_instances.png](example/list_instances.png)
 
@@ -137,9 +146,9 @@ The service uses OIDC authentication:
 ```json
 {
   "users": {
-    "client_id": "example-app",
-    "client_secret": "example-app-secret",
-    "issuer_url": "http://localhost:5556",
+    "client_id": "db-gateway",
+    "client_secret": "db-gateway-secret",
+    "issuer_url": "http://localhost:9000/application/o/db-gateway/",
     "redirect_url": "http://localhost:8080/auth/callback",
     "scopes": ["email", "profile"]
   }
