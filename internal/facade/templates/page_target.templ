@@ -77,6 +77,19 @@ templ queryResult(tbl structs.QTable, meta *structs.QMeta) {
 
 templ smallQueryResult(tbl structs.QTable, meta *structs.QMeta) {
 	<div class="result-wrap">
+		if len(tbl.Rows) > 0 || meta != nil {
+			<div class="result-meta">
+				<span>Showing { len(tbl.Rows) } rows</span>
+				if meta != nil {
+					<span> | full: { meta.ExecutionTimeMS }ms</span>
+					<span> | parsing: { meta.ParsingTimeMS }ms</span>
+					<span> | network: { meta.NetworkRoundTripMS }ms</span>
+					if meta.ColumnsCount > 0 {
+						<span> | cols: { meta.ColumnsCount }</span>
+					}
+				}
+			</div>
+		}
 		<table class="result-table">
 			<thead>
 				<tr>
@@ -95,19 +108,6 @@ templ smallQueryResult(tbl structs.QTable, meta *structs.QMeta) {
 				}
 			</tbody>
 		</table>
-		if len(tbl.Rows) > 0 || meta != nil {
-			<div class="result-meta">
-				<span>Showing { len(tbl.Rows) } rows</span>
-				if meta != nil {
-					<span> | full: { meta.ExecutionTimeMS }ms</span>
-					<span> | parsing: { meta.ParsingTimeMS }ms</span>
-					<span> | network: { meta.NetworkRoundTripMS }ms</span>
-					if meta.ColumnsCount > 0 {
-						<span> | cols: { meta.ColumnsCount }</span>
-					}
-				}
-			</div>
-		}
 	</div>
 }
 
