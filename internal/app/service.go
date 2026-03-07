@@ -269,33 +269,16 @@ func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uu
 		return nil, fmt.Errorf("get query results: %w", err)
 	}
 
-	var responseObj map[string]json.RawMessage
-	if err := json.Unmarshal(res.Response, &responseObj); err == nil {
-		if _, ok := responseObj["table"]; ok {
-			var payload storedQueryResultPayload
-			if err := json.Unmarshal(res.Response, &payload); err != nil {
-				return nil, fmt.Errorf("unmarshal query results: %w", err)
-			}
-
-			return &QueryResults{
-				CreatedAt: res.CreatedAt,
-				Query:     res.Query,
-				QTable:    payload.Table,
-				Meta:      payload.Meta,
-			}, nil
-		}
-	}
-
-	var legacyQTable structs.QTable
-	if err := json.Unmarshal(res.Response, &legacyQTable); err != nil {
+	var payload storedQueryResultPayload
+	if err := json.Unmarshal(res.Response, &payload); err != nil {
 		return nil, fmt.Errorf("unmarshal query results: %w", err)
 	}
 
 	return &QueryResults{
 		CreatedAt: res.CreatedAt,
 		Query:     res.Query,
-		QTable:    legacyQTable,
-		Meta:      *new(structs.QMeta),
+		QTable:    payload.Table,
+		Meta:      payload.Meta,
 	}, nil
 }
 
