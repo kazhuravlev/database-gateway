@@ -55,7 +55,7 @@ templ listRecentQueries(items []structs.RecentQuery) {
 			  <div class="text-[11px] muted">{ item.CreatedAt } | { item.TargetID.S() }</div>
 			  <a class="btn text-xs leading-none px-2 py-1" href={ templ.URL("/servers/" + item.TargetID.S() + "/" + item.ID + "?format=html") }>View</a>
 			</div>
-			<div class="tbl-chip text-xs break-all mt-1">{ item.Query }</div>
+			<div class="tbl-chip text-xs break-words mt-1">{ item.Query }</div>
 		  </div>
 		}
 	</div>

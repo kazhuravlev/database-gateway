@@ -88,10 +88,16 @@ templ targetLineWithQuickSelect(item structs.Server, formURL string) {
 								</div>
 							}
 						</div>
-						<form action={ templ.SafeURL(formURL) } method="post" class="m-0">
-							<input type="hidden" name="query" value={ fmt.Sprintf("select %s from %s", strings.Join(tbl.Fields, ", "), tbl.Table) }/>
-							<button type="submit" name="format" value="html" class="btn text-xs leading-none" style="padding:4px 8px">sel *</button>
-						</form>
+						<div class="flex flex-wrap flex-row gap-1">
+							<form action={ templ.SafeURL(formURL) } method="post" class="m-0">
+								<input type="hidden" name="query" value={ fmt.Sprintf("select %s from %s limit 10", strings.Join(tbl.Fields, ", "), tbl.Table) }/>
+								<button type="submit" name="format" value="html" class="btn text-xs leading-none" style="padding:4px 8px">first 10</button>
+							</form>
+							<form action={ templ.SafeURL(formURL) } method="post" class="m-0">
+								<input type="hidden" name="query" value={ fmt.Sprintf("select count(*) from %s", tbl.Table) }/>
+								<button type="submit" name="format" value="html" class="btn text-xs leading-none" style="padding:4px 8px">count</button>
+							</form>
+						</div>
 					</div>
 				}
 			</div>
