@@ -18,7 +18,6 @@ package app //nolint:testpackage
 
 import (
 	"encoding/json"
-	"io"
 	"log/slog"
 	"testing"
 
@@ -168,12 +167,28 @@ func TestGetClaimValues(t *testing.T) {
 func TestNewRequiresRoleMapping(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 
 	opts := NewOptions(
 		logger,
 		[]config.Target{
-			{ID: "pg-1"},
+			{
+				ID:          "pg-1",
+				Description: "",
+				Tags:        nil,
+				Type:        "",
+				Connection: config.Connection{
+					Host:        "",
+					Port:        0,
+					User:        "",
+					Password:    "",
+					DB:          "",
+					UseSSL:      false,
+					MaxPoolSize: 0,
+				},
+				DefaultSchema: "",
+				Tables:        nil,
+			},
 		},
 		config.UsersProviderOIDC{
 			ClientID:     "cid",
