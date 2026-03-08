@@ -21,6 +21,9 @@ vars:
   DEPS_COMPOSE_FILE: ./.cicd/local/docker-compose.yaml
   DOCKER_IMAGE_NAME: database-gateway
   GO_ENTRYPOINT: ./cmd/gateway
+  FRONTEND_DIR: ./frontend
+  FRONTEND_DIST: ./frontend/dist
+  FRONTEND_EMBED_DIST: ./internal/facade/ui/dist
   TOOLSET: "go run github.com/kazhuravlev/toolset/cmd/toolset@v0.40.0"
   GIT_TAG:
     sh: "gt t l -f tag"
@@ -28,6 +31,7 @@ vars:
 tasks:
   run:
     cmds:
+      - task: "frontend:build"
       - go run {{ .GO_ENTRYPOINT }} run
 
   deps:run:
@@ -91,8 +95,6 @@ tasks:
     desc: Generate code
     cmds:
       - task: "generate:go"
-      - task: "generate:tailwind"
-      - task: "generate:templ"
       - task: "generate:jet"
       - task: "generate:license"
       - task: "fmt"
@@ -110,23 +112,38 @@ tasks:
     cmds:
       - "{{ .TOOLSET }} run addlicense -f LICENSE_gplv3_header.txt ."
 
-  generate:tailwind:
-    dir: './internal/facade'
+  frontend:deps:
+    desc: Install frontend dependencies
+    dir: '{{ .FRONTEND_DIR }}'
     cmds:
-      - npx tailwindcss@3.4.17 --config ./tailwind.config.js -i ./static/input.css -o ./static/output.css
+      - npm install
+
+  frontend:dev:
+    desc: Run frontend in dev mode with autoreload
+    dir: '{{ .FRONTEND_DIR }}'
+    env:
+      VITE_BASE_PATH: /
+    cmds:
+      - npm run dev
+
+  frontend:build:
+    desc: Build frontend for /ui and sync dist to Go embed directory
+    env:
+      VITE_BASE_PATH: /ui/
+    cmds:
+      - task: "frontend:deps"
+      - echo ">>> Build frontend"
+      - cd {{ .FRONTEND_DIR }} && npm run build
+      - echo ">>> Sync frontend dist into embed directory"
+      - rm -rf {{ .FRONTEND_EMBED_DIST }}
+      - mkdir -p {{ .FRONTEND_EMBED_DIST }}
+      - cp -R {{ .FRONTEND_DIST }}/. {{ .FRONTEND_EMBED_DIST }}/
 
   generate:go:
     desc: Generate go
     cmds:
       - echo ">>> Go generate ./..."
       - go generate ./...
-
-  generate:templ:
-    desc: Generate templ
-    dir: './internal/facade/templates'
-    cmds:
-      - echo ">>> Templ"
-      - "{{ .TOOLSET }} run templ generate"
 
   check:
     desc: Run all project checks

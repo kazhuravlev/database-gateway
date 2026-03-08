@@ -18,6 +18,7 @@ func NewOptions(
 	app *app.Service,
 	cookieSecret string,
 	port int,
+	corsAllowAll bool,
 	options ...OptOptionsSetter,
 ) Options {
 	var o Options
@@ -28,6 +29,7 @@ func NewOptions(
 	o.app = app
 	o.cookieSecret = cookieSecret
 	o.port = port
+	o.corsAllowAll = corsAllowAll
 
 	for _, opt := range options {
 		opt(&o)

@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
+	"github.com/kazhuravlev/database-gateway/internal/app"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/labstack/echo-contrib/session"
@@ -55,25 +56,31 @@ func TestAuthFlowStoresStateAndCreatesSession(t *testing.T) {
 			app:          nil,
 			cookieSecret: "very-secret-key-for-tests",
 			port:         0,
+			corsAllowAll: false,
 		},
 		initOIDC: func(context.Context) (string, string, error) {
 			return authURL, state, nil
 		},
-		completeOIDC: func(_ context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, error) {
+		completeOIDC: func(_ context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, *app.OIDCTokens, error) {
 			completeOIDCCalled = true
 			require.Equal(t, "oidc-code-1", code)
 			require.Equal(t, state, expectedState)
 			require.Equal(t, state, receivedState)
 
 			return &structs.User{
-				ID:       config.UserID("alice@example.com"),
-				Username: "alice",
-				Role:     config.RoleUser,
-			}, time.Now().Add(time.Hour), nil
+					ID:       config.UserID("alice@example.com"),
+					Username: "alice",
+					Role:     config.RoleUser,
+				}, time.Now().Add(time.Hour), &app.OIDCTokens{
+					IDToken:     "",
+					AccessToken: "access-token-1",
+				}, nil
 		},
 		buildOIDCLogoutURL: func(_, _ string) (string, error) {
 			return "", errNotUsed
 		},
+		authByAccessToken: nil,
+		lrpc:              nil,
 	}
 	echoInst := authTestEcho(svc)
 
@@ -96,7 +103,7 @@ func TestAuthFlowStoresStateAndCreatesSession(t *testing.T) {
 	recCallback := httptest.NewRecorder()
 	echoInst.ServeHTTP(recCallback, reqCallback)
 	require.Equal(t, http.StatusSeeOther, recCallback.Code, recCallback.Body.String())
-	require.Equal(t, "/", recCallback.Header().Get(echo.HeaderLocation))
+	require.Equal(t, buildAuthRedirectURL("access-token-1"), recCallback.Header().Get(echo.HeaderLocation))
 	require.True(t, completeOIDCCalled)
 
 	userCookie := getSessionCookie(recCallback.Result().Cookies())
@@ -112,16 +119,19 @@ func TestAuthCallbackRequiresStateInSession(t *testing.T) {
 			app:          nil,
 			cookieSecret: "very-secret-key-for-tests",
 			port:         0,
+			corsAllowAll: false,
 		},
 		initOIDC: func(context.Context) (string, string, error) {
 			return "", "", errNotUsed
 		},
-		completeOIDC: func(context.Context, string, string, string) (*structs.User, time.Time, error) {
-			return nil, time.Time{}, errNotUsed
+		completeOIDC: func(context.Context, string, string, string) (*structs.User, time.Time, *app.OIDCTokens, error) {
+			return nil, time.Time{}, nil, errNotUsed
 		},
 		buildOIDCLogoutURL: func(string, string) (string, error) {
 			return "", errNotUsed
 		},
+		authByAccessToken: nil,
+		lrpc:              nil,
 	}
 	echoInst := authTestEcho(svc)
 
@@ -153,22 +163,28 @@ func TestLogoutRedirectsToOIDCEndSession(t *testing.T) {
 			app:          nil,
 			cookieSecret: "very-secret-key-for-tests",
 			port:         0,
+			corsAllowAll: false,
 		},
 		initOIDC: func(context.Context) (string, string, error) {
 			return authURL, state, nil
 		},
-		completeOIDC: func(context.Context, string, string, string) (*structs.User, time.Time, error) {
+		completeOIDC: func(context.Context, string, string, string) (*structs.User, time.Time, *app.OIDCTokens, error) {
 			return &structs.User{
-				ID:       config.UserID("alice@example.com"),
-				Username: "alice",
-				Role:     config.RoleUser,
-			}, time.Now().Add(time.Hour), nil
+					ID:       config.UserID("alice@example.com"),
+					Username: "alice",
+					Role:     config.RoleUser,
+				}, time.Now().Add(time.Hour), &app.OIDCTokens{
+					IDToken:     "",
+					AccessToken: "access-token-1",
+				}, nil
 		},
 		buildOIDCLogoutURL: func(_ string, postLogoutRedirectURL string) (string, error) {
 			gotPostLogoutRedirectURL = postLogoutRedirectURL
 
 			return logoutURL, nil
 		},
+		authByAccessToken: nil,
+		lrpc:              nil,
 	}
 	echoInst := authTestEcho(svc)
 
@@ -209,16 +225,19 @@ func TestLogoutFallbackToAuthWhenOIDCLogoutURLFails(t *testing.T) {
 			app:          nil,
 			cookieSecret: "very-secret-key-for-tests",
 			port:         0,
+			corsAllowAll: false,
 		},
 		initOIDC: func(context.Context) (string, string, error) {
 			return "", "", errNotUsed
 		},
-		completeOIDC: func(context.Context, string, string, string) (*structs.User, time.Time, error) {
-			return nil, time.Time{}, errNotUsed
+		completeOIDC: func(context.Context, string, string, string) (*structs.User, time.Time, *app.OIDCTokens, error) {
+			return nil, time.Time{}, nil, errNotUsed
 		},
 		buildOIDCLogoutURL: func(string, string) (string, error) {
 			return "", errBrokenDiscovery
 		},
+		authByAccessToken: nil,
+		lrpc:              nil,
 	}
 	echoInst := authTestEcho(svc)
 
@@ -228,6 +247,16 @@ func TestLogoutFallbackToAuthWhenOIDCLogoutURLFails(t *testing.T) {
 
 	require.Equal(t, http.StatusSeeOther, rec.Code)
 	require.Equal(t, "/auth", rec.Header().Get(echo.HeaderLocation))
+}
+
+func TestBuildAuthRedirectURL(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(
+		t,
+		"/ui#access_token=token%2Bwith%2Fchars&token_type=Bearer",
+		buildAuthRedirectURL("token+with/chars"),
+	)
 }
 
 func authTestEcho(svc *Service) *echo.Echo {

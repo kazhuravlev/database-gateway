@@ -19,12 +19,6 @@
 			"tags": null
 		},
 		{
-			"runtime": "go",
-			"module": "github.com/a-h/templ/cmd/templ@v0.3.1001",
-			"alias": null,
-			"tags": null
-		},
-		{
 			"runtime": "gh",
 			"module": "golangci/golangci-lint@v2.11.1",
 			"alias": null,

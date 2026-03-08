@@ -107,6 +107,7 @@
 		"client_secret": "db-gateway-secret",
 		"issuer_url": "http://localhost:9000/application/o/db-gateway/",
 		"redirect_url": "http://localhost:8080/auth/callback",
+		"access_token_audience": "db-gateway",
 		"scopes": [
 			"groups",
 			"email",
@@ -143,7 +144,8 @@
 	],
 	"facade": {
 		"port": 8080,
-		"cookie_secret": "secret"
+		"cookie_secret": "secret",
+		"unsafe_cors_allow_all": true
 	},
 	"storage": {
 		"host": "127.0.0.1",

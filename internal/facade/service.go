@@ -19,11 +19,16 @@ package facade
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/csv"
 	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -31,33 +36,71 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/templ"
 	"github.com/gorilla/sessions"
 	"github.com/kazhuravlev/database-gateway/internal/app"
 	"github.com/kazhuravlev/database-gateway/internal/config"
-	"github.com/kazhuravlev/database-gateway/internal/facade/static"
-	"github.com/kazhuravlev/database-gateway/internal/facade/templates"
+	"github.com/kazhuravlev/database-gateway/internal/facade/ui"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 	"github.com/kazhuravlev/just"
+	"github.com/kazhuravlev/lrpc/ctypes"
+	lrpcserver "github.com/kazhuravlev/lrpc/server"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 const (
-	ctxUser      = "c-user"
-	keySession   = "session"
-	keyUserID    = "uid"
-	keyOIDCState = "oidc-state"
+	ctxUser        = "c-user"
+	keySession     = "session"
+	keyUserID      = "uid"
+	keyOIDCState   = "oidc-state"
+	exportNonceLen = 8
+)
+
+var (
+	errBadTokenFormat    = errors.New("bad token format")
+	errBadTokenSignature = errors.New("bad token signature")
+	errBadExportFormat   = errors.New("bad export format")
+	errTokenExpired      = errors.New("token expired")
+	errNoSessionUser     = errors.New("no session user")
+)
+
+//nolint:gochecknoglobals
+var corsMwForDevelopment = middleware.CORSWithConfig(middleware.CORSConfig{
+	Skipper:         nil,
+	AllowOrigins:    []string{"localhost", "*"},
+	AllowOriginFunc: nil,
+	AllowMethods: []string{
+		http.MethodOptions,
+		http.MethodGet,
+		http.MethodHead,
+		http.MethodPut,
+		http.MethodPatch,
+		http.MethodPost,
+		http.MethodDelete,
+	},
+	AllowHeaders:                             []string{},
+	AllowCredentials:                         true,
+	UnsafeWildcardOriginWithAllowCredentials: true,
+	ExposeHeaders:                            nil,
+	MaxAge:                                   0,
+})
+
+type lrpcContextKey string
+
+const (
+	ctxAPITokenUser lrpcContextKey = "api-user"
 )
 
 type Service struct {
 	opts Options
 
 	initOIDC           func(ctx context.Context) (string, string, error)
-	completeOIDC       func(ctx context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, error)
+	completeOIDC       func(ctx context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, *app.OIDCTokens, error)
 	buildOIDCLogoutURL func(idTokenHint, postLogoutRedirectURL string) (string, error)
+	authByAccessToken  func(ctx context.Context, token string) (*structs.User, error)
+	lrpc               *lrpcserver.Server
 }
 
 func New(opts Options) (*Service, error) {
@@ -68,11 +111,21 @@ func New(opts Options) (*Service, error) {
 		return nil, fmt.Errorf("bad configuration: %w", err)
 	}
 
+	lrpc, err := lrpcserver.New(lrpcserver.NewOptions(
+		lrpcserver.WithLogger(opts.logger.With(slog.String("mod", "lrpc"))),
+		lrpcserver.WithName("dbgw"),
+	))
+	if err != nil {
+		return nil, fmt.Errorf("create lrpc server: %w", err)
+	}
+
 	return &Service{
 		opts:               opts,
 		initOIDC:           opts.app.InitOIDC,
 		completeOIDC:       opts.app.CompleteOIDC,
 		buildOIDCLogoutURL: opts.app.BuildOIDCLogoutURL,
+		authByAccessToken:  opts.app.AuthByAccessToken,
+		lrpc:               lrpc,
 	}, nil
 }
 
@@ -125,16 +178,20 @@ func (s *Service) Run(_ context.Context) error {
 	}))
 	echoInst.Use(session.Middleware(sessions.NewCookieStore([]byte(s.opts.cookieSecret))))
 
+	if s.opts.corsAllowAll {
+		echoInst.Use(corsMwForDevelopment)
+	}
+
 	echoInst.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			path := c.Request().URL.Path
-			if strings.HasPrefix(path, "/static") {
-				return next(c)
-			}
 			if strings.HasPrefix(path, "/auth") {
 				return next(c)
 			}
 			if strings.HasPrefix(path, "/logout") {
+				return next(c)
+			}
+			if strings.HasPrefix(path, "/api/v1/") {
 				return next(c)
 			}
 
@@ -159,27 +216,51 @@ func (s *Service) Run(_ context.Context) error {
 		}
 	})
 
-	echoInst.StaticFS("/static", static.Files)
+	echoInst.GET("/ui", s.getApp)
+	echoInst.GET("/ui/*", s.getApp)
 
 	echoInst.GET("/", func(c echo.Context) error {
-		return c.Redirect(http.StatusSeeOther, "/servers")
+		return c.Redirect(http.StatusSeeOther, "/ui")
 	})
-	echoInst.GET("/servers", s.getServers)
-	echoInst.GET("/servers/:id", s.getServer)
-	echoInst.POST("/servers/:id", s.runQuery)
-	echoInst.POST("/servers/:id/bookmarks", s.addBookmark)
-	echoInst.POST("/servers/:id/bookmarks/:bid/delete", s.deleteBookmark)
-	echoInst.GET("/servers/:id/:qid", s.getQueryResults)
-	echoInst.GET("/admin/requests", s.getAdminRequests)
-	echoInst.GET("/admin/requests/:qid", s.getAdminRequest)
-
 	echoInst.GET("/auth", s.getAuth)
 	echoInst.GET("/auth/callback", s.getAuthCallback)
 
 	echoInst.GET("/logout", s.logout)
 
+	{
+		errorMapping := map[error]ctypes.ErrorCode{
+			errBadInput:      400,
+			app.ErrForbidden: 403,
+			app.ErrNotFound:  404,
+		}
+
+		lrpcserver.RegisterHandler(s.lrpc, "profile.get.v1", s.lrpcProfileGet, errorMapping)
+		lrpcserver.RegisterHandler(s.lrpc, "targets.list.v1", s.lrpcTargetList, errorMapping)
+		lrpcserver.RegisterHandler(s.lrpc, "targets.get.v1", s.lrpcTargetGet, errorMapping)
+		lrpcserver.RegisterHandler(s.lrpc, "bookmarks.list.v1", s.lrpcBookmarksList, errorMapping)
+		lrpcserver.RegisterHandler(s.lrpc, "bookmarks.add.v1", s.lrpcBookmarksAdd, errorMapping)
+		lrpcserver.RegisterHandler(s.lrpc, "bookmarks.delete.v1", s.lrpcBookmarksDelete, errorMapping)
+		lrpcserver.RegisterHandler(s.lrpc, "queries.list.v1", s.lrpcQueriesList, errorMapping)
+		lrpcserver.RegisterHandler(s.lrpc, "admin.requests.list.v1", s.lrpcAdminRequestsList, errorMapping)
+		lrpcserver.RegisterHandler(s.lrpc, "query.run.v1", s.lrpcQueryRun, errorMapping)
+		lrpcserver.RegisterHandler(s.lrpc, "query-results.get.v1", s.lrpcQueryResultsGet, errorMapping)
+		lrpcserver.RegisterHandler(s.lrpc, "query-results.export-link.v1", s.lrpcQueryResultsExportLink, errorMapping)
+
+		var apiGroup *echo.Group
+		if s.opts.corsAllowAll {
+			//nolint:contextcheck
+			apiGroup = echoInst.Group("/api/v1", corsMwForDevelopment, s.withAPIBearerAuth())
+		} else {
+			//nolint:contextcheck
+			apiGroup = echoInst.Group("/api/v1", s.withAPIBearerAuth())
+		}
+
+		apiGroup.GET("/schema", echo.WrapHandler(s.lrpc.HTTPHandlerSchema()))
+		apiGroup.POST("/:method", echo.WrapHandler(s.lrpc.HTTPHandler()))
+	}
+	echoInst.GET("/api/v1/query-results/export/:token", s.downloadQueryResultsExport)
 	echoInst.GET("/*", func(c echo.Context) error {
-		return c.Redirect(http.StatusSeeOther, "/")
+		return c.Redirect(http.StatusSeeOther, "/ui")
 	})
 
 	echoInst.Logger.Fatal(echoInst.Start(":" + strconv.Itoa(s.opts.port)))
@@ -187,50 +268,61 @@ func (s *Service) Run(_ context.Context) error {
 	return nil
 }
 
-func (s *Service) getServers(c echo.Context) error {
-	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
+func (s *Service) withAPIBearerAuth() echo.MiddlewareFunc { //nolint:contextcheck
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			token := extractBearerToken(c.Request().Header.Get(echo.HeaderAuthorization))
+			if token == "" {
+				return c.NoContent(http.StatusUnauthorized)
+			}
 
-	servers, err := s.opts.app.GetTargets(c.Request().Context(), user)
-	if err != nil {
-		s.opts.logger.Error("get targets", slog.String("error", err.Error()))
+			user, err := s.authByAccessToken(c.Request().Context(), token)
+			if err != nil {
+				s.opts.logger.Warn("authenticate api token", slog.String("error", err.Error()))
 
-		return c.String(http.StatusInternalServerError, "the sky was falling")
+				return c.NoContent(http.StatusUnauthorized)
+			}
+
+			ctx := context.WithValue(c.Request().Context(), ctxAPITokenUser, *user)
+			c.SetRequest(c.Request().WithContext(ctx))
+
+			return next(c)
+		}
 	}
-
-	bookmarks, err := s.opts.app.ListAllBookmarks(c.Request().Context(), user.ID)
-	if err != nil {
-		s.opts.logger.Error("list bookmarks", slog.String("error", err.Error()))
-
-		return c.String(http.StatusInternalServerError, "the sky was falling")
-	}
-
-	const maxLastQueries = 50
-	recentQueries, err := s.opts.app.ListRecentQueries(c.Request().Context(), user.ID, maxLastQueries)
-	if err != nil {
-		s.opts.logger.Error("list recent queries", slog.String("error", err.Error()))
-
-		return c.String(http.StatusInternalServerError, "the sky was falling")
-	}
-
-	return Render(c, http.StatusOK, templates.PageTargetsList(user, servers, bookmarks, recentQueries))
 }
 
-func (s *Service) getServer(c echo.Context) error {
-	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
-
-	tID := config.TargetID(c.Param("id"))
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), user, tID)
-	if err != nil {
-		return fmt.Errorf("get target by id: %w", err)
+func extractBearerToken(authHeader string) string {
+	if authHeader == "" {
+		return ""
 	}
 
-	formURL := "/servers/" + srv.ID.S()
-	bookmarks, err := s.opts.app.ListBookmarks(c.Request().Context(), user, srv.ID)
-	if err != nil {
-		return fmt.Errorf("list bookmarks: %w", err)
+	scheme, token, found := strings.Cut(strings.TrimSpace(authHeader), " ")
+	if !found {
+		return ""
+	}
+	if !strings.EqualFold(scheme, "Bearer") {
+		return ""
 	}
 
-	return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, ``, bookmarks, nil, nil, nil))
+	return strings.TrimSpace(token)
+}
+
+func (*Service) getApp(c echo.Context) error {
+	requestPath := strings.TrimPrefix(c.Request().URL.Path, "/ui")
+	requestPath = strings.TrimPrefix(requestPath, "/")
+
+	if requestPath != "" {
+		info, err := fs.Stat(ui.DistFS, requestPath)
+		if err == nil && !info.IsDir() {
+			http.ServeFileFS(c.Response(), c.Request(), ui.DistFS, requestPath)
+
+			return nil
+		}
+	}
+
+	http.ServeFileFS(c.Response(), c.Request(), ui.DistFS, "index.html")
+
+	return nil
 }
 
 func (s *Service) getAuth(c echo.Context) error {
@@ -273,7 +365,7 @@ func (s *Service) getAuthCallback(c echo.Context) error {
 	receivedState := c.Request().URL.Query().Get("state")
 	code := c.Request().URL.Query().Get("code")
 
-	user, expiry, err := s.completeOIDC(c.Request().Context(), code, expectedState, receivedState)
+	user, expiry, tokens, err := s.completeOIDC(c.Request().Context(), code, expectedState, receivedState)
 	if err != nil {
 		return fmt.Errorf("complete oidc: %w", err)
 	}
@@ -290,7 +382,7 @@ func (s *Service) getAuthCallback(c echo.Context) error {
 		return fmt.Errorf("save session: %w", err)
 	}
 
-	return c.Redirect(http.StatusSeeOther, "/")
+	return c.Redirect(http.StatusSeeOther, buildAuthRedirectURL(tokens.AccessToken))
 }
 
 func (s *Service) logout(c echo.Context) error {
@@ -319,221 +411,229 @@ func (s *Service) logout(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, logoutURL)
 }
 
-func (s *Service) runQuery(c echo.Context) error {
-	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
+func buildAuthRedirectURL(accessToken string) string {
+	query := url.Values{}
+	query.Set("access_token", accessToken)
+	query.Set("token_type", "Bearer")
 
-	tID := config.TargetID(c.Param("id"))
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), user, tID)
-	if err != nil {
-		return fmt.Errorf("get target by id: %w", err)
-	}
-
-	params, err := c.FormParams()
-	if err != nil {
-		return c.Redirect(http.StatusSeeOther, "/")
-	}
-
-	query := params.Get("query")
-	format := params.Get("format")
-	formURL := "/servers/" + srv.ID.S()
-	bookmarks, bErr := s.opts.app.ListBookmarks(c.Request().Context(), user, srv.ID)
-	if bErr != nil {
-		return fmt.Errorf("list bookmarks: %w", bErr)
-	}
-
-	queryID, _, err := s.opts.app.RunQuery(c.Request().Context(), user, srv.ID, query)
-	if err != nil {
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, query, bookmarks, nil, nil, err)) //nolint:err113
-	}
-
-	params2 := url.Values{}
-	params2.Set("format", format)
-	targetURL := fmt.Sprintf("/servers/%s/%s?%s", srv.ID, queryID.S(), params2.Encode())
-
-	return c.Redirect(http.StatusSeeOther, targetURL)
+	return "/ui#" + query.Encode()
 }
 
-func (s *Service) addBookmark(c echo.Context) error {
-	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
-
-	tID := config.TargetID(c.Param("id"))
-	if err := s.opts.app.AddBookmark(
-		c.Request().Context(),
-		user,
-		tID,
-		c.FormValue("title"),
-		c.FormValue("query"),
-	); err != nil {
-		return fmt.Errorf("add bookmark: %w", err)
-	}
-
-	return c.Redirect(http.StatusSeeOther, "/servers/"+tID.S())
-}
-
-func (s *Service) deleteBookmark(c echo.Context) error {
-	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
-
-	tID := config.TargetID(c.Param("id"))
-	bookmarkID, err := uuid6.ParseStr(c.Param("bid"))
+func (s *Service) downloadQueryResultsExport(c echo.Context) error {
+	user, err := s.currentExportUser(c)
 	if err != nil {
-		return fmt.Errorf("parse bookmark id: %w", err)
-	}
-	if err := s.opts.app.DeleteBookmark(c.Request().Context(), user.ID, bookmarkID); err != nil {
-		return fmt.Errorf("delete bookmark: %w", err)
+		return c.NoContent(http.StatusUnauthorized)
 	}
 
-	returnTo := c.FormValue("return_to")
-	if returnTo == "" || !strings.HasPrefix(returnTo, "/") || strings.HasPrefix(returnTo, "//") {
-		returnTo = "/servers/" + tID.S()
-	}
-
-	return c.Redirect(http.StatusSeeOther, returnTo)
-}
-
-func (s *Service) getQueryResults(c echo.Context) error { //nolint:cyclop
-	ctx := c.Request().Context()
-	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
-
-	tID := config.TargetID(c.Param("id"))
-	srv, err := s.opts.app.GetTargetByID(ctx, user, tID)
+	claims, err := s.parseQueryResultsExportToken(c.Param("token"))
 	if err != nil {
-		return fmt.Errorf("get target by id: %w", err)
+		return c.NoContent(http.StatusNotFound)
 	}
 
-	qID := uuid6.FromStr(c.Param("qid"))
-	qRes, err := s.opts.app.GetQueryResults(ctx, user.ID, qID)
+	if claims.UserID != user.ID {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	qRes, err := s.lookupQueryResultsExport(c, user, claims.QueryResultID)
 	if err != nil {
-		return fmt.Errorf("get query results: %w", err)
-	}
-
-	params, err := c.FormParams()
-	if err != nil {
-		return c.Redirect(http.StatusSeeOther, "/")
-	}
-
-	format := params.Get("format")
-	formURL := "/servers/" + srv.ID.S()
-	bookmarks, bErr := s.opts.app.ListBookmarks(ctx, user, srv.ID)
-	if bErr != nil {
-		return fmt.Errorf("list bookmarks: %w", bErr)
-	}
-
-	switch format {
-	default:
-		correctedURL := c.Request().URL.Path + "?format=html"
-
-		return c.Redirect(http.StatusSeeOther, correctedURL)
-	case "html":
-		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, &qRes.QTable, &qRes.Meta, nil))
-	case "json":
-		qTbl2 := just.SliceMap(qRes.QTable.Rows, func(row []string) map[string]any {
-			m := make(map[string]any, len(qRes.QTable.Headers))
-			for i := range qRes.QTable.Headers {
-				m[qRes.QTable.Headers[i]] = row[i]
-			}
-
-			return m
-		})
-
-		resBuf, err := json.Marshal(struct {
-			Meta structs.QMeta    `json:"meta"`
-			Rows []map[string]any `json:"rows"`
-		}{
-			Meta: qRes.Meta,
-			Rows: qTbl2,
-		})
-		if err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, nil, nil, err))
-		}
-
-		c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.json")) //nolint
-		http.ServeContent(c.Response(), c.Request(), "response.json", time.Now(), bytes.NewReader(resBuf))
-
-		return nil
-	case "csv":
-		var csvBuf bytes.Buffer
-		csvWriter := csv.NewWriter(&csvBuf)
-		if err := csvWriter.Write(qRes.QTable.Headers); err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, nil, nil, err))
-		}
-		if err := csvWriter.WriteAll(qRes.QTable.Rows); err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, nil, nil, err))
-		}
-		csvWriter.Flush()
-		if err := csvWriter.Error(); err != nil {
-			return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, qRes.Query, bookmarks, nil, nil, err))
-		}
-
-		c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", "response.csv")) //nolint
-		http.ServeContent(c.Response(), c.Request(), "response.csv", time.Now(), bytes.NewReader(csvBuf.Bytes()))
-
-		return nil
-	}
-}
-
-func (s *Service) getAdminRequests(c echo.Context) error {
-	ctx := c.Request().Context()
-	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
-
-	page := int64(parsePositiveInt(c.QueryParam("page"), 1))
-	const pageSize = int64(50)
-
-	items, hasNext, err := s.opts.app.ListAdminRequests(ctx, user, page, pageSize)
-	if err != nil {
-		if errors.Is(err, app.ErrForbidden) {
-			return c.String(http.StatusForbidden, "forbidden")
-		}
-
-		return fmt.Errorf("list admin requests: %w", err)
-	}
-
-	return Render(c, http.StatusOK, templates.PageAdminRequests(user, items, int(page), page > 1, hasNext))
-}
-
-func (s *Service) getAdminRequest(c echo.Context) error {
-	ctx := c.Request().Context()
-	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
-
-	qID, err := uuid6.ParseStr(c.Param("qid"))
-	if err != nil {
-		return c.String(http.StatusNotFound, "not found")
-	}
-
-	item, err := s.opts.app.GetAdminQueryResults(ctx, user, qID)
-	if err != nil {
-		switch {
-		case errors.Is(err, app.ErrForbidden):
-			return c.String(http.StatusForbidden, "forbidden")
-		case errors.Is(err, app.ErrNotFound):
-			return c.String(http.StatusNotFound, "not found")
-		default:
-			return fmt.Errorf("get admin query result: %w", err)
-		}
-	}
-
-	return Render(c, http.StatusOK, templates.PageAdminRequest(user, *item))
-}
-
-func Render(ctx echo.Context, statusCode int, t templ.Component) error {
-	buf := templ.GetBuffer()
-	defer templ.ReleaseBuffer(buf)
-
-	if err := t.Render(ctx.Request().Context(), buf); err != nil {
 		return err
 	}
 
-	return ctx.HTML(statusCode, buf.String())
+	return serveExport(c, claims.Format, qRes)
 }
 
-func parsePositiveInt(input string, defaultValue int) int {
-	if input == "" {
-		return defaultValue
+func marshalQueryResultsJSON(qRes *app.QueryResults) ([]byte, error) {
+	qTbl := just.SliceMap(qRes.QTable.Rows, func(row []string) map[string]any {
+		m := make(map[string]any, len(qRes.QTable.Headers))
+		for i := range qRes.QTable.Headers {
+			m[qRes.QTable.Headers[i]] = row[i]
+		}
+
+		return m
+	})
+
+	return json.Marshal(struct {
+		Meta structs.QMeta    `json:"meta"`
+		Rows []map[string]any `json:"rows"`
+	}{
+		Meta: qRes.Meta,
+		Rows: qTbl,
+	})
+}
+
+func marshalQueryResultsCSV(qRes *app.QueryResults) ([]byte, error) {
+	var csvBuf bytes.Buffer
+	csvWriter := csv.NewWriter(&csvBuf)
+	if err := csvWriter.Write(qRes.QTable.Headers); err != nil {
+		return nil, err
+	}
+	if err := csvWriter.WriteAll(qRes.QTable.Rows); err != nil {
+		return nil, err
+	}
+	csvWriter.Flush()
+	if err := csvWriter.Error(); err != nil {
+		return nil, err
 	}
 
-	value, err := strconv.Atoi(input)
-	if err != nil || value <= 0 {
-		return defaultValue
+	return csvBuf.Bytes(), nil
+}
+
+type queryResultsExportTokenClaims struct {
+	UserID        config.UserID `json:"user_id"`
+	QueryResultID uuid6.UUID    `json:"query_result_id"`
+	Format        string        `json:"format"`
+	ExpiresAt     int64         `json:"expires_at"`
+	Nonce         string        `json:"nonce"`
+}
+
+func (s *Service) buildQueryResultsExportToken(
+	userID config.UserID,
+	queryResultID uuid6.UUID,
+	format string,
+	expiresAt time.Time,
+) (string, error) {
+	nonce := make([]byte, exportNonceLen)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", fmt.Errorf("generate nonce: %w", err)
 	}
 
-	return value
+	claims := queryResultsExportTokenClaims{
+		UserID:        userID,
+		QueryResultID: queryResultID,
+		Format:        format,
+		ExpiresAt:     expiresAt.Unix(),
+		Nonce:         base64.RawURLEncoding.EncodeToString(nonce),
+	}
+
+	payload, err := json.Marshal(claims)
+	if err != nil {
+		return "", fmt.Errorf("marshal claims: %w", err)
+	}
+
+	sig := s.signQueryResultsExportPayload(payload)
+
+	return base64.RawURLEncoding.EncodeToString(payload) + "." +
+		base64.RawURLEncoding.EncodeToString(sig), nil
+}
+
+func (s *Service) parseQueryResultsExportToken(rawToken string) (*queryResultsExportTokenClaims, error) {
+	rawToken = strings.TrimSpace(rawToken)
+	payloadPart, sigPart, ok := strings.Cut(rawToken, ".")
+	if !ok {
+		return nil, errBadTokenFormat
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(payloadPart)
+	if err != nil {
+		return nil, fmt.Errorf("decode payload: %w", err)
+	}
+
+	gotSig, err := base64.RawURLEncoding.DecodeString(sigPart)
+	if err != nil {
+		return nil, fmt.Errorf("decode signature: %w", err)
+	}
+
+	wantSig := s.signQueryResultsExportPayload(payload)
+	if !hmac.Equal(gotSig, wantSig) {
+		return nil, errBadTokenSignature
+	}
+
+	var claims queryResultsExportTokenClaims
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil, fmt.Errorf("unmarshal claims: %w", err)
+	}
+
+	if !isSupportedExportFormat(claims.Format) {
+		return nil, errBadExportFormat
+	}
+	if time.Now().Unix() > claims.ExpiresAt {
+		return nil, errTokenExpired
+	}
+
+	return &claims, nil
+}
+
+func (s *Service) signQueryResultsExportPayload(payload []byte) []byte {
+	mac := hmac.New(sha256.New, []byte(s.opts.cookieSecret))
+	_, _ = mac.Write(payload)
+
+	return mac.Sum(nil)
+}
+
+func (s *Service) currentExportUser(c echo.Context) (*structs.User, error) {
+	token := extractBearerToken(c.Request().Header.Get(echo.HeaderAuthorization))
+	if token != "" {
+		return s.authByAccessToken(c.Request().Context(), token)
+	}
+
+	sess, err := session.Get(keySession, c)
+	if err != nil {
+		return nil, err
+	}
+
+	user, ok := sess.Values[keyUserID].(structs.User)
+	if !ok {
+		return nil, errNoSessionUser
+	}
+
+	return &user, nil
+}
+
+func (s *Service) lookupQueryResultsExport(
+	c echo.Context,
+	user *structs.User,
+	queryResultID uuid6.UUID,
+) (*app.QueryResults, error) {
+	qRes, err := s.opts.app.GetQueryResults(c.Request().Context(), *user, queryResultID)
+	if err != nil {
+		switch {
+		case errors.Is(err, app.ErrNotFound):
+			return nil, c.NoContent(http.StatusNotFound)
+		case errors.Is(err, app.ErrForbidden):
+			return nil, c.NoContent(http.StatusForbidden)
+		default:
+			return nil, fmt.Errorf("get query results: %w", err)
+		}
+	}
+
+	return qRes, nil
+}
+
+func serveExport(c echo.Context, format string, qRes *app.QueryResults) error {
+	var (
+		payload  []byte
+		filename string
+		err      error
+	)
+
+	switch format {
+	case "json":
+		filename = "response.json"
+		payload, err = marshalQueryResultsJSON(qRes)
+		if err != nil {
+			return fmt.Errorf("marshal query results json: %w", err)
+		}
+	case "csv":
+		filename = "response.csv"
+		payload, err = marshalQueryResultsCSV(qRes)
+		if err != nil {
+			return fmt.Errorf("marshal query results csv: %w", err)
+		}
+	default:
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	c.Response().Header().Set(echo.HeaderContentDisposition, fmt.Sprintf(`%s; filename="%s"`, "attachment", filename)) //nolint
+	http.ServeContent(c.Response(), c.Request(), filename, time.Now(), bytes.NewReader(payload))
+
+	return nil
+}
+
+func isSupportedExportFormat(format string) bool {
+	switch format {
+	case "json", "csv":
+		return true
+	default:
+		return false
+	}
 }

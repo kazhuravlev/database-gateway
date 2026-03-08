@@ -139,12 +139,13 @@ func validConfigForTest() config.Config {
 			},
 		},
 		Users: config.UsersProviderOIDC{
-			ClientID:     "",
-			ClientSecret: "",
-			IssuerURL:    "",
-			RedirectURL:  "",
-			Scopes:       nil,
-			RoleClaim:    "groups",
+			ClientID:            "",
+			ClientSecret:        "",
+			IssuerURL:           "",
+			RedirectURL:         "",
+			Scopes:              nil,
+			AccessTokenAudience: "",
+			RoleClaim:           "groups",
 			RoleMapping: map[string]config.Role{
 				"dbgw-admins": config.RoleAdmin,
 				"dbgw-users":  config.RoleUser,
@@ -160,8 +161,9 @@ func validConfigForTest() config.Config {
 			},
 		},
 		Facade: config.FacadeConfig{
-			Port:         0,
-			CookieSecret: "",
+			Port:               0,
+			CookieSecret:       "",
+			UnsafeCORSAllowAll: false,
 		},
 		Storage: config.PostgresConfig{
 			Host:        "",

@@ -56,12 +56,13 @@ type storedQueryResultPayload struct {
 type Service struct {
 	opts Options
 
-	connsMu      *sync.RWMutex
-	conns        map[config.TargetID]*pgxpool.Pool
-	oauthCfg     *oauth2.Config
-	oidcProvider *oidc.Provider
-	oidcLogoutEP string
-	oidcRevokeEP string
+	connsMu       *sync.RWMutex
+	conns         map[config.TargetID]*pgxpool.Pool
+	oauthCfg      *oauth2.Config
+	oidcProvider  *oidc.Provider
+	tokenVerifier *oidc.IDTokenVerifier
+	oidcLogoutEP  string
+	oidcRevokeEP  string
 }
 
 type OIDCTokens struct {
@@ -101,15 +102,20 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 		RedirectURL:  oidcCfg.RedirectURL,
 		Scopes:       append([]string{oidc.ScopeOpenID}, oidcCfg.Scopes...),
 	}
+	accessTokenAudience := strings.TrimSpace(oidcCfg.AccessTokenAudience)
+	tokenVerifier := oidcProvider.Verifier(&oidc.Config{ //nolint:exhaustruct
+		ClientID: accessTokenAudience,
+	})
 
 	return &Service{
-		opts:         opts,
-		connsMu:      new(sync.RWMutex),
-		conns:        make(map[config.TargetID]*pgxpool.Pool),
-		oidcProvider: oidcProvider,
-		oauthCfg:     oauthCfg,
-		oidcLogoutEP: discoveryClaims.EndSessionEndpoint,
-		oidcRevokeEP: discoveryClaims.RevocationEndpoint,
+		opts:          opts,
+		connsMu:       new(sync.RWMutex),
+		conns:         make(map[config.TargetID]*pgxpool.Pool),
+		oidcProvider:  oidcProvider,
+		tokenVerifier: tokenVerifier,
+		oauthCfg:      oauthCfg,
+		oidcLogoutEP:  discoveryClaims.EndSessionEndpoint,
+		oidcRevokeEP:  discoveryClaims.RevocationEndpoint,
 	}, nil
 }
 
@@ -249,25 +255,25 @@ func (s *Service) InitOIDC(_ context.Context) (string, string, error) { //nolint
 func (s *Service) CompleteOIDC( //nolint:cyclop
 	ctx context.Context,
 	code, expectedState, receivedState string,
-) (*structs.User, time.Time, error) {
+) (*structs.User, time.Time, *OIDCTokens, error) {
 	// Validate state parameter to prevent CSRF attacks
 	if expectedState != receivedState || expectedState == "" {
-		return nil, time.Time{}, errors.New("invalid state parameter - possible CSRF attack") //nolint:err113
+		return nil, time.Time{}, nil, errors.New("invalid state parameter - possible CSRF attack") //nolint:err113
 	}
 
 	token, err := s.oauthCfg.Exchange(ctx, code)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("exchange token: %w", err)
+		return nil, time.Time{}, nil, fmt.Errorf("exchange token: %w", err)
 	}
 
 	rawIDToken, ok := token.Extra("id_token").(string)
 	if !ok {
-		return nil, time.Time{}, errors.New("id_token not found in response") //nolint:err113
+		return nil, time.Time{}, nil, errors.New("id_token not found in response") //nolint:err113
 	}
 
 	idToken, err := s.oidcProvider.Verifier(&oidc.Config{ClientID: s.oauthCfg.ClientID}).Verify(ctx, rawIDToken) //nolint:exhaustruct
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("verify id_token: %w", err)
+		return nil, time.Time{}, nil, fmt.Errorf("verify id_token: %w", err)
 	}
 
 	var claims struct {
@@ -275,26 +281,29 @@ func (s *Service) CompleteOIDC( //nolint:cyclop
 		PreferredUsername string `json:"preferred_username"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
-		return nil, time.Time{}, fmt.Errorf("parse id_token claims: %w", err)
+		return nil, time.Time{}, nil, fmt.Errorf("parse id_token claims: %w", err)
 	}
 
 	if claims.Email == "" {
-		return nil, time.Time{}, errors.New("email claim is required in id_token") //nolint:err113
+		return nil, time.Time{}, nil, errors.New("email claim is required in id_token") //nolint:err113
 	}
 
 	var rawClaims map[string]json.RawMessage
 	if err := idToken.Claims(&rawClaims); err != nil {
-		return nil, time.Time{}, fmt.Errorf("parse raw id_token claims: %w", err)
+		return nil, time.Time{}, nil, fmt.Errorf("parse raw id_token claims: %w", err)
 	}
 
 	role, err := resolveUserRole(rawClaims, s.opts.users.RoleClaim, s.opts.users.RoleMapping)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("resolve role: %w", err)
+		return nil, time.Time{}, nil, fmt.Errorf("resolve role: %w", err)
 	}
 
 	expiry := token.Expiry
 	if expiry.IsZero() {
 		expiry = time.Now().Add(15 * time.Minute) //nolint:mnd
+	}
+	if strings.TrimSpace(token.AccessToken) == "" {
+		return nil, time.Time{}, nil, errors.New("access_token not found in response") //nolint:err113
 	}
 
 	user := structs.User{
@@ -303,7 +312,10 @@ func (s *Service) CompleteOIDC( //nolint:cyclop
 		Role:     role,
 	}
 
-	return &user, expiry, nil
+	return &user, expiry, &OIDCTokens{
+		IDToken:     rawIDToken,
+		AccessToken: token.AccessToken,
+	}, nil
 }
 
 func (s *Service) BuildOIDCLogoutURL(idTokenHint, postLogoutRedirectURL string) (string, error) {
@@ -326,6 +338,58 @@ func (s *Service) BuildOIDCLogoutURL(idTokenHint, postLogoutRedirectURL string) 
 	parsedURL.RawQuery = queryValues.Encode()
 
 	return parsedURL.String(), nil
+}
+
+func (s *Service) AuthByAccessToken(ctx context.Context, token string) (*structs.User, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil, errors.New("access token is required") //nolint:err113
+	}
+
+	idToken, err := s.tokenVerifier.Verify(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("verify access token with jwks: %w", err)
+	}
+
+	var claims struct {
+		Email             string `json:"email"`
+		PreferredUsername string `json:"preferred_username"`
+		Subject           string `json:"sub"`
+	}
+	if err := idToken.Claims(&claims); err != nil {
+		return nil, fmt.Errorf("parse access token claims: %w", err)
+	}
+
+	var rawClaims map[string]json.RawMessage
+	if err := idToken.Claims(&rawClaims); err != nil {
+		return nil, fmt.Errorf("parse raw access token claims: %w", err)
+	}
+
+	role, err := resolveUserRole(rawClaims, s.opts.users.RoleClaim, s.opts.users.RoleMapping)
+	if err != nil {
+		return nil, fmt.Errorf("resolve role: %w", err)
+	}
+
+	userID := claims.Email
+	if userID == "" {
+		userID = claims.Subject
+	}
+	if userID == "" {
+		return nil, errors.New("email or sub claim is required in access token") //nolint:err113
+	}
+
+	username := strings.TrimSpace(claims.PreferredUsername)
+	if username == "" {
+		username = userID
+	}
+
+	user := structs.User{
+		ID:       config.UserID(userID),
+		Username: username,
+		Role:     role,
+	}
+
+	return &user, nil
 }
 
 func (s *Service) RevokeOIDCToken(ctx context.Context, token string) error {
@@ -364,7 +428,7 @@ func (s *Service) RevokeOIDCToken(ctx context.Context, token string) error {
 	return nil
 }
 
-func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uuid6.UUID) (*QueryResults, error) {
+func (s *Service) GetQueryResults(ctx context.Context, user structs.User, qid uuid6.UUID) (*QueryResults, error) {
 	res, err := s.opts.storage.GetQueryResultsByID(s.opts.storage.Conn(ctx), qid)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
@@ -374,7 +438,7 @@ func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uu
 		return nil, fmt.Errorf("get query results: %w", err)
 	}
 
-	if res.UserID != uid {
+	if !canReadQueryResults(user, res.UserID) {
 		return nil, fmt.Errorf("user does not have access to this query result: %w", ErrNotFound)
 	}
 
@@ -384,6 +448,9 @@ func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uu
 	}
 
 	return &QueryResults{
+		ID:        res.ID.S(),
+		UserID:    res.UserID.S(),
+		TargetID:  res.TargetID.S(),
 		CreatedAt: res.CreatedAt,
 		Query:     res.Query,
 		QTable:    payload.Table,
@@ -471,7 +538,7 @@ func (s *Service) ListAllBookmarks(ctx context.Context, uid config.UserID) ([]st
 	return out, nil
 }
 
-func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limit int64) ([]structs.RecentQuery, error) {
+func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limit int64) ([]structs.Query, error) {
 	if limit <= 0 {
 		limit = 50
 	}
@@ -481,14 +548,14 @@ func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limi
 		return nil, fmt.Errorf("list query results by user: %w", err)
 	}
 
-	out := make([]structs.RecentQuery, 0, len(items))
+	out := make([]structs.Query, 0, len(items))
 	for _, item := range items {
 		var payload storedQueryResultPayload
 		if err := json.Unmarshal(item.Response, &payload); err != nil {
 			continue
 		}
 
-		out = append(out, structs.RecentQuery{
+		out = append(out, structs.Query{
 			ID:        item.ID.S(),
 			TargetID:  item.TargetID,
 			Query:     item.Query,
@@ -540,40 +607,6 @@ func (s *Service) ListAdminRequests(
 	return out, hasNext, nil
 }
 
-func (s *Service) GetAdminQueryResults(
-	ctx context.Context,
-	user structs.User,
-	qid uuid6.UUID,
-) (*structs.AdminRequestDetails, error) {
-	if user.Role != config.RoleAdmin {
-		return nil, ErrForbidden
-	}
-
-	res, err := s.opts.storage.GetQueryResultsByID(s.opts.storage.Conn(ctx), qid)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, fmt.Errorf("unknown result id: %w", ErrNotFound)
-		}
-
-		return nil, fmt.Errorf("get query results by id: %w", err)
-	}
-
-	var payload storedQueryResultPayload
-	if err := json.Unmarshal(res.Response, &payload); err != nil {
-		return nil, fmt.Errorf("unmarshal query results: %w", err)
-	}
-
-	return &structs.AdminRequestDetails{
-		ID:        res.ID.S(),
-		UserID:    res.UserID,
-		TargetID:  res.TargetID,
-		Query:     res.Query,
-		CreatedAt: res.CreatedAt.Format("2006-01-02 15:04:05"),
-		QTable:    payload.Table,
-		Meta:      &payload.Meta,
-	}, nil
-}
-
 func resolveUserRole(claims map[string]json.RawMessage, roleClaim string, roleMapping map[string]config.Role) (config.Role, error) {
 	claimValues, err := getClaimValues(claims, roleClaim)
 	if err != nil {
@@ -608,4 +641,8 @@ func userSubjects(user structs.User) []string {
 		rules.UserPrincipal(user.ID.S()),
 		rules.RolePrincipal(user.Role.S()),
 	}
+}
+
+func canReadQueryResults(user structs.User, ownerID config.UserID) bool {
+	return user.Role == config.RoleAdmin || user.ID == ownerID
 }
