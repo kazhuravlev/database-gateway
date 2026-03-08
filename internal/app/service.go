@@ -44,6 +44,7 @@ import (
 )
 
 var ErrNotFound = errors.New("not found")
+var ErrForbidden = errors.New("forbidden")
 
 type storedQueryResultPayload struct {
 	Table structs.QTable `json:"table"`
@@ -490,6 +491,81 @@ func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limi
 	}
 
 	return out, nil
+}
+
+func (s *Service) ListAdminRequests(
+	ctx context.Context,
+	user structs.User,
+	page, pageSize int64,
+) ([]structs.AdminRequest, bool, error) {
+	if user.Role != config.RoleAdmin {
+		return nil, false, ErrForbidden
+	}
+
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 50
+	}
+
+	offset := (page - 1) * pageSize
+	items, err := s.opts.storage.ListQueryResults(s.opts.storage.Conn(ctx), pageSize+1, offset)
+	if err != nil {
+		return nil, false, fmt.Errorf("list query results: %w", err)
+	}
+
+	hasNext := len(items) > int(pageSize)
+	if hasNext {
+		items = items[:pageSize]
+	}
+
+	out := make([]structs.AdminRequest, 0, len(items))
+	for _, item := range items {
+		out = append(out, structs.AdminRequest{
+			ID:        item.ID.S(),
+			UserID:    item.UserID,
+			TargetID:  item.TargetID,
+			Query:     item.Query,
+			CreatedAt: item.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	return out, hasNext, nil
+}
+
+func (s *Service) GetAdminQueryResults(
+	ctx context.Context,
+	user structs.User,
+	qid uuid6.UUID,
+) (*structs.AdminRequestDetails, error) {
+	if user.Role != config.RoleAdmin {
+		return nil, ErrForbidden
+	}
+
+	res, err := s.opts.storage.GetQueryResultsByID(s.opts.storage.Conn(ctx), qid)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, fmt.Errorf("unknown result id: %w", ErrNotFound)
+		}
+
+		return nil, fmt.Errorf("get query results by id: %w", err)
+	}
+
+	var payload storedQueryResultPayload
+	if err := json.Unmarshal(res.Response, &payload); err != nil {
+		return nil, fmt.Errorf("unmarshal query results: %w", err)
+	}
+
+	return &structs.AdminRequestDetails{
+		ID:        res.ID.S(),
+		UserID:    res.UserID,
+		TargetID:  res.TargetID,
+		Query:     res.Query,
+		CreatedAt: res.CreatedAt.Format("2006-01-02 15:04:05"),
+		QTable:    payload.Table,
+		Meta:      &payload.Meta,
+	}, nil
 }
 
 func resolveUserRole(claims map[string]json.RawMessage, roleClaim string, roleMapping map[string]config.Role) (config.Role, error) {

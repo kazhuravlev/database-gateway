@@ -58,6 +58,7 @@ func (*Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) error
 	return nil
 }
 
+// Deprecated: use GetQueryResultsByID instead. but check the ownership.
 func (*Service) GetQueryResults(conn qrm.DB, uid config.UserID, queryID uuid6.UUID) (*model.QueryResults, error) {
 	var obj model.QueryResults
 	//nolint:unqueryvet // ok while reading into model
@@ -76,6 +77,21 @@ func (*Service) GetQueryResults(conn qrm.DB, uid config.UserID, queryID uuid6.UU
 	return &obj, nil
 }
 
+func (*Service) GetQueryResultsByID(conn qrm.DB, queryID uuid6.UUID) (*model.QueryResults, error) {
+	var obj model.QueryResults
+	//nolint:unqueryvet // ok while reading into model
+	err := tbl.QueryResults.
+		SELECT(tbl.QueryResults.AllColumns).
+		WHERE(tbl.QueryResults.ID.EQ(postgres.UUID(queryID.ToUUID()))).
+		LIMIT(1).
+		Query(conn, &obj)
+	if err := handleError("get query results by id", err, nil); err != nil {
+		return nil, err
+	}
+
+	return &obj, nil
+}
+
 func (*Service) ListQueryResultsByUser(conn qrm.DB, uid config.UserID, limit int64) ([]QueryResult, error) {
 	var items []model.QueryResults
 	//nolint:unqueryvet // ok while reading into model
@@ -86,6 +102,38 @@ func (*Service) ListQueryResultsByUser(conn qrm.DB, uid config.UserID, limit int
 		LIMIT(limit).
 		Query(conn, &items)
 	if err := handleError("list query results by user", err, nil); err != nil {
+		return nil, err
+	}
+
+	if items == nil {
+		return []QueryResult{}, nil
+	}
+
+	out := make([]QueryResult, 0, len(items))
+	for _, item := range items {
+		out = append(out, QueryResult{
+			ID:        item.ID,
+			UserID:    item.UserID,
+			TargetID:  item.TargetID,
+			CreatedAt: item.CreatedAt,
+			Query:     item.Query,
+			Response:  item.Response,
+		})
+	}
+
+	return out, nil
+}
+
+func (*Service) ListQueryResults(conn qrm.DB, limit, offset int64) ([]QueryResult, error) {
+	var items []model.QueryResults
+	//nolint:unqueryvet // ok while reading into model
+	err := tbl.QueryResults.
+		SELECT(tbl.QueryResults.AllColumns).
+		ORDER_BY(tbl.QueryResults.CreatedAt.DESC()).
+		LIMIT(limit).
+		OFFSET(offset).
+		Query(conn, &items)
+	if err := handleError("list query results", err, nil); err != nil {
 		return nil, err
 	}
 

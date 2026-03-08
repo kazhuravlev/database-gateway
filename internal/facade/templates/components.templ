@@ -3,6 +3,7 @@ package templates
 import (
 	"fmt"
 	"strings"
+	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/just"
 )
@@ -113,6 +114,9 @@ templ header(user structs.User) {
 			</div>
 			<div class="flex items-center gap-2">
 				@button("All servers", "/servers")
+				if user.Role == config.RoleAdmin {
+					@button("Admin requests", "/admin/requests")
+				}
 				@button("Logout", "/logout")
 			</div>
 		</div>

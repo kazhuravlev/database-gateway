@@ -66,3 +66,21 @@ type RecentQuery struct {
 	Query     string
 	CreatedAt string
 }
+
+type AdminRequest struct {
+	ID        string
+	UserID    config.UserID
+	TargetID  config.TargetID
+	Query     string
+	CreatedAt string
+}
+
+type AdminRequestDetails struct {
+	ID        string
+	UserID    config.UserID
+	TargetID  config.TargetID
+	Query     string
+	CreatedAt string
+	QTable    QTable
+	Meta      *QMeta
+}
