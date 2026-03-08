@@ -16,6 +16,8 @@
 
 package rules
 
+import "slices"
+
 type IFilter func(ACL) bool
 
 func BySubjects(subjects ...string) IFilter {
@@ -24,13 +26,7 @@ func BySubjects(subjects ...string) IFilter {
 			return true
 		}
 
-		for _, subject := range subjects {
-			if acl.User == subject {
-				return true
-			}
-		}
-
-		return false
+		return slices.Contains(subjects, acl.User)
 	}
 }
 
