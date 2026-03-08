@@ -14,12 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package config
+package config_test
 
 import (
 	"testing"
 
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
+	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,24 +29,24 @@ func TestConfigValidate(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		prepare func(cfg *Config)
+		prepare func(cfg *config.Config)
 		wantErr bool
 	}{
 		{
 			name:    "valid config",
-			prepare: func(_ *Config) {},
+			prepare: func(_ *config.Config) {},
 			wantErr: false,
 		},
 		{
 			name: "table without schema prefix",
-			prepare: func(cfg *Config) {
+			prepare: func(cfg *config.Config) {
 				cfg.Targets[0].Tables[0].Table = "clients"
 			},
 			wantErr: true,
 		},
 		{
 			name: "acl references unknown table",
-			prepare: func(cfg *Config) {
+			prepare: func(cfg *config.Config) {
 				cfg.ACLs = []rules.ACL{
 					{
 						User:   "role:user",
@@ -60,7 +61,7 @@ func TestConfigValidate(t *testing.T) {
 		},
 		{
 			name: "acl with wildcard table is allowed",
-			prepare: func(cfg *Config) {
+			prepare: func(cfg *config.Config) {
 				cfg.ACLs = []rules.ACL{
 					{
 						User:   "role:user",
@@ -75,7 +76,7 @@ func TestConfigValidate(t *testing.T) {
 		},
 		{
 			name: "acl with wildcard target is allowed",
-			prepare: func(cfg *Config) {
+			prepare: func(cfg *config.Config) {
 				cfg.ACLs = []rules.ACL{
 					{
 						User:   "role:user",
@@ -90,15 +91,14 @@ func TestConfigValidate(t *testing.T) {
 		},
 		{
 			name: "invalid role mapping",
-			prepare: func(cfg *Config) {
-				cfg.Users.RoleMapping["broken-group"] = Role("owner")
+			prepare: func(cfg *config.Config) {
+				cfg.Users.RoleMapping["broken-group"] = config.Role("owner")
 			},
 			wantErr: true,
 		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -115,21 +115,39 @@ func TestConfigValidate(t *testing.T) {
 	}
 }
 
-func validConfigForTest() Config {
-	return Config{
-		Targets: []Target{
+func validConfigForTest() config.Config {
+	return config.Config{
+		Targets: []config.Target{
 			{
-				ID: "pg-1",
-				Tables: []TargetTable{
-					{Table: "public.known"},
+				ID:          "pg-1",
+				Description: "",
+				Tags:        nil,
+				Type:        "",
+				Connection: config.Connection{
+					Host:        "",
+					Port:        0,
+					User:        "",
+					Password:    "",
+					DB:          "",
+					UseSSL:      false,
+					MaxPoolSize: 0,
+				},
+				DefaultSchema: "",
+				Tables: []config.TargetTable{
+					{Table: "public.known", Fields: nil},
 				},
 			},
 		},
-		Users: UsersProviderOIDC{
-			RoleClaim: "groups",
-			RoleMapping: map[string]Role{
-				"dbgw-admins": RoleAdmin,
-				"dbgw-users":  RoleUser,
+		Users: config.UsersProviderOIDC{
+			ClientID:     "",
+			ClientSecret: "",
+			IssuerURL:    "",
+			RedirectURL:  "",
+			Scopes:       nil,
+			RoleClaim:    "groups",
+			RoleMapping: map[string]config.Role{
+				"dbgw-admins": config.RoleAdmin,
+				"dbgw-users":  config.RoleUser,
 			},
 		},
 		ACLs: []rules.ACL{
@@ -140,6 +158,19 @@ func validConfigForTest() Config {
 				Tbl:    "public.known",
 				Allow:  true,
 			},
+		},
+		Facade: config.FacadeConfig{
+			Port:         0,
+			CookieSecret: "",
+		},
+		Storage: config.PostgresConfig{
+			Host:        "",
+			Port:        0,
+			Database:    "",
+			Username:    "",
+			Password:    "",
+			UseSSL:      false,
+			MaxPoolSize: 0,
 		},
 	}
 }
