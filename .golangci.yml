@@ -116,6 +116,7 @@ linters:
         - i
         - ok
         - fn
+        - tc
       ignore-decls:
         - c echo.Context
         - c *cli.Context
