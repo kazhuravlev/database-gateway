@@ -365,13 +365,17 @@ func (s *Service) RevokeOIDCToken(ctx context.Context, token string) error {
 }
 
 func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uuid6.UUID) (*QueryResults, error) {
-	res, err := s.opts.storage.GetQueryResults(s.opts.storage.Conn(ctx), uid, qid)
+	res, err := s.opts.storage.GetQueryResultsByID(s.opts.storage.Conn(ctx), qid)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, fmt.Errorf("unknown result id: %w", ErrNotFound)
 		}
 
 		return nil, fmt.Errorf("get query results: %w", err)
+	}
+
+	if res.UserID != uid {
+		return nil, fmt.Errorf("user does not have access to this query result: %w", ErrNotFound)
 	}
 
 	var payload storedQueryResultPayload

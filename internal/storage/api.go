@@ -58,25 +58,6 @@ func (*Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) error
 	return nil
 }
 
-// Deprecated: use GetQueryResultsByID instead. but check the ownership.
-func (*Service) GetQueryResults(conn qrm.DB, uid config.UserID, queryID uuid6.UUID) (*model.QueryResults, error) {
-	var obj model.QueryResults
-	//nolint:unqueryvet // ok while reading into model
-	err := tbl.QueryResults.
-		SELECT(tbl.QueryResults.AllColumns).
-		WHERE(postgres.AND(
-			tbl.QueryResults.ID.EQ(postgres.UUID(queryID.ToUUID())),
-			tbl.QueryResults.UserID.EQ(postgres.String(uid.S())),
-		)).
-		LIMIT(1).
-		Query(conn, &obj)
-	if err := handleError("get query results", err, nil); err != nil {
-		return nil, err
-	}
-
-	return &obj, nil
-}
-
 func (*Service) GetQueryResultsByID(conn qrm.DB, queryID uuid6.UUID) (*model.QueryResults, error) {
 	var obj model.QueryResults
 	//nolint:unqueryvet // ok while reading into model
