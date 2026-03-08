@@ -104,8 +104,8 @@ type UsersProviderOIDC struct {
 	IssuerURL    string          `json:"issuer_url"`
 	RedirectURL  string          `json:"redirect_url"`
 	Scopes       []string        `json:"scopes"`
-	RoleClaim    string          `json:"role_claim" validate:"required"`
-	RoleMappings map[string]Role `json:"role_mappings" validate:"required"`
+	RoleClaim    string          `json:"role_claim"    validate:"required"`
+	RoleMapping  map[string]Role `json:"role_mapping"  validate:"required"`
 }
 
 type FacadeConfig struct {
@@ -159,9 +159,9 @@ func (c *Config) Validate() error { //nolint:cyclop
 		}
 	}
 
-	for attrValue, role := range c.Users.RoleMappings {
+	for attrValue, role := range c.Users.RoleMapping {
 		if !role.IsValid() {
-			return fmt.Errorf("unsupported role %q for users.role_mappings[%q]", role, attrValue) //nolint:err113
+			return fmt.Errorf("unsupported role %q for users.role_mapping[%q]", role, attrValue) //nolint:err113
 		}
 	}
 

@@ -108,7 +108,7 @@
 			"profile"
 		],
 		"role_claim": "groups",
-		"role_mappings": {
+		"role_mapping": {
 			"dbgw-admins": "admin",
 			"dbgw-users": "user"
 		}

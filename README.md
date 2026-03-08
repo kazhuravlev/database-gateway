@@ -152,7 +152,7 @@ The service uses OIDC authentication:
     "redirect_url": "http://localhost:8080/auth/callback",
     "scopes": ["groups", "email", "profile"],
     "role_claim": "groups",
-    "role_mappings": {
+    "role_mapping": {
       "dbgw-admins": "admin",
       "dbgw-users": "user"
     }
