@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -55,6 +57,13 @@ type Service struct {
 	conns        map[config.TargetID]*pgxpool.Pool
 	oauthCfg     *oauth2.Config
 	oidcProvider *oidc.Provider
+	oidcLogoutEP string
+	oidcRevokeEP string
+}
+
+type OIDCTokens struct {
+	IDToken     string
+	AccessToken string
 }
 
 func New(opts Options) (*Service, error) { //nolint:gocritic
@@ -74,6 +83,13 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 	if err != nil {
 		return nil, fmt.Errorf("init provider: %w", err)
 	}
+	var discoveryClaims struct {
+		EndSessionEndpoint string `json:"end_session_endpoint"`
+		RevocationEndpoint string `json:"revocation_endpoint"`
+	}
+	if err := oidcProvider.Claims(&discoveryClaims); err != nil {
+		opts.logger.Warn("parse oidc discovery claims", "error", err.Error())
+	}
 
 	oauthCfg := &oauth2.Config{
 		ClientID:     oidcCfg.ClientID,
@@ -89,6 +105,8 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 		conns:        make(map[config.TargetID]*pgxpool.Pool),
 		oidcProvider: oidcProvider,
 		oauthCfg:     oauthCfg,
+		oidcLogoutEP: discoveryClaims.EndSessionEndpoint,
+		oidcRevokeEP: discoveryClaims.RevocationEndpoint,
 	}, nil
 }
 
@@ -225,10 +243,7 @@ func (s *Service) InitOIDC(_ context.Context) (string, string, error) { //nolint
 	return s.oauthCfg.AuthCodeURL(state), state, nil
 }
 
-func (s *Service) CompleteOIDC( //nolint:cyclop
-	ctx context.Context,
-	code, expectedState, receivedState string,
-) (*structs.User, time.Time, error) {
+func (s *Service) CompleteOIDC(ctx context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, error) {
 	// Validate state parameter to prevent CSRF attacks
 	if expectedState != receivedState || expectedState == "" {
 		return nil, time.Time{}, errors.New("invalid state parameter - possible CSRF attack") //nolint:err113
@@ -276,11 +291,71 @@ func (s *Service) CompleteOIDC( //nolint:cyclop
 		expiry = time.Now().Add(15 * time.Minute) //nolint:mnd
 	}
 
-	return &structs.User{
+	user := structs.User{
 		ID:       config.UserID(claims.Email),
 		Username: just.If(claims.PreferredUsername != "", claims.PreferredUsername, claims.Email),
 		Role:     role,
-	}, expiry, nil
+	}
+
+	return &user, expiry, nil
+}
+
+func (s *Service) BuildOIDCLogoutURL(idTokenHint, postLogoutRedirectURL string) (string, error) {
+	if s.oidcLogoutEP == "" {
+		return "", errors.New("oidc end_session_endpoint is not configured") //nolint:err113
+	}
+
+	parsedURL, err := url.Parse(s.oidcLogoutEP)
+	if err != nil {
+		return "", fmt.Errorf("parse end_session_endpoint: %w", err)
+	}
+
+	queryValues := parsedURL.Query()
+	if idTokenHint != "" {
+		queryValues.Set("id_token_hint", idTokenHint)
+	}
+	if postLogoutRedirectURL != "" {
+		queryValues.Set("post_logout_redirect_uri", postLogoutRedirectURL)
+	}
+	parsedURL.RawQuery = queryValues.Encode()
+
+	return parsedURL.String(), nil
+}
+
+func (s *Service) RevokeOIDCToken(ctx context.Context, token string) error {
+	if token == "" {
+		return nil
+	}
+	if s.oidcRevokeEP == "" {
+		return nil
+	}
+
+	formValues := url.Values{
+		"token":           []string{token},
+		"client_id":       []string{s.oauthCfg.ClientID},
+		"client_secret":   []string{s.oauthCfg.ClientSecret},
+		"token_type_hint": []string{"access_token"},
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.oidcRevokeEP, strings.NewReader(formValues.Encode()))
+	if err != nil {
+		return fmt.Errorf("build revoke request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	httpClient := &http.Client{ //nolint:exhaustruct
+		Timeout: 10 * time.Second,
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("revoke token request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("revoke token request: unexpected status %d", resp.StatusCode) //nolint:err113
+	}
+
+	return nil
 }
 
 func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uuid6.UUID) (*QueryResults, error) {

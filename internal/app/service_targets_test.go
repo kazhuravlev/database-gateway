@@ -139,6 +139,8 @@ func TestServiceGetTargets(t *testing.T) {
 				conns:        nil,
 				oauthCfg:     nil,
 				oidcProvider: nil,
+				oidcLogoutEP: "",
+				oidcRevokeEP: "",
 			}
 
 			got, err := svc.GetTargets(context.Background(), tc.user)
@@ -254,6 +256,8 @@ func TestServiceGetTargetByID(t *testing.T) {
 				conns:        nil,
 				oauthCfg:     nil,
 				oidcProvider: nil,
+				oidcLogoutEP: "",
+				oidcRevokeEP: "",
 			}
 
 			got, err := svc.GetTargetByID(context.Background(), user, tc.targetID)
@@ -316,6 +320,8 @@ func TestGetTargetByIDReturnsSchema(t *testing.T) {
 		conns:        nil,
 		oauthCfg:     nil,
 		oidcProvider: nil,
+		oidcLogoutEP: "",
+		oidcRevokeEP: "",
 	}
 
 	_, schema, err := svc.getTargetByID(context.Background(), structs.User{
