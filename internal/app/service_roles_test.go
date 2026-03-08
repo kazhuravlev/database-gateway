@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package app
+package app //nolint:testpackage
 
 import (
 	"encoding/json"
@@ -31,76 +31,72 @@ func TestResolveUserRole(t *testing.T) {
 	const roleClaimGroups = "groups"
 	const roleClaimDepartment = "department"
 	testCases := []struct {
-		name     string
-		claims   map[string]any
-		cfg      config.UsersProviderOIDC
-		wantRole config.Role
-		wantErr  bool
+		name           string
+		claims         map[string]any
+		cfgRoleClaim   string
+		cfgRoleMapping map[string]config.Role
+		wantRole       config.Role
+		wantErr        bool
 	}{
 		{
 			name: "matched group",
 			claims: map[string]any{
 				roleClaimGroups: []string{"dbgw-users", "ops"},
 			},
-			cfg: config.UsersProviderOIDC{
-				RoleClaim: roleClaimGroups,
-				RoleMappings: map[string]config.Role{
-					"dbgw-admins": config.RoleAdmin,
-					"dbgw-users":  config.RoleUser,
-				},
+			cfgRoleClaim: roleClaimGroups,
+			cfgRoleMapping: map[string]config.Role{
+				"dbgw-admins": config.RoleAdmin,
+				"dbgw-users":  config.RoleUser,
 			},
 			wantRole: config.RoleUser,
+			wantErr:  false,
 		},
 		{
 			name: "no fallbacks",
 			claims: map[string]any{
 				roleClaimGroups: []string{"unknown"},
 			},
-			cfg: config.UsersProviderOIDC{
-				RoleClaim: roleClaimGroups,
-				RoleMappings: map[string]config.Role{
-					"dbgw-admins": config.RoleAdmin,
-				},
+			cfgRoleClaim: roleClaimGroups,
+			cfgRoleMapping: map[string]config.Role{
+				"dbgw-admins": config.RoleAdmin,
 			},
-			wantErr: true,
+			wantRole: "",
+			wantErr:  true,
 		},
 		{
 			name: "single string claim not supported",
 			claims: map[string]any{
 				roleClaimDepartment: "platform-admins",
 			},
-			cfg: config.UsersProviderOIDC{
-				RoleClaim: roleClaimDepartment,
-				RoleMappings: map[string]config.Role{
-					"platform-admins": config.RoleAdmin,
-				},
+			cfgRoleClaim: roleClaimDepartment,
+			cfgRoleMapping: map[string]config.Role{
+				"platform-admins": config.RoleAdmin,
 			},
-			wantErr: true,
+			wantRole: "",
+			wantErr:  true,
 		},
 		{
 			name: "invalid claim type",
 			claims: map[string]any{
 				roleClaimGroups: map[string]string{"name": "dbgw-users"},
 			},
-			cfg: config.UsersProviderOIDC{
-				RoleClaim: roleClaimGroups,
-				RoleMappings: map[string]config.Role{
-					"dbgw-users": config.RoleUser,
-				},
+			cfgRoleClaim: roleClaimGroups,
+			cfgRoleMapping: map[string]config.Role{
+				"dbgw-users": config.RoleUser,
 			},
-			wantErr: true,
+			wantRole: "",
+			wantErr:  true,
 		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			rawClaims, err := toRawClaims(tc.claims)
 			require.NoError(t, err)
 
-			gotRole, err := resolveUserRole(rawClaims, tc.cfg)
+			gotRole, err := resolveUserRole(rawClaims, tc.cfgRoleClaim, tc.cfgRoleMapping)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -121,8 +117,9 @@ func TestUserSubjectsIncludesRolePrincipal(t *testing.T) {
 	t.Parallel()
 
 	subjects := userSubjects(structs.User{
-		ID:   "user@example.com",
-		Role: config.RoleAdmin,
+		ID:       "user@example.com",
+		Username: "user",
+		Role:     config.RoleAdmin,
 	})
 
 	require.Len(t, subjects, 2)
