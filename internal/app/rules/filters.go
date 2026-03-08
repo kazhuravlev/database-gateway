@@ -18,10 +18,28 @@ package rules
 
 type IFilter func(ACL) bool
 
-func ByUserID(uid string) IFilter {
+func BySubjects(subjects ...string) IFilter {
 	return func(acl ACL) bool {
-		return acl.User == uid || acl.User == Star
+		if acl.User == Star {
+			return true
+		}
+
+		for _, subject := range subjects {
+			if acl.User == subject {
+				return true
+			}
+		}
+
+		return false
 	}
+}
+
+func RolePrincipal(role string) string {
+	return "role:" + role
+}
+
+func UserPrincipal(uid string) string {
+	return "user:" + uid
 }
 
 func ByTargetID(tid string) IFilter {

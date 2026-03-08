@@ -16,7 +16,9 @@
 
 package structs
 
-import "github.com/kazhuravlev/database-gateway/internal/config"
+import (
+	"github.com/kazhuravlev/database-gateway/internal/config"
+)
 
 type Tag struct {
 	Name string
@@ -48,6 +50,7 @@ type QMeta struct {
 type User struct {
 	ID       config.UserID
 	Username string
+	Role     config.Role
 }
 
 type Bookmark struct {

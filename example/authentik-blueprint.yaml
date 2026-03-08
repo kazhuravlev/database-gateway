@@ -24,6 +24,12 @@ entries:
     attrs:
       name: dbgw-users
 
+  - model: authentik_core.group
+    identifiers:
+      name: dbgw-admins
+    attrs:
+      name: dbgw-admins
+
   - model: authentik_core.user
     identifiers:
       username: admin
@@ -35,7 +41,7 @@ entries:
       path: users
       password: password
       groups:
-        - !Find [authentik_core.group, [name, "dbgw-users"]]
+        - !Find [authentik_core.group, [name, "dbgw-admins"]]
 
   - model: authentik_core.user
     identifiers:

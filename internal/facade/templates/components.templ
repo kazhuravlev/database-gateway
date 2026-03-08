@@ -109,7 +109,7 @@ templ header(user structs.User) {
 	@w_appline() {
 		<div class="flex flex-row items-center justify-between w-full gap-2">
 			<div class="flex items-center gap-2 min-w-0">
-				<div class="text-sm font-medium truncate">{ user.Username }</div>
+				<div class="text-sm font-medium truncate">{ user.Username } ({ user.Role })</div>
 			</div>
 			<div class="flex items-center gap-2">
 				@button("All servers", "/servers")
