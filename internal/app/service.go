@@ -43,8 +43,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var ErrNotFound = errors.New("not found")
-var ErrForbidden = errors.New("forbidden")
+var (
+	ErrNotFound  = errors.New("not found")
+	ErrForbidden = errors.New("forbidden")
+)
 
 type storedQueryResultPayload struct {
 	Table structs.QTable `json:"table"`
