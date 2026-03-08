@@ -130,3 +130,30 @@ templ button(text string, url templ.SafeURL) {
 templ showError(err error) {
 	<div class="w-full border border-[#a24545] bg-[#4a2929] text-[#ffd4d4] rounded-md px-2 py-1.5 text-xs">{ err.Error() }</div>
 }
+
+templ bookmarksListShared(bookmarks []structs.Bookmark, returnTo string) {
+	<div class="grid gap-2 w-full">
+		if len(bookmarks) == 0 {
+			<div class="panel text-xs muted">No bookmarks yet</div>
+		}
+		for _, item := range bookmarks {
+			<div class="tbl-chip flex flex-col gap-1.5">
+				<div class="flex items-center justify-between gap-2">
+					<div class="text-sm font-semibold">{ item.Title }</div>
+					<div class="text-xs font-mono bg-[#2a2a2a] border border-[#4a4a4a] rounded px-1.5 py-0.5">{ item.TargetID.S() }</div>
+				</div>
+				<div class="text-xs muted" style="white-space: pre-wrap; word-break: break-word">{ item.Query }</div>
+				<div class="flex items-center gap-2">
+					<form action={ templ.SafeURL("/servers/" + item.TargetID.S()) } method="post" class="m-0">
+						<input type="hidden" name="query" value={ item.Query }/>
+						<button type="submit" name="format" value="html" class="btn text-xs leading-none" style="padding:3px 7px">Run</button>
+					</form>
+					<form action={ templ.SafeURL("/servers/" + item.TargetID.S() + "/bookmarks/" + item.ID + "/delete") } method="post" class="m-0">
+						<input type="hidden" name="return_to" value={ returnTo }/>
+						<button type="submit" class="btn text-xs leading-none" style="padding:3px 7px">Delete</button>
+					</form>
+				</div>
+			</div>
+		}
+	</div>
+}
