@@ -14,102 +14,102 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package rules
+package rules_test
 
 import (
 	"testing"
 
+	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/stretchr/testify/require"
 )
 
 func TestACLAllow_TableDriven(t *testing.T) {
 	t.Parallel()
 
-	subjects := []string{UserPrincipal("user1@example.com"), RolePrincipal("user")}
+	subjects := []string{rules.UserPrincipal("user1@example.com"), rules.RolePrincipal("user")}
 
 	testCases := []struct {
 		name    string
-		acls    []ACL
-		filters []IFilter
+		acls    []rules.ACL
+		filters []rules.IFilter
 		want    bool
 	}{
 		{
 			name: "no source rules",
 			acls: nil,
-			filters: []IFilter{
-				BySubjects(subjects...),
+			filters: []rules.IFilter{
+				rules.BySubjects(subjects...),
 			},
 			want: false,
 		},
 		{
 			name: "no filters",
-			acls: []ACL{
-				{User: RolePrincipal("user"), Op: Star, Target: Star, Tbl: Star, Allow: true},
+			acls: []rules.ACL{
+				{User: rules.RolePrincipal("user"), Op: rules.Star, Target: rules.Star, Tbl: rules.Star, Allow: true},
 			},
 			filters: nil,
 			want:    false,
 		},
 		{
 			name: "allow by matching role principal",
-			acls: []ACL{
-				{User: RolePrincipal("user"), Op: "select", Target: "pg-1", Tbl: "public.clients", Allow: true},
+			acls: []rules.ACL{
+				{User: rules.RolePrincipal("user"), Op: "select", Target: "pg-1", Tbl: "public.clients", Allow: true},
 			},
-			filters: []IFilter{
-				BySubjects(subjects...),
-				ByOp("select"),
-				ByTargetID("pg-1"),
-				ByTable("public.clients"),
+			filters: []rules.IFilter{
+				rules.BySubjects(subjects...),
+				rules.ByOp("select"),
+				rules.ByTargetID("pg-1"),
+				rules.ByTable("public.clients"),
 			},
 			want: true,
 		},
 		{
 			name: "allow by star values",
-			acls: []ACL{
-				{User: Star, Op: Star, Target: Star, Tbl: Star, Allow: true},
+			acls: []rules.ACL{
+				{User: rules.Star, Op: rules.Star, Target: rules.Star, Tbl: rules.Star, Allow: true},
 			},
-			filters: []IFilter{
-				BySubjects(subjects...),
-				ByOp("delete"),
-				ByTargetID("pg-2"),
-				ByTable("public.orders"),
+			filters: []rules.IFilter{
+				rules.BySubjects(subjects...),
+				rules.ByOp("delete"),
+				rules.ByTargetID("pg-2"),
+				rules.ByTable("public.orders"),
 			},
 			want: true,
 		},
 		{
 			name: "deny when op does not match",
-			acls: []ACL{
-				{User: RolePrincipal("user"), Op: "select", Target: "pg-1", Tbl: "public.clients", Allow: true},
+			acls: []rules.ACL{
+				{User: rules.RolePrincipal("user"), Op: "select", Target: "pg-1", Tbl: "public.clients", Allow: true},
 			},
-			filters: []IFilter{
-				BySubjects(subjects...),
-				ByOp("update"),
-				ByTargetID("pg-1"),
-				ByTable("public.clients"),
+			filters: []rules.IFilter{
+				rules.BySubjects(subjects...),
+				rules.ByOp("update"),
+				rules.ByTargetID("pg-1"),
+				rules.ByTable("public.clients"),
 			},
 			want: false,
 		},
 		{
 			name: "first matching rule wins",
-			acls: []ACL{
-				{User: RolePrincipal("user"), Op: Star, Target: Star, Tbl: Star, Allow: false},
-				{User: RolePrincipal("user"), Op: Star, Target: Star, Tbl: Star, Allow: true},
+			acls: []rules.ACL{
+				{User: rules.RolePrincipal("user"), Op: rules.Star, Target: rules.Star, Tbl: rules.Star, Allow: false},
+				{User: rules.RolePrincipal("user"), Op: rules.Star, Target: rules.Star, Tbl: rules.Star, Allow: true},
 			},
-			filters: []IFilter{
-				BySubjects(subjects...),
-				ByOp("select"),
-				ByTargetID("pg-1"),
-				ByTable("public.clients"),
+			filters: []rules.IFilter{
+				rules.BySubjects(subjects...),
+				rules.ByOp("select"),
+				rules.ByTargetID("pg-1"),
+				rules.ByTable("public.clients"),
 			},
 			want: false,
 		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := New(tc.acls).Allow(tc.filters...)
+			got := rules.New(tc.acls).Allow(tc.filters...)
 			require.Equal(t, tc.want, got)
 		})
 	}
@@ -118,9 +118,21 @@ func TestACLAllow_TableDriven(t *testing.T) {
 func TestBySubjects(t *testing.T) {
 	t.Parallel()
 
-	matched := ACL{User: RolePrincipal("admin")}
-	notMatched := ACL{User: RolePrincipal("user")}
-	filter := BySubjects(UserPrincipal("a@example.com"), RolePrincipal("admin"))
+	matched := rules.ACL{
+		User:   rules.RolePrincipal("admin"),
+		Op:     rules.Star,
+		Target: rules.Star,
+		Tbl:    rules.Star,
+		Allow:  true,
+	}
+	notMatched := rules.ACL{
+		User:   rules.RolePrincipal("user"),
+		Op:     rules.Star,
+		Target: rules.Star,
+		Tbl:    rules.Star,
+		Allow:  true,
+	}
+	filter := rules.BySubjects(rules.UserPrincipal("a@example.com"), rules.RolePrincipal("admin"))
 
 	require.True(t, filter(matched))
 	require.False(t, filter(notMatched))
