@@ -60,7 +60,7 @@ tasks:
     desc: Run static analysis
     cmds:
       - echo '>>> Run lint'
-      - "{{ .TOOLSET }} run golangci-lint run"
+      - "{{ .TOOLSET }} run golangci-lint run --fix"
 
   fmt:
     desc: Safe formatting codebase
