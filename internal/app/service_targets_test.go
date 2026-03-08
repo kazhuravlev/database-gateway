@@ -18,7 +18,7 @@ package app //nolint:testpackage
 
 import (
 	"context"
-	"errors"
+	"sync"
 	"testing"
 
 	"github.com/kazhuravlev/database-gateway/internal/app/rules"
@@ -32,23 +32,41 @@ func TestServiceGetTargets(t *testing.T) {
 
 	targets := []config.Target{
 		{
-			ID:            config.TargetID("pg-1"),
-			Description:   "main",
-			Tags:          []string{"prod"},
-			Type:          "postgres",
+			ID:          config.TargetID("pg-1"),
+			Description: "main",
+			Tags:        []string{"prod"},
+			Type:        "postgres",
+			Connection: config.Connection{
+				Host:        "",
+				Port:        0,
+				User:        "",
+				Password:    "",
+				DB:          "",
+				UseSSL:      false,
+				MaxPoolSize: 0,
+			},
 			DefaultSchema: "public",
 			Tables: []config.TargetTable{
-				{Table: "public.clients"},
+				{Table: "public.clients", Fields: nil},
 			},
 		},
 		{
-			ID:            config.TargetID("pg-2"),
-			Description:   "analytics",
-			Tags:          []string{"analytics"},
-			Type:          "postgres",
+			ID:          config.TargetID("pg-2"),
+			Description: "analytics",
+			Tags:        []string{"analytics"},
+			Type:        "postgres",
+			Connection: config.Connection{
+				Host:        "",
+				Port:        0,
+				User:        "",
+				Password:    "",
+				DB:          "",
+				UseSSL:      false,
+				MaxPoolSize: 0,
+			},
 			DefaultSchema: "public",
 			Tables: []config.TargetTable{
-				{Table: "public.events"},
+				{Table: "public.events", Fields: nil},
 			},
 		},
 	}
@@ -62,8 +80,9 @@ func TestServiceGetTargets(t *testing.T) {
 		{
 			name: "allow by role",
 			user: structs.User{
-				ID:   config.UserID("alice@example.com"),
-				Role: config.RoleUser,
+				ID:       config.UserID("alice@example.com"),
+				Username: "",
+				Role:     config.RoleUser,
 			},
 			acls: []rules.ACL{
 				{User: rules.RolePrincipal(config.RoleUser.S()), Target: "pg-1", Op: rules.Star, Tbl: rules.Star, Allow: true},
@@ -73,8 +92,9 @@ func TestServiceGetTargets(t *testing.T) {
 		{
 			name: "allow by user principal",
 			user: structs.User{
-				ID:   config.UserID("alice@example.com"),
-				Role: config.RoleUser,
+				ID:       config.UserID("alice@example.com"),
+				Username: "",
+				Role:     config.RoleUser,
 			},
 			acls: []rules.ACL{
 				{User: rules.UserPrincipal("alice@example.com"), Target: "pg-2", Op: rules.Star, Tbl: rules.Star, Allow: true},
@@ -84,8 +104,9 @@ func TestServiceGetTargets(t *testing.T) {
 		{
 			name: "no matching acl",
 			user: structs.User{
-				ID:   config.UserID("alice@example.com"),
-				Role: config.RoleUser,
+				ID:       config.UserID("alice@example.com"),
+				Username: "",
+				Role:     config.RoleUser,
 			},
 			acls: []rules.ACL{
 				{User: rules.RolePrincipal(config.RoleAdmin.S()), Target: rules.Star, Op: rules.Star, Tbl: rules.Star, Allow: true},
@@ -95,15 +116,29 @@ func TestServiceGetTargets(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			svc := &Service{
 				opts: Options{
+					logger:  nil,
 					targets: targets,
+					users: config.UsersProviderOIDC{
+						ClientID:     "",
+						ClientSecret: "",
+						IssuerURL:    "",
+						RedirectURL:  "",
+						Scopes:       nil,
+						RoleClaim:    "",
+						RoleMapping:  nil,
+					},
 					acls:    rules.New(tc.acls),
+					storage: nil,
 				},
+				connsMu:      new(sync.RWMutex),
+				conns:        nil,
+				oauthCfg:     nil,
+				oidcProvider: nil,
 			}
 
 			got, err := svc.GetTargets(context.Background(), tc.user)
@@ -124,19 +159,29 @@ func TestServiceGetTargetByID(t *testing.T) {
 	t.Parallel()
 
 	target := config.Target{
-		ID:            config.TargetID("pg-1"),
-		Description:   "main",
-		Tags:          []string{"prod"},
-		Type:          "postgres",
+		ID:          config.TargetID("pg-1"),
+		Description: "main",
+		Tags:        []string{"prod"},
+		Type:        "postgres",
+		Connection: config.Connection{
+			Host:        "",
+			Port:        0,
+			User:        "",
+			Password:    "",
+			DB:          "",
+			UseSSL:      false,
+			MaxPoolSize: 0,
+		},
 		DefaultSchema: "public",
 		Tables: []config.TargetTable{
-			{Table: "public.clients"},
+			{Table: "public.clients", Fields: nil},
 		},
 	}
 
 	user := structs.User{
-		ID:   config.UserID("alice@example.com"),
-		Role: config.RoleUser,
+		ID:       config.UserID("alice@example.com"),
+		Username: "",
+		Role:     config.RoleUser,
 	}
 
 	testCases := []struct {
@@ -152,14 +197,15 @@ func TestServiceGetTargetByID(t *testing.T) {
 			acls: []rules.ACL{
 				{User: rules.RolePrincipal(config.RoleUser.S()), Target: "pg-1", Op: rules.Star, Tbl: rules.Star, Allow: true},
 			},
-			targetID: config.TargetID("pg-1"),
-			wantErr:  false,
+			targetID:  config.TargetID("pg-1"),
+			wantErr:   false,
+			wantErrIs: nil,
 			wantServer: &structs.Server{
 				ID:          config.TargetID("pg-1"),
 				Description: "main",
 				Tags:        []structs.Tag{{Name: "prod"}},
 				Type:        "postgres",
-				Tables:      []config.TargetTable{{Table: "public.clients"}},
+				Tables:      []config.TargetTable{{Table: "public.clients", Fields: nil}},
 			},
 		},
 		{
@@ -167,38 +213,54 @@ func TestServiceGetTargetByID(t *testing.T) {
 			acls: []rules.ACL{
 				{User: rules.RolePrincipal(config.RoleAdmin.S()), Target: "pg-1", Op: rules.Star, Tbl: rules.Star, Allow: true},
 			},
-			targetID:  config.TargetID("pg-1"),
-			wantErr:   true,
-			wantErrIs: ErrNotFound,
+			targetID:   config.TargetID("pg-1"),
+			wantErr:    true,
+			wantErrIs:  ErrNotFound,
+			wantServer: nil,
 		},
 		{
 			name: "target does not exist",
 			acls: []rules.ACL{
 				{User: rules.RolePrincipal(config.RoleUser.S()), Target: "pg-1", Op: rules.Star, Tbl: rules.Star, Allow: true},
 			},
-			targetID:  config.TargetID("pg-unknown"),
-			wantErr:   true,
-			wantErrIs: ErrNotFound,
+			targetID:   config.TargetID("pg-unknown"),
+			wantErr:    true,
+			wantErrIs:  ErrNotFound,
+			wantServer: nil,
 		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			svc := &Service{
 				opts: Options{
+					logger:  nil,
 					targets: []config.Target{target},
+					users: config.UsersProviderOIDC{
+						ClientID:     "",
+						ClientSecret: "",
+						IssuerURL:    "",
+						RedirectURL:  "",
+						Scopes:       nil,
+						RoleClaim:    "",
+						RoleMapping:  nil,
+					},
 					acls:    rules.New(tc.acls),
+					storage: nil,
 				},
+				connsMu:      new(sync.RWMutex),
+				conns:        nil,
+				oauthCfg:     nil,
+				oidcProvider: nil,
 			}
 
 			got, err := svc.GetTargetByID(context.Background(), user, tc.targetID)
 			if tc.wantErr {
 				require.Error(t, err)
 				require.Nil(t, got)
-				require.True(t, errors.Is(err, tc.wantErrIs))
+				require.ErrorIs(t, err, tc.wantErrIs)
 
 				return
 			}
@@ -214,24 +276,52 @@ func TestGetTargetByIDReturnsSchema(t *testing.T) {
 
 	svc := &Service{
 		opts: Options{
+			logger: nil,
 			targets: []config.Target{
 				{
-					ID:            config.TargetID("pg-1"),
+					ID:          config.TargetID("pg-1"),
+					Description: "",
+					Tags:        nil,
+					Type:        "",
+					Connection: config.Connection{
+						Host:        "",
+						Port:        0,
+						User:        "",
+						Password:    "",
+						DB:          "",
+						UseSSL:      false,
+						MaxPoolSize: 0,
+					},
 					DefaultSchema: "public",
 					Tables: []config.TargetTable{
-						{Table: "public.clients"},
+						{Table: "public.clients", Fields: nil},
 					},
 				},
+			},
+			users: config.UsersProviderOIDC{
+				ClientID:     "",
+				ClientSecret: "",
+				IssuerURL:    "",
+				RedirectURL:  "",
+				Scopes:       nil,
+				RoleClaim:    "",
+				RoleMapping:  nil,
 			},
 			acls: rules.New([]rules.ACL{
 				{User: rules.RolePrincipal(config.RoleUser.S()), Target: "pg-1", Op: rules.Star, Tbl: rules.Star, Allow: true},
 			}),
+			storage: nil,
 		},
+		connsMu:      new(sync.RWMutex),
+		conns:        nil,
+		oauthCfg:     nil,
+		oidcProvider: nil,
 	}
 
 	_, schema, err := svc.getTargetByID(context.Background(), structs.User{
-		ID:   config.UserID("alice@example.com"),
-		Role: config.RoleUser,
+		ID:       config.UserID("alice@example.com"),
+		Username: "",
+		Role:     config.RoleUser,
 	}, config.TargetID("pg-1"))
 	require.NoError(t, err)
 
