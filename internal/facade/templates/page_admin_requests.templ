@@ -1,0 +1,46 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
+)
+
+templ adminRequestsTable(items []structs.AdminRequest) {
+	<div class="grid gap-1.5 w-full">
+		if len(items) == 0 {
+			<div class="panel text-xs muted">No requests yet</div>
+		}
+		for _, item := range items {
+			<div class="panel flex flex-col gap-1.5">
+				<div class="flex items-center justify-between gap-2">
+					<div class="text-[11px] muted">{ item.CreatedAt } | { item.UserID.S() } | { item.TargetID.S() }</div>
+					<a class="btn text-xs leading-none px-2 py-1" href={ templ.URL("/admin/requests/" + item.ID) }>View response</a>
+				</div>
+				<div class="tbl-chip text-xs break-words mt-1">{ item.Query }</div>
+			</div>
+		}
+	</div>
+}
+
+templ adminRequestsPagination(page int, hasPrev, hasNext bool) {
+	<div class="panel flex items-center justify-between gap-2">
+		<div class="text-xs muted">Page { fmt.Sprint(page) }</div>
+		<div class="flex items-center gap-2">
+			if hasPrev {
+				@button("Previous", templ.SafeURL(fmt.Sprintf("/admin/requests?page=%d", page-1)))
+			}
+			if hasNext {
+				@button("Next", templ.SafeURL(fmt.Sprintf("/admin/requests?page=%d", page+1)))
+			}
+		</div>
+	</div>
+}
+
+templ PageAdminRequests(user structs.User, items []structs.AdminRequest, page int, hasPrev, hasNext bool) {
+	@l_app() {
+		@header(user)
+		@adminRequestsPagination(page, hasPrev, hasNext)
+		@adminRequestsTable(items)
+		@adminRequestsPagination(page, hasPrev, hasNext)
+	}
+}

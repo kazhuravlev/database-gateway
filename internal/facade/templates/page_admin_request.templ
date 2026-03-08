@@ -1,0 +1,20 @@
+package templates
+
+import "github.com/kazhuravlev/database-gateway/internal/structs"
+
+templ PageAdminRequest(user structs.User, item structs.AdminRequestDetails) {
+	@l_app() {
+		@header(user)
+		@w_appline() {
+			<div class="flex items-center justify-between gap-2">
+				<div class="text-sm font-semibold">Request details</div>
+				@button("Back to requests", "/admin/requests")
+			</div>
+			<div class="text-xs muted mt-1">{ item.CreatedAt } | { item.UserID.S() } | { item.TargetID.S() }</div>
+			<div class="tbl-chip text-xs break-words mt-2">{ item.Query }</div>
+		}
+		if item.Meta != nil {
+			@queryResult(item.QTable, item.Meta)
+		}
+	}
+}

@@ -33,6 +33,7 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/gorilla/sessions"
+	"github.com/kazhuravlev/database-gateway/internal/app"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/facade/static"
 	"github.com/kazhuravlev/database-gateway/internal/facade/templates"
@@ -169,6 +170,8 @@ func (s *Service) Run(_ context.Context) error {
 	echoInst.POST("/servers/:id/bookmarks", s.addBookmark)
 	echoInst.POST("/servers/:id/bookmarks/:bid/delete", s.deleteBookmark)
 	echoInst.GET("/servers/:id/:qid", s.getQueryResults)
+	echoInst.GET("/admin/requests", s.getAdminRequests)
+	echoInst.GET("/admin/requests/:qid", s.getAdminRequest)
 
 	echoInst.GET("/auth", s.getAuth)
 	echoInst.GET("/auth/callback", s.getAuthCallback)
@@ -468,6 +471,49 @@ func (s *Service) getQueryResults(c echo.Context) error { //nolint:cyclop
 	}
 }
 
+func (s *Service) getAdminRequests(c echo.Context) error {
+	ctx := c.Request().Context()
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
+
+	page := int64(parsePositiveInt(c.QueryParam("page"), 1))
+	const pageSize = int64(50)
+
+	items, hasNext, err := s.opts.app.ListAdminRequests(ctx, user, page, pageSize)
+	if err != nil {
+		if errors.Is(err, app.ErrForbidden) {
+			return c.String(http.StatusForbidden, "forbidden")
+		}
+
+		return fmt.Errorf("list admin requests: %w", err)
+	}
+
+	return Render(c, http.StatusOK, templates.PageAdminRequests(user, items, int(page), page > 1, hasNext))
+}
+
+func (s *Service) getAdminRequest(c echo.Context) error {
+	ctx := c.Request().Context()
+	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
+
+	qID, err := uuid6.ParseStr(c.Param("qid"))
+	if err != nil {
+		return c.String(http.StatusNotFound, "not found")
+	}
+
+	item, err := s.opts.app.GetAdminQueryResults(ctx, user, qID)
+	if err != nil {
+		switch {
+		case errors.Is(err, app.ErrForbidden):
+			return c.String(http.StatusForbidden, "forbidden")
+		case errors.Is(err, app.ErrNotFound):
+			return c.String(http.StatusNotFound, "not found")
+		default:
+			return fmt.Errorf("get admin query result: %w", err)
+		}
+	}
+
+	return Render(c, http.StatusOK, templates.PageAdminRequest(user, *item))
+}
+
 func Render(ctx echo.Context, statusCode int, t templ.Component) error {
 	buf := templ.GetBuffer()
 	defer templ.ReleaseBuffer(buf)
@@ -477,4 +523,17 @@ func Render(ctx echo.Context, statusCode int, t templ.Component) error {
 	}
 
 	return ctx.HTML(statusCode, buf.String())
+}
+
+func parsePositiveInt(input string, defaultValue int) int {
+	if input == "" {
+		return defaultValue
+	}
+
+	value, err := strconv.Atoi(input)
+	if err != nil || value <= 0 {
+		return defaultValue
+	}
+
+	return value
 }
