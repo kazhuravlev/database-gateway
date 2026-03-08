@@ -101,7 +101,7 @@ Bootstrap details for local Authentik:
 2. Static users are created with password `password`:
    - `admin@example.com`
    - `user1@example.com`
-3. Both users are members of group `dbgw-users`.
+3. `admin@example.com` belongs to `dbgw-admins` and `dbgw-users`; `user1@example.com` belongs to `dbgw-users`.
 4. Authentik admin user:
    - `akadmin@example.com` / `password`
 
@@ -150,7 +150,12 @@ The service uses OIDC authentication:
     "client_secret": "db-gateway-secret",
     "issuer_url": "http://localhost:9000/application/o/db-gateway/",
     "redirect_url": "http://localhost:8080/auth/callback",
-    "scopes": ["email", "profile"]
+    "scopes": ["groups", "email", "profile"],
+    "role_claim": "groups",
+    "role_mappings": {
+      "dbgw-admins": "admin",
+      "dbgw-users": "user"
+    }
   }
 }
 ```
@@ -163,17 +168,24 @@ Access control lists define user permissions with fine-grained control:
 {
   "acls": [
     {
-      "user": "admin@example.com",
+      "user": "role:admin",
       "op": "*",
       "target": "*",
       "tbl": "*",
       "allow": true
     },
     {
-      "user": "user1@example.com",
+      "user": "role:user",
       "op": "select",
       "target": "pg-5433",
       "tbl": "*",
+      "allow": true
+    },
+    {
+      "user": "user:max@example.com",
+      "op": "select",
+      "target": "pg-5434",
+      "tbl": "sales",
       "allow": true
     }
   ]
