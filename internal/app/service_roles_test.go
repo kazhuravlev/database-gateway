@@ -18,9 +18,12 @@ package app //nolint:testpackage
 
 import (
 	"encoding/json"
+	"log/slog"
 	"testing"
 
+	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/stretchr/testify/require"
 )
@@ -127,6 +130,83 @@ func TestUserSubjectsIncludesRolePrincipal(t *testing.T) {
 		"user:user@example.com",
 		"role:admin",
 	}, subjects)
+}
+
+func TestGetClaimValues(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ok", func(t *testing.T) {
+		t.Parallel()
+
+		values, err := getClaimValues(map[string]json.RawMessage{
+			"groups": json.RawMessage(`["dbgw-users","ops"]`),
+		}, "groups")
+		require.NoError(t, err)
+		require.Equal(t, []string{"dbgw-users", "ops"}, values)
+	})
+
+	t.Run("claim missing", func(t *testing.T) {
+		t.Parallel()
+
+		values, err := getClaimValues(map[string]json.RawMessage{}, "groups")
+		require.Error(t, err)
+		require.Nil(t, values)
+	})
+
+	t.Run("invalid claim type", func(t *testing.T) {
+		t.Parallel()
+
+		values, err := getClaimValues(map[string]json.RawMessage{
+			"groups": json.RawMessage(`"dbgw-users"`),
+		}, "groups")
+		require.Error(t, err)
+		require.Nil(t, values)
+	})
+}
+
+func TestNewRequiresRoleMapping(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.DiscardHandler)
+
+	opts := NewOptions(
+		logger,
+		[]config.Target{
+			{
+				ID:          "pg-1",
+				Description: "",
+				Tags:        nil,
+				Type:        "",
+				Connection: config.Connection{
+					Host:        "",
+					Port:        0,
+					User:        "",
+					Password:    "",
+					DB:          "",
+					UseSSL:      false,
+					MaxPoolSize: 0,
+				},
+				DefaultSchema: "",
+				Tables:        nil,
+			},
+		},
+		config.UsersProviderOIDC{
+			ClientID:     "cid",
+			ClientSecret: "secret",
+			IssuerURL:    "http://localhost:9000/application/o/db-gateway/",
+			RedirectURL:  "http://localhost:8080/auth/callback",
+			Scopes:       []string{"openid"},
+			RoleClaim:    "groups",
+			RoleMapping:  map[string]config.Role{},
+		},
+		rules.New([]rules.ACL{}),
+		&storage.Service{},
+	)
+
+	service, err := New(opts)
+	require.Error(t, err)
+	require.Nil(t, service)
+	require.ErrorContains(t, err, "no role mappings defined")
 }
 
 func toRawClaims(claims map[string]any) (map[string]json.RawMessage, error) {
