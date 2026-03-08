@@ -43,33 +43,6 @@ templ bookmarkForm(formUrl, query string) {
 	</div>
 }
 
-templ bookmarksList(formUrl string, items []structs.Bookmark) {
-	<div class="w-full">
-		<div class=" w-full flex flex-col gap-2">
-			<div class="text-sm font-semibold">Bookmarks</div>
-			if len(items) == 0 {
-				<div class="text-xs muted">No bookmarks yet</div>
-			}
-			for _, item := range items {
-				<div class="tbl-chip flex flex-col gap-2">
-					<div class="flex items-start justify-between gap-2">
-						<div class="text-sm font-semibold">{ item.Title }</div>
-						<form action={ templ.SafeURL(formUrl + "/bookmarks/" + item.ID + "/delete") } method="post" class="m-0">
-							<input type="hidden" name="return_to" value={ formUrl }/>
-							<button type="submit" class="btn text-xs leading-none" style="padding:4px 8px">Delete</button>
-						</form>
-					</div>
-					<div class="text-xs muted" style="white-space: pre-wrap; word-break: break-word">{ item.Query }</div>
-					<form action={ templ.SafeURL(formUrl) } method="post" class="m-0">
-						<input type="hidden" name="query" value={ item.Query }/>
-						<button type="submit" name="format" value="html" class="btn text-xs leading-none" style="padding:4px 8px">Run</button>
-					</form>
-				</div>
-			}
-		</div>
-	</div>
-}
-
 templ queryResult(tbl structs.QTable, meta *structs.QMeta) {
 	<div class="w-full">
 		@smallQueryResult(tbl, meta)
@@ -127,7 +100,7 @@ templ PageTarget(user structs.User, target structs.Server, formUrl,query string,
 			}
 		}
 		@w_appline() {
-			@bookmarksList(formUrl, bookmarks)
+			@bookmarksListShared(bookmarks, formUrl)
 		}
 		if err != nil {
 			@showError(err)
