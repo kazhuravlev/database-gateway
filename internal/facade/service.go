@@ -178,7 +178,7 @@ func (s *Service) Run(_ context.Context) error {
 func (s *Service) getServers(c echo.Context) error {
 	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
-	servers, err := s.opts.app.GetTargets(c.Request().Context(), user.ID)
+	servers, err := s.opts.app.GetTargets(c.Request().Context(), user)
 	if err != nil {
 		s.opts.logger.Error("get targets", slog.String("error", err.Error()))
 
@@ -207,13 +207,13 @@ func (s *Service) getServer(c echo.Context) error {
 	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
 	tID := config.TargetID(c.Param("id"))
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), user.ID, tID)
+	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), user, tID)
 	if err != nil {
 		return fmt.Errorf("get target by id: %w", err)
 	}
 
 	formURL := "/servers/" + srv.ID.S()
-	bookmarks, err := s.opts.app.ListBookmarks(c.Request().Context(), user.ID, srv.ID)
+	bookmarks, err := s.opts.app.ListBookmarks(c.Request().Context(), user, srv.ID)
 	if err != nil {
 		return fmt.Errorf("list bookmarks: %w", err)
 	}
@@ -304,7 +304,7 @@ func (s *Service) runQuery(c echo.Context) error {
 	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
 	tID := config.TargetID(c.Param("id"))
-	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), user.ID, tID)
+	srv, err := s.opts.app.GetTargetByID(c.Request().Context(), user, tID)
 	if err != nil {
 		return fmt.Errorf("get target by id: %w", err)
 	}
@@ -317,12 +317,12 @@ func (s *Service) runQuery(c echo.Context) error {
 	query := params.Get("query")
 	format := params.Get("format")
 	formURL := "/servers/" + srv.ID.S()
-	bookmarks, bErr := s.opts.app.ListBookmarks(c.Request().Context(), user.ID, srv.ID)
+	bookmarks, bErr := s.opts.app.ListBookmarks(c.Request().Context(), user, srv.ID)
 	if bErr != nil {
 		return fmt.Errorf("list bookmarks: %w", bErr)
 	}
 
-	queryID, _, err := s.opts.app.RunQuery(c.Request().Context(), user.ID, srv.ID, query)
+	queryID, _, err := s.opts.app.RunQuery(c.Request().Context(), user, srv.ID, query)
 	if err != nil {
 		return Render(c, http.StatusOK, templates.PageTarget(user, *srv, formURL, query, bookmarks, nil, nil, err)) //nolint:err113
 	}
@@ -340,7 +340,7 @@ func (s *Service) addBookmark(c echo.Context) error {
 	tID := config.TargetID(c.Param("id"))
 	if err := s.opts.app.AddBookmark(
 		c.Request().Context(),
-		user.ID,
+		user,
 		tID,
 		c.FormValue("title"),
 		c.FormValue("query"),
@@ -376,7 +376,7 @@ func (s *Service) getQueryResults(c echo.Context) error { //nolint:cyclop
 	user := c.Get(ctxUser).(structs.User) //nolint:forcetypeassert
 
 	tID := config.TargetID(c.Param("id"))
-	srv, err := s.opts.app.GetTargetByID(ctx, user.ID, tID)
+	srv, err := s.opts.app.GetTargetByID(ctx, user, tID)
 	if err != nil {
 		return fmt.Errorf("get target by id: %w", err)
 	}
@@ -394,7 +394,7 @@ func (s *Service) getQueryResults(c echo.Context) error { //nolint:cyclop
 
 	format := params.Get("format")
 	formURL := "/servers/" + srv.ID.S()
-	bookmarks, bErr := s.opts.app.ListBookmarks(ctx, user.ID, srv.ID)
+	bookmarks, bErr := s.opts.app.ListBookmarks(ctx, user, srv.ID)
 	if bErr != nil {
 		return fmt.Errorf("list bookmarks: %w", bErr)
 	}

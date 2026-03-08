@@ -108,27 +108,33 @@
 		"issuer_url": "http://localhost:9000/application/o/db-gateway/",
 		"redirect_url": "http://localhost:8080/auth/callback",
 		"scopes": [
+			"groups",
 			"email",
 			"profile"
-		]
+		],
+		"role_claim": "groups",
+		"role_mapping": {
+			"dbgw-admins": "admin",
+			"dbgw-users": "user"
+		}
 	},
 	"acls": [
 		{
-			"user": "admin@example.com",
+			"user": "user:admin@example.com",
 			"op": "*",
 			"target": "*",
 			"tbl": "*",
 			"allow": true
 		},
 		{
-			"user": "user1@example.com",
+			"user": "role:user",
 			"op": "*",
 			"target": "pg-5433",
 			"tbl": "*",
 			"allow": true
 		},
 		{
-			"user": "user1@example.com",
+			"user": "role:user",
 			"op": "select",
 			"target": "pg-5434",
 			"tbl": "*",

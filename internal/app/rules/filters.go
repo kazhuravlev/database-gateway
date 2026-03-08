@@ -16,12 +16,26 @@
 
 package rules
 
+import "slices"
+
 type IFilter func(ACL) bool
 
-func ByUserID(uid string) IFilter {
+func BySubjects(subjects ...string) IFilter {
 	return func(acl ACL) bool {
-		return acl.User == uid || acl.User == Star
+		if acl.User == Star {
+			return true
+		}
+
+		return slices.Contains(subjects, acl.User)
 	}
+}
+
+func RolePrincipal(role string) string {
+	return "role:" + role
+}
+
+func UserPrincipal(uid string) string {
+	return "user:" + uid
 }
 
 func ByTargetID(tid string) IFilter {

@@ -23,7 +23,7 @@ import (
 const Star = "*"
 
 type ACL struct {
-	User   string `json:"user"`   // can be a `userID` or `*` (means all)
+	User   string `json:"user"`   // can be a `userID`, `role:<role>`, or `*` (means all)
 	Op     string `json:"op"`     // can be a `specific operation` or `*` (means all)
 	Target string `json:"target"` // can be a `specific target id` or `*` (means all)
 	Tbl    string `json:"tbl"`    // can be a `specific table` or `*` (means all)

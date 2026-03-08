@@ -29,6 +29,21 @@ func (u UserID) S() string {
 	return string(u)
 }
 
+type Role string
+
+const (
+	RoleAdmin Role = "admin"
+	RoleUser  Role = "user"
+)
+
+func (r Role) S() string {
+	return string(r)
+}
+
+func (r Role) IsValid() bool {
+	return r == RoleAdmin || r == RoleUser
+}
+
 type TargetID string
 
 func (t TargetID) S() string {
@@ -84,11 +99,13 @@ type Target struct {
 }
 
 type UsersProviderOIDC struct {
-	ClientID     string   `json:"client_id"`
-	ClientSecret string   `json:"client_secret"`
-	IssuerURL    string   `json:"issuer_url"`
-	RedirectURL  string   `json:"redirect_url"`
-	Scopes       []string `json:"scopes"`
+	ClientID     string          `json:"client_id"`
+	ClientSecret string          `json:"client_secret"`
+	IssuerURL    string          `json:"issuer_url"`
+	RedirectURL  string          `json:"redirect_url"`
+	Scopes       []string        `json:"scopes"`
+	RoleClaim    string          `json:"role_claim"    validate:"required"`
+	RoleMapping  map[string]Role `json:"role_mapping"  validate:"required"`
 }
 
 type FacadeConfig struct {
@@ -139,6 +156,12 @@ func (c *Config) Validate() error { //nolint:cyclop
 		}
 		if _, ok := idx[key]; !ok {
 			return fmt.Errorf("ACL (%#v) references for not existent table", acl) //nolint:err113
+		}
+	}
+
+	for attrValue, role := range c.Users.RoleMapping {
+		if !role.IsValid() {
+			return fmt.Errorf("unsupported role %q for users.role_mapping[%q]", role, attrValue) //nolint:err113
 		}
 	}
 

@@ -66,6 +66,9 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 	defer cancel()
 
 	oidcCfg := opts.users
+	if len(oidcCfg.RoleMapping) == 0 {
+		return nil, errors.New("no role mappings defined") //nolint:err113
+	}
 
 	oidcProvider, err := oidc.NewProvider(ctx, oidcCfg.IssuerURL)
 	if err != nil {
@@ -89,10 +92,11 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 	}, nil
 }
 
-// GetTargets return targets that available for this user id.
-func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Server, error) {
+// GetTargets return targets that available for this user.
+func (s *Service) GetTargets(_ context.Context, user structs.User) ([]structs.Server, error) {
+	subjects := userSubjects(user)
 	availableTargets := just.SliceFilter(s.opts.targets, func(target config.Target) bool {
-		return s.opts.acls.Allow(rules.ByUserID(uID.S()), rules.ByTargetID(target.ID.S()))
+		return s.opts.acls.Allow(rules.BySubjects(subjects...), rules.ByTargetID(target.ID.S()))
 	})
 
 	servers := just.SliceMap(availableTargets, adaptTarget)
@@ -100,8 +104,8 @@ func (s *Service) GetTargets(_ context.Context, uID config.UserID) ([]structs.Se
 	return servers, nil
 }
 
-func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID config.TargetID) (*structs.Server, error) {
-	res, _, err := s.getTargetByID(ctx, uID, tID)
+func (s *Service) GetTargetByID(ctx context.Context, user structs.User, tID config.TargetID) (*structs.Server, error) {
+	res, _, err := s.getTargetByID(ctx, user, tID)
 	if err != nil {
 		return nil, fmt.Errorf("get target: %w", err)
 	}
@@ -111,20 +115,21 @@ func (s *Service) GetTargetByID(ctx context.Context, uID config.UserID, tID conf
 
 func (s *Service) RunQuery(
 	ctx context.Context,
-	userID config.UserID,
+	user structs.User,
 	srvID config.TargetID,
 	query string,
 ) (uuid6.UUID, *structs.QTable, error) {
 	fullRoundTripStartedAt := time.Now()
 
-	srv, schema, err := s.getTargetByID(ctx, userID, srvID)
+	srv, schema, err := s.getTargetByID(ctx, user, srvID)
 	if err != nil {
 		return uuid6.Nil(), nil, fmt.Errorf("get target by id: %w", err)
 	}
+	subjects := userSubjects(user)
 
 	haveAccess := func(vec validator.Vec) bool {
 		return s.opts.acls.Allow(
-			rules.ByUserID(userID.S()),
+			rules.BySubjects(subjects...),
 			rules.ByTargetID(srvID.S()),
 			rules.ByOp(vec.Op.S()),
 			rules.ByTable(vec.Tbl),
@@ -201,7 +206,7 @@ func (s *Service) RunQuery(
 
 	req := storage.InsertQueryResultsReq{
 		ID:        uuid6.New(),
-		UserID:    userID,
+		UserID:    user.ID,
 		TargetID:  srvID,
 		CreatedAt: queryStartedAt,
 		Query:     query,
@@ -220,9 +225,12 @@ func (s *Service) InitOIDC(_ context.Context) (string, string, error) { //nolint
 	return s.oauthCfg.AuthCodeURL(state), state, nil
 }
 
-func (s *Service) CompleteOIDC(ctx context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, error) {
+func (s *Service) CompleteOIDC( //nolint:cyclop
+	ctx context.Context,
+	code, expectedState, receivedState string,
+) (*structs.User, time.Time, error) {
 	// Validate state parameter to prevent CSRF attacks
-	if expectedState == "" || receivedState == "" || expectedState != receivedState {
+	if expectedState != receivedState || expectedState == "" {
 		return nil, time.Time{}, errors.New("invalid state parameter - possible CSRF attack") //nolint:err113
 	}
 
@@ -249,6 +257,20 @@ func (s *Service) CompleteOIDC(ctx context.Context, code, expectedState, receive
 		return nil, time.Time{}, fmt.Errorf("parse id_token claims: %w", err)
 	}
 
+	if claims.Email == "" {
+		return nil, time.Time{}, errors.New("email claim is required in id_token") //nolint:err113
+	}
+
+	var rawClaims map[string]json.RawMessage
+	if err := idToken.Claims(&rawClaims); err != nil {
+		return nil, time.Time{}, fmt.Errorf("parse raw id_token claims: %w", err)
+	}
+
+	role, err := resolveUserRole(rawClaims, s.opts.users.RoleClaim, s.opts.users.RoleMapping)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("resolve role: %w", err)
+	}
+
 	expiry := token.Expiry
 	if expiry.IsZero() {
 		expiry = time.Now().Add(15 * time.Minute) //nolint:mnd
@@ -257,6 +279,7 @@ func (s *Service) CompleteOIDC(ctx context.Context, code, expectedState, receive
 	return &structs.User{
 		ID:       config.UserID(claims.Email),
 		Username: just.If(claims.PreferredUsername != "", claims.PreferredUsername, claims.Email),
+		Role:     role,
 	}, expiry, nil
 }
 
@@ -285,7 +308,7 @@ func (s *Service) GetQueryResults(ctx context.Context, uid config.UserID, qid uu
 
 func (s *Service) AddBookmark(
 	ctx context.Context,
-	uid config.UserID,
+	user structs.User,
 	targetID config.TargetID,
 	title string,
 	query string,
@@ -296,13 +319,13 @@ func (s *Service) AddBookmark(
 		return errors.New("title and query are required") //nolint:err113
 	}
 
-	if _, _, err := s.getTargetByID(ctx, uid, targetID); err != nil {
+	if _, _, err := s.getTargetByID(ctx, user, targetID); err != nil {
 		return fmt.Errorf("validate target access: %w", err)
 	}
 
 	req := storage.InsertBookmarkReq{
 		ID:        uuid6.New(),
-		UserID:    uid,
+		UserID:    user.ID,
 		TargetID:  targetID,
 		Title:     trimmedTitle,
 		Query:     trimmedQuery,
@@ -323,12 +346,12 @@ func (s *Service) DeleteBookmark(ctx context.Context, uid config.UserID, bookmar
 	return nil
 }
 
-func (s *Service) ListBookmarks(ctx context.Context, uid config.UserID, targetID config.TargetID) ([]structs.Bookmark, error) {
-	if _, _, err := s.getTargetByID(ctx, uid, targetID); err != nil {
+func (s *Service) ListBookmarks(ctx context.Context, user structs.User, targetID config.TargetID) ([]structs.Bookmark, error) {
+	if _, _, err := s.getTargetByID(ctx, user, targetID); err != nil {
 		return nil, fmt.Errorf("validate target access: %w", err)
 	}
 
-	items, err := s.opts.storage.ListBookmarks(s.opts.storage.Conn(ctx), uid, targetID)
+	items, err := s.opts.storage.ListBookmarks(s.opts.storage.Conn(ctx), user.ID, targetID)
 	if err != nil {
 		return nil, fmt.Errorf("list bookmarks: %w", err)
 	}
@@ -389,4 +412,40 @@ func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limi
 	}
 
 	return out, nil
+}
+
+func resolveUserRole(claims map[string]json.RawMessage, roleClaim string, roleMapping map[string]config.Role) (config.Role, error) {
+	claimValues, err := getClaimValues(claims, roleClaim)
+	if err != nil {
+		return "", err
+	}
+
+	for _, claimValue := range claimValues {
+		if role, ok := roleMapping[claimValue]; ok {
+			return role, nil
+		}
+	}
+
+	return "", errors.New("no role found") //nolint:err113
+}
+
+func getClaimValues(claims map[string]json.RawMessage, claimName string) ([]string, error) {
+	rawClaim, ok := claims[claimName]
+	if !ok {
+		return nil, errors.New("claim not found") //nolint:err113
+	}
+
+	var claimValues []string
+	if err := json.Unmarshal(rawClaim, &claimValues); err != nil {
+		return nil, fmt.Errorf("claim (%q) must be []string type", claimName) //nolint:err113
+	}
+
+	return claimValues, nil
+}
+
+func userSubjects(user structs.User) []string {
+	return []string{
+		rules.UserPrincipal(user.ID.S()),
+		rules.RolePrincipal(user.Role.S()),
+	}
 }
