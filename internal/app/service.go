@@ -66,7 +66,7 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 	defer cancel()
 
 	oidcCfg := opts.users
-	if len(oidcCfg.RoleMappings) == 0 {
+	if len(oidcCfg.RoleMapping) == 0 {
 		return nil, errors.New("no role mappings defined") //nolint:err113
 	}
 
@@ -225,9 +225,12 @@ func (s *Service) InitOIDC(_ context.Context) (string, string, error) { //nolint
 	return s.oauthCfg.AuthCodeURL(state), state, nil
 }
 
-func (s *Service) CompleteOIDC(ctx context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, error) {
+func (s *Service) CompleteOIDC(
+	ctx context.Context,
+	code, expectedState, receivedState string,
+) (*structs.User, time.Time, error) { //nolint:cyclop
 	// Validate state parameter to prevent CSRF attacks
-	if expectedState == "" || receivedState == "" || expectedState != receivedState {
+	if expectedState != receivedState || expectedState == "" {
 		return nil, time.Time{}, errors.New("invalid state parameter - possible CSRF attack") //nolint:err113
 	}
 
@@ -263,7 +266,7 @@ func (s *Service) CompleteOIDC(ctx context.Context, code, expectedState, receive
 		return nil, time.Time{}, fmt.Errorf("parse raw id_token claims: %w", err)
 	}
 
-	role, err := resolveUserRole(rawClaims, s.opts.users)
+	role, err := resolveUserRole(rawClaims, s.opts.users.RoleClaim, s.opts.users.RoleMapping)
 	if err != nil {
 		return nil, time.Time{}, fmt.Errorf("resolve role: %w", err)
 	}
@@ -411,30 +414,30 @@ func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limi
 	return out, nil
 }
 
-func resolveUserRole(claims map[string]json.RawMessage, cfg config.UsersProviderOIDC) (config.Role, error) {
-	claimValues, err := getClaimValues(claims, cfg.RoleClaim)
+func resolveUserRole(claims map[string]json.RawMessage, roleClaim string, roleMapping map[string]config.Role) (config.Role, error) {
+	claimValues, err := getClaimValues(claims, roleClaim)
 	if err != nil {
 		return "", err
 	}
 
 	for _, claimValue := range claimValues {
-		if role, ok := cfg.RoleMappings[claimValue]; ok {
+		if role, ok := roleMapping[claimValue]; ok {
 			return role, nil
 		}
 	}
 
-	return "", errors.New("no role found")
+	return "", errors.New("no role found") //nolint:err113
 }
 
 func getClaimValues(claims map[string]json.RawMessage, claimName string) ([]string, error) {
 	rawClaim, ok := claims[claimName]
 	if !ok {
-		return nil, errors.New("claim not found")
+		return nil, errors.New("claim not found") //nolint:err113
 	}
 
 	var claimValues []string
 	if err := json.Unmarshal(rawClaim, &claimValues); err != nil {
-		return nil, fmt.Errorf("claim (%q) must be []string type", claimName)
+		return nil, fmt.Errorf("claim (%q) must be []string type", claimName) //nolint:err113
 	}
 
 	return claimValues, nil
