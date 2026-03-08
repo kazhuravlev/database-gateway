@@ -53,6 +53,10 @@ const (
 
 type Service struct {
 	opts Options
+
+	initOIDC           func(ctx context.Context) (string, string, error)
+	completeOIDC       func(ctx context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, error)
+	buildOIDCLogoutURL func(idTokenHint, postLogoutRedirectURL string) (string, error)
 }
 
 func New(opts Options) (*Service, error) {
@@ -63,7 +67,12 @@ func New(opts Options) (*Service, error) {
 		return nil, fmt.Errorf("bad configuration: %w", err)
 	}
 
-	return &Service{opts: opts}, nil
+	return &Service{
+		opts:               opts,
+		initOIDC:           opts.app.InitOIDC,
+		completeOIDC:       opts.app.CompleteOIDC,
+		buildOIDCLogoutURL: opts.app.BuildOIDCLogoutURL,
+	}, nil
 }
 
 func (s *Service) Run(_ context.Context) error {
@@ -222,7 +231,7 @@ func (s *Service) getServer(c echo.Context) error {
 }
 
 func (s *Service) getAuth(c echo.Context) error {
-	authURL, state, err := s.opts.app.InitOIDC(c.Request().Context())
+	authURL, state, err := s.initOIDC(c.Request().Context())
 	if err != nil {
 		return fmt.Errorf("init oidc: %w", err)
 	}
@@ -261,7 +270,7 @@ func (s *Service) getAuthCallback(c echo.Context) error {
 	receivedState := c.Request().URL.Query().Get("state")
 	code := c.Request().URL.Query().Get("code")
 
-	user, expiry, err := s.opts.app.CompleteOIDC(c.Request().Context(), code, expectedState, receivedState)
+	user, expiry, err := s.completeOIDC(c.Request().Context(), code, expectedState, receivedState)
 	if err != nil {
 		return fmt.Errorf("complete oidc: %w", err)
 	}
@@ -299,7 +308,7 @@ func (s *Service) logout(c echo.Context) error {
 	}
 
 	postLogoutRedirectURL := fmt.Sprintf("%s://%s/auth", c.Scheme(), c.Request().Host)
-	logoutURL, err := s.opts.app.BuildOIDCLogoutURL("", postLogoutRedirectURL)
+	logoutURL, err := s.buildOIDCLogoutURL("", postLogoutRedirectURL)
 	if err != nil {
 		return c.Redirect(http.StatusSeeOther, "/auth")
 	}

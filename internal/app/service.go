@@ -243,7 +243,10 @@ func (s *Service) InitOIDC(_ context.Context) (string, string, error) { //nolint
 	return s.oauthCfg.AuthCodeURL(state), state, nil
 }
 
-func (s *Service) CompleteOIDC(ctx context.Context, code, expectedState, receivedState string) (*structs.User, time.Time, error) {
+func (s *Service) CompleteOIDC( //nolint:cyclop
+	ctx context.Context,
+	code, expectedState, receivedState string,
+) (*structs.User, time.Time, error) {
 	// Validate state parameter to prevent CSRF attacks
 	if expectedState != receivedState || expectedState == "" {
 		return nil, time.Time{}, errors.New("invalid state parameter - possible CSRF attack") //nolint:err113
