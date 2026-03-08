@@ -121,8 +121,10 @@ templ PageTarget(user structs.User, target structs.Server, formUrl,query string,
 		@w_appline() {
 			@sqlForm(formUrl,query)
 		}
-		@w_appline() {
-			@bookmarkForm(formUrl, query)
+		if qTbl != nil {
+			@w_appline() {
+				@bookmarkForm(formUrl, query)
+			}
 		}
 		@w_appline() {
 			@bookmarksList(formUrl, bookmarks)
