@@ -88,7 +88,7 @@ func addRangeVar(tables *Tables, tbl *pg.RangeVar) error {
 	return nil
 }
 
-func collectSelectFromTables(tables *Tables, node *pg.Node) error {
+func collectSelectFromTables(tables *Tables, node *pg.Node) error { //nolint:cyclop
 	switch fromNode := node.GetNode().(type) {
 	default:
 		return fmt.Errorf("from type (%T): %w", node.GetNode(), ErrNotImplemented)

@@ -215,7 +215,7 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclo
 	return vectors, nil
 }
 
-func parseWhereClause(node *pg.Node) (Columns, error) { //nolint:cyclop
+func parseWhereClause(node *pg.Node) (Columns, error) { //nolint:cyclop,gocognit,gocyclo
 	var columns Columns
 	if node == nil {
 		return columns, nil
