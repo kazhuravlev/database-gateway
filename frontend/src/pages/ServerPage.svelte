@@ -26,7 +26,7 @@
   let isRunning = $state(false);
   let isSavingBookmark = $state(false);
   let runningBookmarkID = $state("");
-  let isDeletingBookmarkID = $state("");	
+  let isDeletingBookmarkID = $state("");
   let exportFormatInProgress = $state("");
 
   let loadError = $state("");
@@ -259,34 +259,80 @@
             </div>
           </div>
 
-          <div class="flex flex-col gap-1.5">
-            {#each server.Tables ?? [] as table}
-              <div class={`${chipClass} flex flex-wrap items-center justify-between gap-2 p-2.5`}>
-                <div class="flex flex-wrap items-center gap-1.5">
-                  <div class="font-semibold text-zinc-100">{table.table}</div>
-                  {#each table.fields ?? [] as field, index}
-                    <div class="text-xs text-zinc-400">{field}{index < (table.fields?.length ?? 0) - 1 ? "," : ""}</div>
-                  {/each}
+          <details class={`${chipClass} overflow-hidden`}>
+            <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 p-2.5 marker:hidden">
+              <div class="flex min-w-0 flex-col gap-0.5">
+                <div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+                  Exposed tables
                 </div>
-                <div class="flex flex-wrap gap-1">
-                  <button
-                    type="button"
-                    class={`${buttonClass} px-2 py-1 text-xs`}
-                    onclick={() => executeQuery(buildPreviewQuery(table))}
-                  >
-                    first 10
-                  </button>
-                  <button
-                    type="button"
-                    class={`${buttonClass} px-2 py-1 text-xs`}
-                    onclick={() => executeQuery(buildCountQuery(table))}
-                  >
-                    count
-                  </button>
+                <div class="text-sm text-zinc-300">
+                  {server.Tables?.length ?? 0} {(server.Tables?.length ?? 0) === 1 ? "table" : "tables"}
                 </div>
               </div>
-            {/each}
-          </div>
+              <div class="text-xs font-semibold text-lime-200">Show</div>
+            </summary>
+
+            <div class="border-t border-zinc-700/80 p-2.5 pt-2">
+              <div class="flex flex-col gap-1.5">
+                {#each server.Tables ?? [] as table}
+                  <div class={`${chipClass} flex flex-wrap items-center justify-between gap-2 p-2.5`}>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <div class="font-semibold text-zinc-100">{table.table}</div>
+                      {#each table.fields ?? [] as field, index}
+                        <div class="text-xs text-zinc-400">{field}{index < (table.fields?.length ?? 0) - 1 ? "," : ""}</div>
+                      {/each}
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                      <button
+                        type="button"
+                        class={`${buttonClass} px-2 py-1 text-xs`}
+                        onclick={() => executeQuery(buildPreviewQuery(table))}
+                      >
+                        first 10
+                      </button>
+                      <button
+                        type="button"
+                        class={`${buttonClass} px-2 py-1 text-xs`}
+                        onclick={() => executeQuery(buildCountQuery(table))}
+                      >
+                        count
+                      </button>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          </details>
+
+
+			{#if bookmarks.length > 0}
+				<details class={`${chipClass} overflow-hidden`}>
+						<summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 p-2.5 marker:hidden">
+							<div class="flex min-w-0 flex-col gap-0.5">
+								<div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+									Saved bookmarks
+								</div>
+								<div class="text-sm text-zinc-300">
+									{bookmarks.length} {bookmarks.length === 1 ? "bookmark" : "bookmarks"}
+								</div>
+							</div>
+							<div class="text-xs font-semibold text-lime-200">Show</div>
+						</summary>
+
+						<div class="border-t border-zinc-700/80 p-2.5 pt-2">
+							<BookmarkList
+								{bookmarks}
+								compact={true}
+								emptyText="No bookmarks yet"
+								{runningBookmarkID}
+								deletingBookmarkID={isDeletingBookmarkID}
+								onRun={runBookmark}
+								onDelete={(bookmark) => removeBookmark(bookmark.id)}
+							/>
+						</div>
+					</details>
+			{/if}
+
         </div>
       </div>
     </section>
@@ -347,18 +393,6 @@
         </div>
         {/if}
       </div>
-    </section>
-
-    <section class={`${panelClass} w-full p-3`}>
-      <BookmarkList
-        {bookmarks}
-        compact={true}
-        emptyText="No bookmarks yet"
-        {runningBookmarkID}
-        deletingBookmarkID={isDeletingBookmarkID}
-        onRun={runBookmark}
-        onDelete={(bookmark) => removeBookmark(bookmark.id)}
-      />
     </section>
 
     {#if queryResult}
