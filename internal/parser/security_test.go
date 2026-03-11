@@ -90,6 +90,20 @@ func TestParseSelectBoolWhereTracksAllColumns(t *testing.T) {
 	require.Contains(t, sel.Columns(), "secret_col")
 }
 
+// Null tests must contribute referenced columns,
+// otherwise protected columns can be used in filters without appearing in ACL vectors.
+func TestParseSelectNullTestTracksColumn(t *testing.T) {
+	t.Parallel()
+
+	vecs, err := parser.Parse("SELECT id FROM clients WHERE secret_col IS NOT NULL")
+	require.NoError(t, err)
+	require.Len(t, vecs, 1)
+
+	sel, ok := vecs[0].(parser.SelectVec)
+	require.True(t, ok)
+	require.Contains(t, sel.Columns(), "secret_col")
+}
+
 // Unsupported WHERE nodes should be rejected, not silently ignored.
 func TestParseSelectUnsupportedWhereExprReturnsError(t *testing.T) {
 	t.Parallel()

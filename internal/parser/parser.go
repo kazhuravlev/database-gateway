@@ -84,12 +84,14 @@ func Parse(query string) ([]Vector, error) { //nolint:cyclop // this is not so c
 type Tables struct {
 	m             map[string]string
 	defaultSchema string
+	sources       int
 }
 
 func NewTables(defaultSchema string) *Tables {
 	return &Tables{
 		m:             make(map[string]string),
 		defaultSchema: defaultSchema,
+		sources:       0,
 	}
 }
 
@@ -112,6 +114,7 @@ func (t *Tables) Put(catalog, schema, relation, alias string) (string, error) {
 	fqtnBuf.WriteString(relation)
 
 	fqtn := fqtnBuf.String()
+	t.sources++
 
 	t.m[relation] = fqtn
 	t.m[fqtn] = fqtn
@@ -123,6 +126,10 @@ func (t *Tables) Put(catalog, schema, relation, alias string) (string, error) {
 	}
 
 	return fqtn, nil
+}
+
+func (t *Tables) SourcesCount() int {
+	return t.sources
 }
 
 func (t *Tables) Get(name string) (string, bool) {
@@ -150,13 +157,13 @@ func (t *Tables) SetMapping(name, target string) {
 	t.m[name] = target
 }
 
-// Finalize will check the collected tables and in case of only one table exists - creates a new Empty mapping.
+// Finalize will check the collected tables and in case of only one source table exists - creates a new Empty mapping.
 func (t *Tables) Finalize() error {
 	all, err := t.GetAll()
 	if err != nil {
 		return fmt.Errorf("failed to get all tables: %w", err)
 	}
-	if len(all) == 1 {
+	if t.sources == 1 && len(all) == 1 {
 		t.m[""] = all[0]
 	}
 

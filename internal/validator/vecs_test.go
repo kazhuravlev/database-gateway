@@ -75,6 +75,107 @@ func TestMakeVectors(t *testing.T) {
 			}})
 	})
 
+	t.Run("join_queries", func(t *testing.T) {
+		t.Parallel()
+
+		testCases := []struct {
+			name  string
+			query string
+			exp   []validator.Vec
+		}{
+			{
+				name:  "inner_join",
+				query: `select clients.id, orders.id from clients inner join orders on clients.id = orders.client_id`,
+				exp: []validator.Vec{
+					{
+						Op:   config.OpSelect,
+						Tbl:  "clients",
+						Cols: []string{"id"},
+					},
+					{
+						Op:   config.OpSelect,
+						Tbl:  "orders",
+						Cols: []string{"client_id", "id"},
+					},
+				},
+			},
+			{
+				name: "left_join_with_aliases",
+				query: `select c.id, count(o.id)
+from clients as c
+left join orders as o on c.id = o.client_id
+where o.status = 'paid'
+group by c.id
+order by c.id`,
+				exp: []validator.Vec{
+					{
+						Op:   config.OpSelect,
+						Tbl:  "clients",
+						Cols: []string{"id"},
+					},
+					{
+						Op:   config.OpSelect,
+						Tbl:  "orders",
+						Cols: []string{"client_id", "id", "status"},
+					},
+				},
+			},
+			{
+				name: "schema_qualified_join",
+				query: `select public.clients.id, billing.orders.amount
+from public.clients
+join billing.orders on public.clients.id = billing.orders.client_id
+where billing.orders.status = 'paid'`,
+				exp: []validator.Vec{
+					{
+						Op:   config.OpSelect,
+						Tbl:  "billing.orders",
+						Cols: []string{"amount", "client_id", "status"},
+					},
+					{
+						Op:   config.OpSelect,
+						Tbl:  "public.clients",
+						Cols: []string{"id"},
+					},
+				},
+			},
+			{
+				name: "self_join_with_qualified_columns",
+				query: `select c.id, parent.name
+from clients as c
+join clients as parent on c.parent_id = parent.id
+where parent.active = true`,
+				exp: []validator.Vec{
+					{
+						Op:   config.OpSelect,
+						Tbl:  "clients",
+						Cols: []string{"active", "id", "name", "parent_id"},
+					},
+				},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				vecs, err := validator.MakeVectors(tc.query)
+				require.NoError(t, err)
+				require.Len(t, vecs, len(tc.exp))
+
+				for i := range vecs {
+					sort.Strings(vecs[i].Cols)
+				}
+
+				sort.Slice(vecs, func(i, j int) bool {
+					return vecs[i].Tbl < vecs[j].Tbl
+				})
+
+				require.Equal(t, tc.exp, vecs)
+			})
+		}
+	})
+
 	t.Run("bad_path", func(t *testing.T) {
 		t.Parallel()
 		test := func(name, query string, err error) {
@@ -100,6 +201,24 @@ func TestMakeVectors(t *testing.T) {
 			validator.ErrComplicatedQuery)
 		test("delete_star",
 			`delete from clients where f1=1 returning *`,
+			validator.ErrComplicatedQuery)
+		test("join_using",
+			`select c.id from clients as c join orders as o using (id)`,
+			validator.ErrComplicatedQuery)
+		test("natural_join",
+			`select c.id from clients as c natural join orders as o`,
+			validator.ErrComplicatedQuery)
+		test("join_subquery_rhs",
+			`select c.id from clients as c join (select client_id from orders) as o on c.id = o.client_id`,
+			validator.ErrComplicatedQuery)
+		test("join_with_ambiguous_column",
+			`select c.id from clients as c join orders as o on id = o.client_id`,
+			validator.ErrComplicatedQuery)
+		test("self_join_with_ambiguous_target",
+			`select id from clients as c join clients as parent on c.parent_id = parent.id`,
+			validator.ErrComplicatedQuery)
+		test("self_join_with_ambiguous_filter",
+			`select c.id from clients as c join clients as parent on c.parent_id = parent.id where name is not null`,
 			validator.ErrComplicatedQuery)
 	})
 }
