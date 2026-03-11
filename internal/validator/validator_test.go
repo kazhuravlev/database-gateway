@@ -90,74 +90,50 @@ func TestValidateSchema(t *testing.T) {
 	})
 }
 
-func TestValidator(t *testing.T) {
-	t.Parallel()
-	target := config.Target{
-		ID:            "t1",
-		Description:   "",
-		Tags:          nil,
-		Type:          "postgres",
-		Connection:    config.Connection{}, //nolint:exhaustruct
-		DefaultSchema: "public",
-		Tables: []config.TargetTable{
-			{
-				Table:  "public.clients",
-				Fields: []string{"id", "name", "email"},
-			},
+func testTargetTables() []config.TargetTable {
+	return []config.TargetTable{
+		{
+			Table:  "public.clients",
+			Fields: []string{"id", "name", "email"},
 		},
 	}
+}
 
-	t.Run("bad_requests", func(t *testing.T) {
-		t.Parallel()
-		t.Run("query_has_no_statements", func(t *testing.T) {
+func TestValidatorBadRequests(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name  string
+		query string
+	}{
+		{name: "query_has_no_statements", query: ``},
+		{name: "not_a_query", query: `what time is it?`},
+		{name: "query_has_several_statements", query: `select 1; select 1`},
+		{name: "star_select", query: `select * from table`}, //nolint:unqueryvet
+		{name: "schema_changes", query: `create table aaa(id text);`},
+		{name: "alter_table", query: `alter table aaa add column id text default '';`},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			query := ``
-			err := validator.IsAllowed(nil, nil, query)
+
+			err := validator.IsAllowed(nil, nil, tc.query)
 			require.Error(t, err)
 		})
+	}
+}
 
-		t.Run("not_a_query", func(t *testing.T) {
-			t.Parallel()
-			query := `what time is it?`
-			err := validator.IsAllowed(nil, nil, query)
-			require.Error(t, err)
-		})
+func TestValidatorComplicatedQueries(t *testing.T) {
+	t.Parallel()
 
-		t.Run("query_has_several_statements", func(t *testing.T) {
-			t.Parallel()
-			query := `select 1; select 1`
-			err := validator.IsAllowed(nil, nil, query)
-			require.Error(t, err)
-		})
-
-		t.Run("star_select", func(t *testing.T) {
-			t.Parallel()
-			query := `select * from table` //nolint:unqueryvet
-			err := validator.IsAllowed(nil, nil, query)
-			require.Error(t, err)
-		})
-
-		t.Run("schema_changes", func(t *testing.T) {
-			t.Parallel()
-			query := `create table aaa(id text);`
-			err := validator.IsAllowed(nil, nil, query)
-			require.Error(t, err)
-		})
-
-		t.Run("alter_table", func(t *testing.T) {
-			t.Parallel()
-			query := `alter table aaa add column id text default '';`
-			err := validator.IsAllowed(nil, nil, query)
-			require.Error(t, err)
-		})
-	})
-
-	t.Run("some_cases", func(t *testing.T) {
-		t.Parallel()
-		t.Run("complicated_query", func(t *testing.T) {
-			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return true }
-			query := `WITH regional_sales AS (
+	testCases := []struct {
+		name  string
+		query string
+	}{
+		{
+			name: "complicated_query",
+			query: `WITH regional_sales AS (
     SELECT region, SUM(amount) AS total_sales
     FROM orders
     GROUP BY region
@@ -172,21 +148,11 @@ SELECT region,
        SUM(amount) AS product_sales
 FROM orders
 WHERE region IN (SELECT region FROM top_regions)
-GROUP BY region, product;`
-			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
-			require.ErrorIs(t, err, validator.ErrComplicatedQuery)
-		})
-
-		t.Run("complicated_query_matrix", func(t *testing.T) {
-			t.Parallel()
-
-			testCases := []struct {
-				name  string
-				query string
-			}{
-				{
-					name: "cte_and_nested_subquery",
-					query: `WITH regional_sales AS (
+GROUP BY region, product;`,
+		},
+		{
+			name: "cte_and_nested_subquery",
+			query: `WITH regional_sales AS (
     SELECT region, SUM(amount) AS total_sales
     FROM orders
     GROUP BY region
@@ -194,168 +160,158 @@ GROUP BY region, product;`
 SELECT region
 FROM regional_sales
 WHERE total_sales > (SELECT SUM(total_sales) / 10 FROM regional_sales)`,
-				},
-				{
-					name:  "join_using_clause",
-					query: `SELECT c.id FROM clients AS c JOIN orders AS o USING (id)`,
-				},
-				{
-					name:  "natural_join",
-					query: `SELECT c.id FROM clients AS c NATURAL JOIN orders AS o`,
-				},
-				{
-					name:  "join_subquery_rhs",
-					query: `SELECT c.id FROM clients AS c JOIN (SELECT client_id FROM orders) AS o ON c.id = o.client_id`,
-				},
-				{
-					name:  "union",
-					query: `SELECT id FROM clients UNION SELECT id FROM orders`,
-				},
-			}
+		},
+		{name: "join_using_clause", query: `SELECT c.id FROM clients AS c JOIN orders AS o USING (id)`},
+		{name: "natural_join", query: `SELECT c.id FROM clients AS c NATURAL JOIN orders AS o`},
+		{name: "join_subquery_rhs", query: `SELECT c.id FROM clients AS c JOIN (SELECT client_id FROM orders) AS o ON c.id = o.client_id`},
+		{name: "union", query: `SELECT id FROM clients UNION SELECT id FROM orders`},
+	}
 
-			haveAccess := func(_ validator.Vec) bool { return true }
-			for _, tc := range testCases {
-				tc := tc
-				t.Run(tc.name, func(t *testing.T) {
-					t.Parallel()
-
-					err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, tc.query)
-					require.ErrorIs(t, err, validator.ErrComplicatedQuery)
-				})
-			}
-		})
-	})
-
-	t.Run("select", func(t *testing.T) {
-		t.Parallel()
-		t.Run("simple_allowed", func(t *testing.T) {
+	haveAccess := func(_ validator.Vec) bool { return true }
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return true }
-			query := `select id, name from clients;`
-			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
-			require.NoError(t, err)
-		})
 
-		t.Run("simple_denied", func(t *testing.T) {
-			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return false }
-			query := `select id, name from clients;`
-			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
-			require.ErrorIs(t, err, validator.ErrAccessDenied)
-		})
-
-		t.Run("select_from_allowed_select__is_not_allowed", func(t *testing.T) {
-			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return true }
-			query := `select id, name from (select id, name from clients)`
-			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
-			// TODO: make it allowed. Actually this is legal query for this ACL.
+			err := validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, tc.query)
 			require.ErrorIs(t, err, validator.ErrComplicatedQuery)
 		})
+	}
+}
 
-		t.Run("join_access_requires_all_tables", func(t *testing.T) {
-			t.Parallel()
+func TestValidatorSelect(t *testing.T) {
+	t.Parallel()
 
-			schema := helpSchemaFromTables([]config.TargetTable{
-				{
-					Table:  "public.clients",
-					Fields: []string{"id", "name"},
-				},
-				{
-					Table:  "public.orders",
-					Fields: []string{"id", "client_id", "status"},
-				},
-			})
+	t.Run("simple_allowed", func(t *testing.T) {
+		t.Parallel()
+		haveAccess := func(_ validator.Vec) bool { return true }
+		query := `select id, name from clients;`
+		err := validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, query)
+		require.NoError(t, err)
+	})
 
-			haveAccess := func(vec validator.Vec) bool {
-				return vec.Tbl == "public.clients"
-			}
+	t.Run("simple_denied", func(t *testing.T) {
+		t.Parallel()
+		haveAccess := func(_ validator.Vec) bool { return false }
+		query := `select id, name from clients;`
+		err := validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, query)
+		require.ErrorIs(t, err, validator.ErrAccessDenied)
+	})
 
-			query := `select c.id, o.id
+	t.Run("select_from_allowed_select__is_not_allowed", func(t *testing.T) {
+		t.Parallel()
+		haveAccess := func(_ validator.Vec) bool { return true }
+		query := `select id, name from (select id, name from clients)`
+		err := validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, query)
+		require.ErrorIs(t, err, validator.ErrComplicatedQuery)
+	})
+
+	t.Run("join_access_requires_all_tables", func(t *testing.T) {
+		t.Parallel()
+
+		schema := helpSchemaFromTables([]config.TargetTable{
+			{
+				Table:  "public.clients",
+				Fields: []string{"id", "name"},
+			},
+			{
+				Table:  "public.orders",
+				Fields: []string{"id", "client_id", "status"},
+			},
+		})
+
+		haveAccess := func(vec validator.Vec) bool {
+			return vec.Tbl == "public.clients"
+		}
+
+		query := `select c.id, o.id
 from public.clients as c
 join public.orders as o on c.id = o.client_id
 where o.status = 'paid'`
-			err := validator.IsAllowed(schema, haveAccess, query)
-			require.ErrorIs(t, err, validator.ErrAccessDenied)
+		err := validator.IsAllowed(schema, haveAccess, query)
+		require.ErrorIs(t, err, validator.ErrAccessDenied)
+	})
+
+	t.Run("join_schema_checks_every_referenced_table", func(t *testing.T) {
+		t.Parallel()
+
+		schema := helpSchemaFromTables([]config.TargetTable{
+			{
+				Table:  "public.clients",
+				Fields: []string{"id", "name"},
+			},
 		})
 
-		t.Run("join_schema_checks_every_referenced_table", func(t *testing.T) {
-			t.Parallel()
-
-			schema := helpSchemaFromTables([]config.TargetTable{
-				{
-					Table:  "public.clients",
-					Fields: []string{"id", "name"},
-				},
-			})
-
-			haveAccess := func(_ validator.Vec) bool { return true }
-			query := `select c.id, o.id
+		haveAccess := func(_ validator.Vec) bool { return true }
+		query := `select c.id, o.id
 from public.clients as c
 join public.orders as o on c.id = o.client_id`
-			err := validator.IsAllowed(schema, haveAccess, query)
-			require.ErrorIs(t, err, validator.ErrAccessDenied)
-		})
+		err := validator.IsAllowed(schema, haveAccess, query)
+		require.ErrorIs(t, err, validator.ErrAccessDenied)
+	})
+}
+
+func TestValidatorUpdate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("simple_allowed", func(t *testing.T) {
+		t.Parallel()
+		haveAccess := func(_ validator.Vec) bool { return true }
+		query := `update clients set id=1, name='john'`
+		require.NoError(t, validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, query))
 	})
 
-	t.Run("update", func(t *testing.T) {
+	t.Run("simple_denied", func(t *testing.T) {
 		t.Parallel()
-		t.Run("simple_allowed", func(t *testing.T) {
-			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return true }
-			query := `update clients set id=1, name='john'`
-			require.NoError(t, validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query))
-		})
-		t.Run("simple_denied", func(t *testing.T) {
-			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return false }
-			query := `update clients set id=1, name='john'`
-			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
-			require.ErrorIs(t, err, validator.ErrAccessDenied)
-		})
+		haveAccess := func(_ validator.Vec) bool { return false }
+		query := `update clients set id=1, name='john'`
+		err := validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, query)
+		require.ErrorIs(t, err, validator.ErrAccessDenied)
+	})
+}
+
+func TestValidatorDelete(t *testing.T) {
+	t.Parallel()
+
+	t.Run("simple_allowed", func(t *testing.T) {
+		t.Parallel()
+		haveAccess := func(_ validator.Vec) bool { return true }
+		query := `delete from clients where id=42`
+		require.NoError(t, validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, query))
 	})
 
-	t.Run("delete", func(t *testing.T) {
+	t.Run("simple_denied", func(t *testing.T) {
 		t.Parallel()
-		t.Run("simple_allowed", func(t *testing.T) {
-			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return true }
-			query := `delete from clients where id=42`
-			require.NoError(t, validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query))
-		})
-		t.Run("simple_denied", func(t *testing.T) {
-			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return false }
-			query := `delete from clients where id=42`
-			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
-			require.ErrorIs(t, err, validator.ErrAccessDenied)
-		})
+		haveAccess := func(_ validator.Vec) bool { return false }
+		query := `delete from clients where id=42`
+		err := validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, query)
+		require.ErrorIs(t, err, validator.ErrAccessDenied)
+	})
+}
+
+func TestValidatorInsert(t *testing.T) {
+	t.Parallel()
+
+	t.Run("simple_allowed", func(t *testing.T) {
+		t.Parallel()
+		haveAccess := func(_ validator.Vec) bool { return true }
+		query := `insert into clients(id) values (42)`
+		err := validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, query)
+		require.NoError(t, err)
 	})
 
-	t.Run("insert", func(t *testing.T) {
+	t.Run("simple_denied", func(t *testing.T) {
 		t.Parallel()
-		t.Run("simple_allowed", func(t *testing.T) {
-			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return true }
-			query := `insert into clients(id) values (42)`
-			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
-			require.NoError(t, err)
-		})
+		haveAccess := func(_ validator.Vec) bool { return false }
+		query := `insert into clients(id) values (42)`
+		err := validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, query)
+		require.ErrorIs(t, err, validator.ErrAccessDenied)
+	})
 
-		t.Run("simple_denied", func(t *testing.T) {
-			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return false }
-			query := `insert into clients(id) values (42)`
-			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
-			require.ErrorIs(t, err, validator.ErrAccessDenied)
-		})
-
-		t.Run("allowed_2", func(t *testing.T) {
-			t.Parallel()
-			haveAccess := func(_ validator.Vec) bool { return true }
-			query := `insert into clients(id, name, email) values('11', '22', '33')`
-			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
-			require.NoError(t, err)
-		})
+	t.Run("allowed_2", func(t *testing.T) {
+		t.Parallel()
+		haveAccess := func(_ validator.Vec) bool { return true }
+		query := `insert into clients(id, name, email) values('11', '22', '33')`
+		err := validator.IsAllowed(helpSchemaFromTables(testTargetTables()), haveAccess, query)
+		require.NoError(t, err)
 	})
 }
