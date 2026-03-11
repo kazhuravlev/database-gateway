@@ -26,7 +26,7 @@
   let isRunning = $state(false);
   let isSavingBookmark = $state(false);
   let runningBookmarkID = $state("");
-  let isDeletingBookmarkID = $state("");
+  let isDeletingBookmarkID = $state("");	
   let exportFormatInProgress = $state("");
 
   let loadError = $state("");

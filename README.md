@@ -109,6 +109,12 @@ Bootstrap details for local Authentik:
 
 Choose `local-1`, run this query `select id, name from clients`, then click `Run`. ![pic2_run.png](example/instance.png)
 
+Admins can inspect recent stored requests and open a detailed result view with execution metadata and exported formats.
+
+![admin-query-list.png](example/admin-query-list.png)
+
+![admin-query-inspect.png](example/admin-query-inspect.png)
+
 ## Features
 
 ### Security & Access Control
