@@ -76,7 +76,7 @@ func pNodeColumnRef(node *pg.Node_ColumnRef) (Column, error) {
 }
 
 func addRangeVar(tables *Tables, tbl *pg.RangeVar) error {
-	alias := ""
+	var alias string
 	if tbl.GetAlias() != nil {
 		alias = tbl.GetAlias().GetAliasname()
 	}
@@ -88,33 +88,31 @@ func addRangeVar(tables *Tables, tbl *pg.RangeVar) error {
 	return nil
 }
 
-func collectSelectFromTables(tables *Tables, node *pg.Node) (bool, error) {
+func collectSelectFromTables(tables *Tables, node *pg.Node) error {
 	switch fromNode := node.GetNode().(type) {
 	default:
-		return false, fmt.Errorf("from type (%T): %w", node.GetNode(), ErrNotImplemented)
+		return fmt.Errorf("from type (%T): %w", node.GetNode(), ErrNotImplemented)
 	case *pg.Node_RangeVar:
 		if err := addRangeVar(tables, fromNode.RangeVar); err != nil {
-			return false, err
+			return err
 		}
 
-		return true, nil
+		return nil
 	case *pg.Node_JoinExpr:
 		join := fromNode.JoinExpr
 		if join.GetIsNatural() || len(join.GetUsingClause()) > 0 || join.GetJoinUsingAlias() != nil || join.GetAlias() != nil {
-			return false, fmt.Errorf("join expression: %w", ErrNotImplemented)
+			return fmt.Errorf("join expression: %w", ErrNotImplemented)
 		}
 
-		leftHasBase, err := collectSelectFromTables(tables, join.GetLarg())
-		if err != nil {
-			return false, err
+		if err := collectSelectFromTables(tables, join.GetLarg()); err != nil {
+			return err
 		}
 
-		rightHasBase, err := collectSelectFromTables(tables, join.GetRarg())
-		if err != nil {
-			return false, err
+		if err := collectSelectFromTables(tables, join.GetRarg()); err != nil {
+			return err
 		}
 
-		return leftHasBase || rightHasBase, nil
+		return nil
 	}
 }
 
@@ -168,7 +166,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 
 	tables := NewTables("public")
 	from := sel.GetFromClause()[0]
-	if _, err := collectSelectFromTables(tables, from); err != nil {
+	if err := collectSelectFromTables(tables, from); err != nil {
 		return nil, err
 	}
 
