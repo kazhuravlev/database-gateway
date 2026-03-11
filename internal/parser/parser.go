@@ -91,6 +91,7 @@ func NewTables(defaultSchema string) *Tables {
 	return &Tables{
 		m:             make(map[string]string),
 		defaultSchema: defaultSchema,
+		sources:       0,
 	}
 }
 
