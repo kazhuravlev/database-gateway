@@ -2,4 +2,4 @@ bin/
 node_modules/
 .idea
 .DS_Store
-dist/
+http-client.private.env.json

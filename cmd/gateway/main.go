@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/dev-services42/version"
 	"github.com/go-jet/jet/v2/generator/metadata"
 	"github.com/go-jet/jet/v2/generator/postgres"
 	"github.com/go-jet/jet/v2/generator/template"
@@ -31,7 +32,6 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/facade"
 	"github.com/kazhuravlev/database-gateway/internal/pgdb"
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
-	"github.com/kazhuravlev/database-gateway/internal/version"
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli/v2"
 )
@@ -93,7 +93,13 @@ func cmdRun(
 		return fmt.Errorf("validate config: %w", err)
 	}
 
-	fInst, err := facade.New(facade.NewOptions(logger, appInst, cfg.Facade.CookieSecret, cfg.Facade.Port))
+	fInst, err := facade.New(facade.NewOptions(
+		logger,
+		appInst,
+		cfg.Facade.CookieSecret,
+		cfg.Facade.Port,
+		cfg.Facade.UnsafeCORSAllowAll,
+	))
 	if err != nil {
 		return fmt.Errorf("create facade: %w", err)
 	}

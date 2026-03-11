@@ -16,6 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+    content: ["./src/**/*.svelte"],
+    theme: {
+        extend: {},
+    },
+    plugins: [],
+}

@@ -16,11 +16,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-    content: ["./templates/*.templ"],
-    theme: {
-        extend: {},
-    },
-    plugins: [],
-}
+import { defineConfig } from "vite";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
+import tailwindcss from '@tailwindcss/vite'
+
+
+export default defineConfig(({ command }) => {
+  const basePath =
+    process.env.VITE_BASE_PATH || (command === "build" ? "/ui/" : "/");
+
+  return {
+    base: basePath,
+    plugins: [
+		svelte(),
+		tailwindcss(),
+	],
+    server: {
+      host: "0.0.0.0",
+      port: 5173
+    }
+  };
+});

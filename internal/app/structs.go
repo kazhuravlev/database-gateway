@@ -23,6 +23,9 @@ import (
 )
 
 type QueryResults struct {
+	ID        string
+	UserID    string
+	TargetID  string
 	CreatedAt time.Time
 	Query     string
 	QTable    structs.QTable

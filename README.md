@@ -109,6 +109,12 @@ Bootstrap details for local Authentik:
 
 Choose `local-1`, run this query `select id, name from clients`, then click `Run`. ![pic2_run.png](example/instance.png)
 
+Admins can inspect recent stored requests and open a detailed result view with execution metadata and exported formats.
+
+![admin-query-list.png](example/admin-query-list.png)
+
+![admin-query-inspect.png](example/admin-query-inspect.png)
+
 ## Features
 
 ### Security & Access Control
@@ -132,6 +138,39 @@ Choose `local-1`, run this query `select id, name from clients`, then click `Run
 - [x] Recent queries feed on the main page (last 50 per user) with quick result access
 - [x] Unique links for query results (useful for debugging)
 
+### LRPC API
+
+LRPC endpoint is exposed on the same port as the web facade:
+
+- `GET /api/v1/token` (returns current session access token for frontend app)
+- `POST /api/v1/:method`
+- `GET /api/v1/schema`
+- `GET /api/v1/query-results/export/:token`
+
+Available methods:
+
+- `targets.list.v1` - list user-available targets
+- `targets.get.v1` - get a single target by `target_id`
+- `bookmarks.list.v1` - list all bookmarks, or filter by optional `target_id`
+- `bookmarks.add.v1` - save a bookmark for `target_id`, `title`, and `query`
+- `bookmarks.delete.v1` - delete a bookmark by `id`
+- `queries.list.v1` - list recent queries, with optional `limit`
+- `query.run.v1` - run query for a target and return table data
+- `query-results.get.v1` - get stored query result by `query_result_id`; users can read their own results and admins can read any user's result
+- `query-results.export-link.v1` - issue a short-lived export link for `json` or `csv`
+
+Download endpoints:
+
+- `/api/v1/query-results/export/:token` - download an exported file using a short-lived signed token
+
+All API requests require an OIDC access token in the header:
+
+```json
+Authorization: Bearer <access_token>
+```
+
+`params` are method-specific. User identity and role are resolved from the verified token claims.
+
 ### Observability & Performance
 
 - [x] Includes query execution stats in results (full round trip, parsing time, network round trip)
@@ -150,6 +189,7 @@ The service uses OIDC authentication:
     "client_secret": "db-gateway-secret",
     "issuer_url": "http://localhost:9000/application/o/db-gateway/",
     "redirect_url": "http://localhost:8080/auth/callback",
+    "access_token_audience": "db-gateway",
     "scopes": ["groups", "email", "profile"],
     "role_claim": "groups",
     "role_mapping": {
@@ -159,6 +199,8 @@ The service uses OIDC authentication:
   }
 }
 ```
+
+`access_token_audience` is optional. If omitted, `client_id` is used for access-token audience validation.
 
 ### Access Control Configuration
 

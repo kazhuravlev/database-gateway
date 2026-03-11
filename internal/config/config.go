@@ -99,18 +99,20 @@ type Target struct {
 }
 
 type UsersProviderOIDC struct {
-	ClientID     string          `json:"client_id"`
-	ClientSecret string          `json:"client_secret"`
-	IssuerURL    string          `json:"issuer_url"`
-	RedirectURL  string          `json:"redirect_url"`
-	Scopes       []string        `json:"scopes"`
-	RoleClaim    string          `json:"role_claim"    validate:"required"`
-	RoleMapping  map[string]Role `json:"role_mapping"  validate:"required"`
+	ClientID            string          `json:"client_id"`
+	ClientSecret        string          `json:"client_secret"`
+	IssuerURL           string          `json:"issuer_url"`
+	RedirectURL         string          `json:"redirect_url"`
+	Scopes              []string        `json:"scopes"`
+	AccessTokenAudience string          `json:"access_token_audience"`
+	RoleClaim           string          `json:"role_claim"            validate:"required"`
+	RoleMapping         map[string]Role `json:"role_mapping"          validate:"required"`
 }
 
 type FacadeConfig struct {
-	Port         int    `json:"port"`
-	CookieSecret string `json:"cookie_secret"`
+	Port               int    `json:"port"`
+	CookieSecret       string `json:"cookie_secret"`
+	UnsafeCORSAllowAll bool   `json:"unsafe_cors_allow_all"`
 }
 
 type Config struct {

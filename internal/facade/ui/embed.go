@@ -14,30 +14,22 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//nolint:testpackage
-package version
+package ui
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"embed"
+	"io/fs"
 )
 
-func TestGetVersion(t *testing.T) {
-	t.Parallel()
+//go:embed dist dist/* dist/assets/*
+var files embed.FS
 
-	require.Contains(t, []string{"(devel)", "unknown-local"}, GetVersion())
+//nolint:gochecknoglobals
+var DistFS = func() fs.FS {
+	fsys, err := fs.Sub(files, "dist")
+	if err != nil {
+		panic(err)
+	}
 
-	t.Run("returns explicitly set version when version variable is set", func(t *testing.T) {
-		t.Parallel()
-
-		// Save original value
-		original := version
-		defer func() { version = original }()
-
-		// Set explicit version
-		version = "v1.2.3"
-		assert.Equal(t, "v1.2.3", GetVersion())
-	})
-}
+	return fsys
+}()

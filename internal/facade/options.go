@@ -28,4 +28,5 @@ type Options struct {
 	app          *app.Service `option:"mandatory" validate:"required"`
 	cookieSecret string       `option:"mandatory" validate:"required"`
 	port         int          `option:"mandatory" validate:"required"`
+	corsAllowAll bool         `option:"mandatory"`
 }

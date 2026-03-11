@@ -60,7 +60,7 @@ type Bookmark struct {
 	Query    string
 }
 
-type RecentQuery struct {
+type Query struct {
 	ID        string
 	TargetID  config.TargetID
 	Query     string
