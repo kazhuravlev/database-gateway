@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"github.com/kazhuravlev/database-gateway/internal/policy"
 	"github.com/kazhuravlev/just"
 )
 
@@ -33,6 +34,8 @@ type ACL struct {
 type ACLs struct {
 	source []ACL
 }
+
+var _ policy.Authorizer = (*ACLs)(nil)
 
 func New(source []ACL) *ACLs {
 	return &ACLs{
@@ -57,4 +60,17 @@ func (a *ACLs) Allow(filters ...IFilter) bool {
 	}
 
 	return false
+}
+
+func (a *ACLs) AllowTarget(subjects []string, target string) bool {
+	return a.Allow(BySubjects(subjects...), ByTargetID(target))
+}
+
+func (a *ACLs) AllowVector(subjects []string, target, op, table string) bool {
+	return a.Allow(
+		BySubjects(subjects...),
+		ByTargetID(target),
+		ByOp(op),
+		ByTable(table),
+	)
 }

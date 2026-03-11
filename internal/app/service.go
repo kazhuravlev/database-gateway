@@ -123,7 +123,7 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 func (s *Service) GetTargets(_ context.Context, user structs.User) ([]structs.Server, error) {
 	subjects := userSubjects(user)
 	availableTargets := just.SliceFilter(s.opts.targets, func(target config.Target) bool {
-		return s.opts.acls.Allow(rules.BySubjects(subjects...), rules.ByTargetID(target.ID.S()))
+		return s.opts.authorizer.AllowTarget(subjects, target.ID.S())
 	})
 
 	servers := just.SliceMap(availableTargets, adaptTarget)
@@ -155,12 +155,7 @@ func (s *Service) RunQuery(
 	subjects := userSubjects(user)
 
 	haveAccess := func(vec validator.Vec) bool {
-		return s.opts.acls.Allow(
-			rules.BySubjects(subjects...),
-			rules.ByTargetID(srvID.S()),
-			rules.ByOp(vec.Op.S()),
-			rules.ByTable(vec.Tbl),
-		)
+		return s.opts.authorizer.AllowVector(subjects, srvID.S(), vec.Op.S(), vec.Tbl)
 	}
 
 	parsingStartedAt := time.Now()
