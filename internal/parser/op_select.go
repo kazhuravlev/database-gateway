@@ -75,6 +75,77 @@ func pNodeColumnRef(node *pg.Node_ColumnRef) (Column, error) {
 	return column, nil
 }
 
+func addRangeVar(tables *Tables, tbl *pg.RangeVar) error {
+	alias := ""
+	if tbl.GetAlias() != nil {
+		alias = tbl.GetAlias().GetAliasname()
+	}
+
+	if _, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), alias); err != nil {
+		return fmt.Errorf("failed to add table: %w", err)
+	}
+
+	return nil
+}
+
+func collectSelectFromTables(tables *Tables, node *pg.Node) (bool, error) {
+	switch fromNode := node.GetNode().(type) {
+	default:
+		return false, fmt.Errorf("from type (%T): %w", node.GetNode(), ErrNotImplemented)
+	case *pg.Node_RangeVar:
+		if err := addRangeVar(tables, fromNode.RangeVar); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	case *pg.Node_JoinExpr:
+		join := fromNode.JoinExpr
+		if join.GetIsNatural() || len(join.GetUsingClause()) > 0 || join.GetJoinUsingAlias() != nil || join.GetAlias() != nil {
+			return false, fmt.Errorf("join expression: %w", ErrNotImplemented)
+		}
+
+		leftHasBase, err := collectSelectFromTables(tables, join.GetLarg())
+		if err != nil {
+			return false, err
+		}
+
+		rightHasBase, err := collectSelectFromTables(tables, join.GetRarg())
+		if err != nil {
+			return false, err
+		}
+
+		return leftHasBase || rightHasBase, nil
+	}
+}
+
+func parseSelectJoinColumns(node *pg.Node) (Columns, error) {
+	switch fromNode := node.GetNode().(type) {
+	default:
+		return nil, fmt.Errorf("from type (%T): %w", node.GetNode(), ErrNotImplemented)
+	case *pg.Node_RangeVar:
+		return nil, nil
+	case *pg.Node_JoinExpr:
+		join := fromNode.JoinExpr
+
+		leftColumns, err := parseSelectJoinColumns(join.GetLarg())
+		if err != nil {
+			return nil, err
+		}
+
+		rightColumns, err := parseSelectJoinColumns(join.GetRarg())
+		if err != nil {
+			return nil, err
+		}
+
+		joinColumns, err := parseWhereClause(join.GetQuals())
+		if err != nil {
+			return nil, fmt.Errorf("parse join clause: %w", err)
+		}
+
+		return slices.Concat(leftColumns, rightColumns, joinColumns), nil
+	}
+}
+
 func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocognit,cyclop,funlen,maintidx
 	if sel.DistinctClause != nil ||
 		sel.GetIntoClause() != nil ||
@@ -96,28 +167,9 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	}
 
 	tables := NewTables("public")
-	var fqTableName string
 	from := sel.GetFromClause()[0]
-	switch fromNode := from.GetNode().(type) {
-	default:
-		return nil, fmt.Errorf("from type (%T): %w", from.GetNode(), ErrNotImplemented)
-	case *pg.Node_JoinExpr:
-		return nil, fmt.Errorf("join expression: %w", ErrNotImplemented)
-	case *pg.Node_RangeVar:
-		tbl := fromNode.RangeVar
-		if tbl.GetAlias() != nil {
-			fqtn, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), tbl.GetAlias().GetAliasname())
-			if err != nil {
-				return nil, fmt.Errorf("failed to add table: %w", err)
-			}
-			fqTableName = fqtn
-		} else {
-			fqtn, err := tables.Put(tbl.GetCatalogname(), tbl.GetSchemaname(), tbl.GetRelname(), "")
-			if err != nil {
-				return nil, fmt.Errorf("failed to add table: %w", err)
-			}
-			fqTableName = fqtn
-		}
+	if _, err := collectSelectFromTables(tables, from); err != nil {
+		return nil, err
 	}
 
 	if err := tables.Finalize(); err != nil {
@@ -190,6 +242,12 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		allColumns = append(allColumns, whereColumns...)
 	}
 
+	joinColumns, err := parseSelectJoinColumns(from)
+	if err != nil {
+		return nil, err
+	}
+	allColumns = append(allColumns, joinColumns...)
+
 	for _, node := range sel.GetSortClause() {
 		switch node := node.GetNode().(type) {
 		default:
@@ -231,9 +289,21 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		}
 	}
 
-	table2target := make(map[string]Columns, len(allColumns))
-	table2target[fqTableName] = nil
+	allTables, err := tables.GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all tables: %w", err)
+	}
+
+	table2target := make(map[string]Columns, len(allTables)+len(allColumns))
+	for _, tableName := range allTables {
+		table2target[tableName] = nil
+	}
+
 	for _, column := range allColumns {
+		if column.Table() == "" && tables.SourcesCount() > 1 {
+			return nil, fmt.Errorf("ambiguous column reference (%s): %w", column.column, ErrNotImplemented)
+		}
+
 		tbl, ok := tables.Get(column.Table())
 		if !ok {
 			return nil, fmt.Errorf("table not found: %s", column.Table()) //nolint:err113

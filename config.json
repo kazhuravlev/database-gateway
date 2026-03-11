@@ -1,20 +1,19 @@
 {
 	"targets": [
 		{
-			"id": "pg-5433",
-			"description": "Production for clients service",
+			"id": "taxi-prod",
+			"description": "Taxi svc database. Clients, drivers, transfers, etc.",
 			"tags": [
 				"env:production",
-				"svc:clients",
-				"replica:analytics"
+				"svc:taxi"
 			],
 			"type": "postgres",
 			"connection": {
 				"host": "127.0.0.1",
 				"port": 5433,
-				"user": "pg5433",
-				"password": "pg5433",
-				"db": "pg5433",
+				"user": "pgtaxi",
+				"password": "pgtaxi",
+				"db": "pgtaxi",
 				"use_ssl": false,
 				"max_pool_size": 4
 			},
@@ -24,16 +23,63 @@
 					"table": "public.clients",
 					"fields": [
 						"id",
-						"name",
-						"email"
+						"full_name",
+						"rating",
+						"joined_at"
 					]
 				},
 				{
-					"table": "public.another_table",
+					"table": "public.cars",
 					"fields": [
-						"name",
-						"surname",
-						"money"
+						"id",
+						"plate_number",
+						"model",
+						"color",
+						"year_made",
+						"service_status",
+						"current_city"
+					]
+				},
+				{
+					"table": "public.drivers",
+					"fields": [
+						"id",
+						"full_name",
+						"phone",
+						"rating",
+						"status",
+						"city",
+						"car_id"
+					]
+				},
+				{
+					"table": "public.transfers",
+					"fields": [
+						"id",
+						"client_id",
+						"driver_id",
+						"car_id",
+						"pickup_address",
+						"dropoff_address",
+						"requested_at",
+						"completed_at",
+						"distance_km",
+						"duration_minutes",
+						"status",
+						"fare_amount_cents"
+					]
+				},
+				{
+					"table": "public.transactions",
+					"fields": [
+						"id",
+						"transfer_id",
+						"payment_method",
+						"amount_cents",
+						"currency",
+						"status",
+						"processed_at",
+						"external_reference"
 					]
 				}
 			]

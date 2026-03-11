@@ -74,16 +74,16 @@ services:
 
   # This is an external databases
 
-  postgres-5433:
+  postgres-taxi:
     image: postgres:16
     ports:
       - '127.0.0.1:5433:5432'
     environment:
-      POSTGRES_DB: pg5433
-      POSTGRES_USER: pg5433
-      POSTGRES_PASSWORD: pg5433
+      POSTGRES_DB: pgtaxi
+      POSTGRES_USER: pgtaxi
+      POSTGRES_PASSWORD: pgtaxi
     volumes:
-      - './init-5433.sql:/docker-entrypoint-initdb.d/init.sql'
+      - './init-taxi.sql:/docker-entrypoint-initdb.d/init.sql'
 
   postgres-5434:
     image: postgres:16

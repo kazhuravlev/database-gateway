@@ -176,6 +176,54 @@ GROUP BY region, product;`
 			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			require.ErrorIs(t, err, validator.ErrComplicatedQuery)
 		})
+
+		t.Run("complicated_query_matrix", func(t *testing.T) {
+			t.Parallel()
+
+			testCases := []struct {
+				name  string
+				query string
+			}{
+				{
+					name: "cte_and_nested_subquery",
+					query: `WITH regional_sales AS (
+    SELECT region, SUM(amount) AS total_sales
+    FROM orders
+    GROUP BY region
+)
+SELECT region
+FROM regional_sales
+WHERE total_sales > (SELECT SUM(total_sales) / 10 FROM regional_sales)`,
+				},
+				{
+					name:  "join_using_clause",
+					query: `SELECT c.id FROM clients AS c JOIN orders AS o USING (id)`,
+				},
+				{
+					name:  "natural_join",
+					query: `SELECT c.id FROM clients AS c NATURAL JOIN orders AS o`,
+				},
+				{
+					name:  "join_subquery_rhs",
+					query: `SELECT c.id FROM clients AS c JOIN (SELECT client_id FROM orders) AS o ON c.id = o.client_id`,
+				},
+				{
+					name:  "union",
+					query: `SELECT id FROM clients UNION SELECT id FROM orders`,
+				},
+			}
+
+			haveAccess := func(_ validator.Vec) bool { return true }
+			for _, tc := range testCases {
+				tc := tc
+				t.Run(tc.name, func(t *testing.T) {
+					t.Parallel()
+
+					err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, tc.query)
+					require.ErrorIs(t, err, validator.ErrComplicatedQuery)
+				})
+			}
+		})
 	})
 
 	t.Run("select", func(t *testing.T) {
@@ -203,6 +251,50 @@ GROUP BY region, product;`
 			err := validator.IsAllowed(helpSchemaFromTables(target.Tables), haveAccess, query)
 			// TODO: make it allowed. Actually this is legal query for this ACL.
 			require.ErrorIs(t, err, validator.ErrComplicatedQuery)
+		})
+
+		t.Run("join_access_requires_all_tables", func(t *testing.T) {
+			t.Parallel()
+
+			schema := helpSchemaFromTables([]config.TargetTable{
+				{
+					Table:  "public.clients",
+					Fields: []string{"id", "name"},
+				},
+				{
+					Table:  "public.orders",
+					Fields: []string{"id", "client_id", "status"},
+				},
+			})
+
+			haveAccess := func(vec validator.Vec) bool {
+				return vec.Tbl == "public.clients"
+			}
+
+			query := `select c.id, o.id
+from public.clients as c
+join public.orders as o on c.id = o.client_id
+where o.status = 'paid'`
+			err := validator.IsAllowed(schema, haveAccess, query)
+			require.ErrorIs(t, err, validator.ErrAccessDenied)
+		})
+
+		t.Run("join_schema_checks_every_referenced_table", func(t *testing.T) {
+			t.Parallel()
+
+			schema := helpSchemaFromTables([]config.TargetTable{
+				{
+					Table:  "public.clients",
+					Fields: []string{"id", "name"},
+				},
+			})
+
+			haveAccess := func(_ validator.Vec) bool { return true }
+			query := `select c.id, o.id
+from public.clients as c
+join public.orders as o on c.id = o.client_id`
+			err := validator.IsAllowed(schema, haveAccess, query)
+			require.ErrorIs(t, err, validator.ErrAccessDenied)
 		})
 	})
 

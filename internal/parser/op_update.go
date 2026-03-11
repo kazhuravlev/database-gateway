@@ -224,13 +224,18 @@ func parseWhereClause(node *pg.Node) (Columns, error) { //nolint:cyclop
 	switch node := node.GetNode().(type) {
 	default:
 		return nil, fmt.Errorf("where clause not supported (%T): %w", node, ErrNotImplemented)
-	case nil, *pg.Node_NullTest:
+	case nil:
 	case *pg.Node_BoolExpr:
 		for _, node := range node.BoolExpr.GetArgs() {
 			switch node.GetNode().(type) {
 			default:
 				return nil, fmt.Errorf("bool expr argument (%T): %w", node.GetNode(), ErrNotImplemented)
 			case *pg.Node_NullTest:
+				cols, err := parseWhereClause(node)
+				if err != nil {
+					return nil, fmt.Errorf("parse update where null test: %w", err)
+				}
+				columns = append(columns, cols...)
 			case *pg.Node_BoolExpr:
 				cols, err := parseWhereClause(node)
 				if err != nil {
@@ -252,6 +257,25 @@ func parseWhereClause(node *pg.Node) (Columns, error) { //nolint:cyclop
 		}
 
 		columns = append(columns, cols...)
+	case *pg.Node_NullTest:
+		switch arg := node.NullTest.GetArg().GetNode().(type) {
+		default:
+			return nil, fmt.Errorf("null test arg (%T): %w", arg, ErrNotImplemented)
+		case *pg.Node_ColumnRef:
+			column, err := pNodeColumnRef(arg)
+			if err != nil {
+				return nil, fmt.Errorf("parse column: %w", err)
+			}
+
+			columns = append(columns, column)
+		case *pg.Node_AExpr:
+			cols, err := parseAexpr(arg)
+			if err != nil {
+				return nil, fmt.Errorf("null test arg expr: %w", err)
+			}
+
+			columns = append(columns, cols...)
+		}
 	}
 
 	return columns, nil
