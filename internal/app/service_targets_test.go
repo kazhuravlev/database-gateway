@@ -7,6 +7,7 @@ import (
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/stretchr/testify/require"
 )
 
@@ -178,4 +179,25 @@ default allow_vector := false
 			require.Equal(t, tc.wantServer, got)
 		})
 	}
+}
+
+func TestPolicyReceivesCanonicalTableName(t *testing.T) {
+	t.Parallel()
+
+	schema := validator.NewDbSchema("public", []config.TargetTable{
+		{Table: "public.clients", Fields: []string{"id", "name"}},
+	})
+
+	var seenTable string
+	haveAccess := func(vec validator.Vec) bool {
+		seenTable = schema.CanonicalTable(vec.Tbl)
+
+		return seenTable == "public.clients"
+	}
+
+	vectors, err := validator.MakeVectors("select id, name from clients")
+	require.NoError(t, err)
+	require.NoError(t, validator.ValidateSchema(vectors, schema))
+	require.NoError(t, validator.ValidateAccess(vectors, haveAccess))
+	require.Equal(t, "public.clients", seenTable)
 }

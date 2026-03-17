@@ -155,7 +155,12 @@ func (s *Service) RunQuery(
 	subjects := userSubjects(user)
 
 	haveAccess := func(vec validator.Vec) bool {
-		return s.opts.authorizer.AllowVector(subjects, srvID.S(), vec.Op.S(), vec.Tbl)
+		return s.opts.authorizer.AllowVector(
+			subjects,
+			srvID.S(),
+			vec.Op.S(),
+			schema.CanonicalTable(vec.Tbl),
+		)
 	}
 
 	parsingStartedAt := time.Now()
