@@ -114,7 +114,7 @@ type FacadeConfig struct {
 }
 
 type PolicyConfig struct {
-	Path string `json:"path"`
+	Path string `json:"path"` // directory with .rego modules; relative paths are resolved from the config file location
 }
 
 type Config struct {

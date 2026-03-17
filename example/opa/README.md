@@ -17,3 +17,9 @@ The OPA authorizer in `internal/policy/opa` evaluates only this input:
   "table": "public.clients"
 }
 ```
+
+`table` is normalized before policy evaluation. If a query references `clients` and the target schema resolves it to
+`public.clients`, OPA receives `public.clients`.
+
+The configured policy path is a directory of `.rego` modules. Relative paths are resolved from the config file
+location.

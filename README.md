@@ -88,12 +88,14 @@ Run commands to get a local dbgw instance with 3 PostgreSQL instances.
 git clone https://github.com/kazhuravlev/database-gateway.git
 cd database-gateway/example
 docker compose up --pull always --force-recreate -d
-open 'http://127.0.0.1:8080'
+open 'http://localhost:8080'
 # Authentik and test users are bootstrapped automatically.
 ```
 
 The example setup uses self-hosted Authentik as the OIDC provider.
 OPA policies are loaded from `example/opa/basic/` and configured in [config.json](example/config.json).
+Use `localhost` consistently for the example login flow, because the example OIDC redirect URL is
+`http://localhost:8080/auth/callback`.
 
 Bootstrap details for local Authentik:
 
@@ -122,7 +124,7 @@ Admins can inspect recent stored requests and open a detailed result view with e
 - [x] Integrates with OpenID Connect for user authentication
 - [x] Enforces access filtering through OPA
 - [x] Fine-grained table-level permissions
-- [x] Column-level access control
+- [x] Schema-backed column allowlists
 - [x] SQL parsing to enforce query type restrictions (SELECT, INSERT, etc.)
 - [x] Query validation and sanitization
 - [x] Session management with token expiration
@@ -218,6 +220,26 @@ Each `.rego` file in the configured directory is compiled into the embedded OPA 
 
 - `data.gateway.allow_target`
 - `data.gateway.allow_vector`
+
+`policy.path` is resolved relative to the config file when it is not absolute.
+
+Current OPA input:
+
+```json
+{
+  "subjects": ["user:alice@example.com", "role:user"],
+  "target": "local-1",
+  "op": "select",
+  "table": "public.clients"
+}
+```
+
+Notes:
+
+- `subjects` always includes both the concrete user principal and the mapped role principal
+- `table` is always sent to OPA in canonical `schema.table` form
+- unqualified SQL like `select id from clients` is normalized before policy evaluation
+- policies run once for target visibility and once for each parsed query vector
 
 ### Database Connection Settings
 
