@@ -1,7 +1,7 @@
 package gateway
 
 default allow_target := false
-default allow_vector := false
+default allow_query := false
 
 # Support can look up operational records, but not highly sensitive tables.
 allowed_support_tables := {
@@ -15,7 +15,7 @@ allow_target if {
 	input.target == "taxi-prod"
 }
 
-allow_vector if {
+allow_query if {
 	"role:support" in input.subjects
 	input.target == "taxi-prod"
 	input.op == "select"

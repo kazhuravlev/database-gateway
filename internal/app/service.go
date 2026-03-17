@@ -155,7 +155,7 @@ func (s *Service) RunQuery(
 	subjects := userSubjects(user)
 
 	haveAccess := func(vec validator.Vec) bool {
-		return s.opts.authorizer.AllowVector(
+		return s.opts.authorizer.AllowQuery(
 			subjects,
 			srvID.S(),
 			vec.Op.S(),

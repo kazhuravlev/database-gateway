@@ -31,7 +31,7 @@ const targetPolicy = `
 package gateway
 
 default allow_target := false
-default allow_vector := false
+default allow_query := false
 
 allow_target if {
 	"role:user" in input.subjects
@@ -43,7 +43,7 @@ allow_target if {
 	input.target == "pg-2"
 }
 
-allow_vector if {
+allow_query if {
 	allow_target
 	input.op == "select"
 }
@@ -202,7 +202,7 @@ func TestServiceGetTargetByID(t *testing.T) {
 			authorizer: `
 package gateway
 default allow_target := false
-default allow_vector := false
+default allow_query := false
 `,
 			targetID:   "pg-1",
 			wantErrIs:  ErrNotFound,

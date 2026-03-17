@@ -202,7 +202,7 @@ func TestNewRequiresRoleMapping(t *testing.T) {
 		mustAuthorizer(t, `
 package gateway
 default allow_target := false
-default allow_vector := false
+default allow_query := false
 `),
 		&storage.Service{},
 	)

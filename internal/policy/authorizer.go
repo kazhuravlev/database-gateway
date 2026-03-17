@@ -19,5 +19,5 @@ package policy
 // Authorizer decides whether a subject can see a target or access a query vector.
 type Authorizer interface {
 	AllowTarget(subjects []string, target string) bool
-	AllowVector(subjects []string, target, op, table string) bool
+	AllowQuery(subjects []string, target, op, table string) bool
 }

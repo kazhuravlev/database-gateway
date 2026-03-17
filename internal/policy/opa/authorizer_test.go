@@ -29,14 +29,14 @@ const ExamplePolicySimple = `
 package gateway
 
 default allow_target := false
-default allow_vector := false
+default allow_query := false
 
 allow_target if {
 	"role:user" in input.subjects
 	input.target == "local-1"
 }
 
-allow_vector if {
+allow_query if {
 	"role:user" in input.subjects
 	input.target == "local-1"
 	input.op == "select"
@@ -57,7 +57,7 @@ func TestAuthorizerAllowTarget(t *testing.T) {
 	require.False(t, authz.AllowTarget([]string{"user:admin@example.com", "role:admin"}, "local-1"))
 }
 
-func TestAuthorizerAllowVector(t *testing.T) {
+func TestAuthorizerAllowQuery(t *testing.T) {
 	t.Parallel()
 
 	authz, err := opa.New(context.Background(), map[string]string{
@@ -65,19 +65,19 @@ func TestAuthorizerAllowVector(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	require.True(t, authz.AllowVector(
+	require.True(t, authz.AllowQuery(
 		[]string{"user:alice@example.com", "role:user"},
 		"local-1",
 		"select",
 		"public.clients",
 	))
-	require.False(t, authz.AllowVector(
+	require.False(t, authz.AllowQuery(
 		[]string{"user:alice@example.com", "role:user"},
 		"local-1",
 		"update",
 		"public.clients",
 	))
-	require.False(t, authz.AllowVector(
+	require.False(t, authz.AllowQuery(
 		[]string{"user:alice@example.com", "role:user"},
 		"local-1",
 		"select",

@@ -219,7 +219,7 @@ OPA policy bundles are loaded from disk:
 Each `.rego` file in the configured directory is compiled into the embedded OPA authorizer. Policies must define:
 
 - `data.gateway.allow_target`
-- `data.gateway.allow_vector`
+- `data.gateway.allow_query`
 
 `policy.path` is resolved relative to the config file when it is not absolute.
 

@@ -30,12 +30,12 @@ import (
 
 const (
 	queryAllowTarget = "x = data.gateway.allow_target"
-	queryAllowVector = "x = data.gateway.allow_vector"
+	queryAllowQuery  = "x = data.gateway.allow_query"
 )
 
 type Authorizer struct {
 	targetQuery oparego.PreparedEvalQuery
-	vectorQuery oparego.PreparedEvalQuery
+	queryQuery  oparego.PreparedEvalQuery
 }
 
 var _ policy.Authorizer = (*Authorizer)(nil)
@@ -46,14 +46,14 @@ func New(ctx context.Context, modules map[string]string) (*Authorizer, error) {
 		return nil, fmt.Errorf("prepare target query: %w", err)
 	}
 
-	vectorQuery, err := prepareQuery(ctx, modules, queryAllowVector)
+	queryQuery, err := prepareQuery(ctx, modules, queryAllowQuery)
 	if err != nil {
 		return nil, fmt.Errorf("prepare vector query: %w", err)
 	}
 
 	return &Authorizer{
 		targetQuery: targetQuery,
-		vectorQuery: vectorQuery,
+		queryQuery:  queryQuery,
 	}, nil
 }
 
@@ -66,8 +66,8 @@ func (a *Authorizer) AllowTarget(subjects []string, target string) bool {
 	})
 }
 
-func (a *Authorizer) AllowVector(subjects []string, target, op, table string) bool {
-	return evalBool(a.vectorQuery, policyInput{
+func (a *Authorizer) AllowQuery(subjects []string, target, op, table string) bool {
+	return evalBool(a.queryQuery, policyInput{
 		Subjects: subjects,
 		Target:   target,
 		Op:       op,

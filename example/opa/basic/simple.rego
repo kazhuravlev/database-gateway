@@ -1,7 +1,7 @@
 package gateway
 
 default allow_target := false
-default allow_vector := false
+default allow_query := false
 
 allow_target if {
 	"role:admin" in input.subjects
@@ -19,23 +19,23 @@ allow_target if {
 	input.target in allowed_users_servers
 }
 
-allow_vector if {
+allow_query if {
 	"role:admin" in input.subjects
 }
 
-allow_vector if {
+allow_query if {
 	"role:user" in input.subjects
 	input.target == "local-1"
 	input.op == "select"
 }
 
-allow_vector if {
+allow_query if {
 	"role:user" in input.subjects
 	input.target == "local-2"
 	input.op == "select"
 }
 
-allow_vector if {
+allow_query if {
 	"role:user" in input.subjects
 	input.target in {"pg-5435", "taxi-prod"}
 	input.op == "select"
