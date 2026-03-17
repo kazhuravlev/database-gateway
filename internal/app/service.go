@@ -32,8 +32,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/policy/opa"
 	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
@@ -633,8 +633,8 @@ func getClaimValues(claims map[string]json.RawMessage, claimName string) ([]stri
 
 func userSubjects(user structs.User) []string {
 	return []string{
-		rules.UserPrincipal(user.ID.S()),
-		rules.RolePrincipal(user.Role.S()),
+		opa.SubjectUser(user.ID.S()),
+		opa.SubjectRole(user.Role.S()),
 	}
 }
 

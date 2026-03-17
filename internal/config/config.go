@@ -19,8 +19,6 @@ package config
 import (
 	"fmt"
 	"strings"
-
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 )
 
 type UserID string
@@ -115,49 +113,26 @@ type FacadeConfig struct {
 	UnsafeCORSAllowAll bool   `json:"unsafe_cors_allow_all"`
 }
 
+type PolicyConfig struct {
+	Path string `json:"path"`
+}
+
 type Config struct {
 	Targets []Target          `json:"targets"`
 	Users   UsersProviderOIDC `json:"users"`
-	ACLs    []rules.ACL       `json:"acls"`
+	Policy  PolicyConfig      `json:"policy"`
 	Facade  FacadeConfig      `json:"facade"`
 	Storage PostgresConfig    `json:"storage"`
 }
 
-func (c *Config) Validate() error { //nolint:cyclop
-	type hTable struct {
-		target TargetID
-		table  string
-	}
-
+func (c *Config) Validate() error {
 	// Check tht each target have table names with schema prefix
-	idx := make(map[hTable]struct{}, len(c.Targets)*2)
 	for i := range c.Targets {
 		target := c.Targets[i]
 		for _, table := range target.Tables {
 			if !strings.Contains(table.Table, ".") {
 				return fmt.Errorf("use table notation with leading schema. Like 'public.%s'", table.Table) //nolint:err113
 			}
-
-			key := hTable{
-				target: target.ID,
-				table:  table.Table,
-			}
-			idx[key] = struct{}{}
-		}
-	}
-
-	// Check that all acls linked with exists targets
-	for _, acl := range c.ACLs {
-		if acl.Target == rules.Star || acl.Tbl == rules.Star {
-			continue
-		}
-
-		key := hTable{
-			target: TargetID(acl.Target),
-			table:  acl.Tbl,
-		}
-		if _, ok := idx[key]; !ok {
-			return fmt.Errorf("ACL (%#v) references for not existent table", acl) //nolint:err113
 		}
 	}
 
@@ -165,6 +140,10 @@ func (c *Config) Validate() error { //nolint:cyclop
 		if !role.IsValid() {
 			return fmt.Errorf("unsupported role %q for users.role_mapping[%q]", role, attrValue) //nolint:err113
 		}
+	}
+
+	if strings.TrimSpace(c.Policy.Path) == "" {
+		return fmt.Errorf("policy.path is required") //nolint:err113
 	}
 
 	return nil

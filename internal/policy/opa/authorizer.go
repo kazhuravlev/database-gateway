@@ -19,7 +19,10 @@ package opa
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/kazhuravlev/database-gateway/internal/policy"
 	oparego "github.com/open-policy-agent/opa/v1/rego"
@@ -75,6 +78,42 @@ type policyInput struct {
 	Target   string   `json:"target"`
 	Op       string   `json:"op,omitempty"`
 	Table    string   `json:"table,omitempty"`
+}
+
+func LoadModules(dir string) (map[string]string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("read policy dir: %w", err)
+	}
+
+	modules := make(map[string]string)
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".rego" {
+			continue
+		}
+
+		filename := filepath.Join(dir, entry.Name())
+		buf, err := os.ReadFile(filename)
+		if err != nil {
+			return nil, fmt.Errorf("read policy module %q: %w", filename, err)
+		}
+
+		modules[entry.Name()] = string(buf)
+	}
+
+	if len(modules) == 0 {
+		return nil, fmt.Errorf("no .rego files found in %q", dir) //nolint:err113
+	}
+
+	return modules, nil
+}
+
+func SubjectUser(userID string) string {
+	return "user:" + strings.TrimSpace(userID)
+}
+
+func SubjectRole(role string) string {
+	return "role:" + strings.TrimSpace(role)
 }
 
 func prepareQuery(
