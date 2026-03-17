@@ -17,6 +17,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -143,7 +144,7 @@ func (c *Config) Validate() error {
 	}
 
 	if strings.TrimSpace(c.Policy.Path) == "" {
-		return fmt.Errorf("policy.path is required") //nolint:err113
+		return errors.New("policy.path is required") //nolint:err113
 	}
 
 	return nil
