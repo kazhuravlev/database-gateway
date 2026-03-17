@@ -21,12 +21,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"github.com/kazhuravlev/database-gateway/internal/app"
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/migrator"
 	"github.com/kazhuravlev/database-gateway/internal/pgdb"
+	"github.com/kazhuravlev/database-gateway/internal/policy/opa"
 	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/storage/migrations"
 	"github.com/kazhuravlev/just"
@@ -40,6 +41,10 @@ func withConfig(action func(c *cli.Context, cfg config.Config) error) cli.Action
 		cfg, err := just.JsonParseTypeF[config.Config](configFilename)
 		if err != nil {
 			return fmt.Errorf("parse config: %w", err)
+		}
+
+		if !filepath.IsAbs(cfg.Policy.Path) {
+			cfg.Policy.Path = filepath.Join(filepath.Dir(configFilename), cfg.Policy.Path)
 		}
 
 		return action(c, *cfg)
@@ -99,7 +104,17 @@ func withApp(
 			return fmt.Errorf("init storage: %w", err)
 		}
 
-		appInst, err := app.New(app.NewOptions(logger, cfg.Targets, cfg.Users, rules.New(cfg.ACLs), storageInst))
+		modules, err := opa.LoadModules(cfg.Policy.Path)
+		if err != nil {
+			return fmt.Errorf("load policy modules: %w", err)
+		}
+
+		authorizer, err := opa.New(ctx, modules)
+		if err != nil {
+			return fmt.Errorf("init opa authorizer: %w", err)
+		}
+
+		appInst, err := app.New(app.NewOptions(logger, cfg.Targets, cfg.Users, authorizer, storageInst))
 		if err != nil {
 			return fmt.Errorf("create app instance: %w", err)
 		}
