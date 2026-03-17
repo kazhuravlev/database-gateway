@@ -165,29 +165,9 @@
 			"dbgw-users": "user"
 		}
 	},
-	"acls": [
-		{
-			"user": "user:admin@example.com",
-			"op": "*",
-			"target": "*",
-			"tbl": "*",
-			"allow": true
-		},
-		{
-			"user": "role:user",
-			"op": "*",
-			"target": "pg-5433",
-			"tbl": "*",
-			"allow": true
-		},
-		{
-			"user": "role:user",
-			"op": "select",
-			"target": "pg-5434",
-			"tbl": "*",
-			"allow": true
-		}
-	],
+	"policy": {
+		"path": "./example/opa/basic"
+	},
 	"facade": {
 		"port": 8080,
 		"cookie_secret": "secret",
