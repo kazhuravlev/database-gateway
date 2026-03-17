@@ -54,20 +54,38 @@ func TestServiceGetTargets(t *testing.T) {
 
 	targets := []config.Target{
 		{
-			ID:            "pg-1",
-			Description:   "main",
-			Tags:          []string{"prod"},
-			Type:          "postgres",
+			ID:          "pg-1",
+			Description: "main",
+			Tags:        []string{"prod"},
+			Type:        "postgres",
+			Connection: config.Connection{
+				Host:        "",
+				Port:        0,
+				User:        "",
+				Password:    "",
+				DB:          "",
+				UseSSL:      false,
+				MaxPoolSize: 0,
+			},
 			DefaultSchema: "public",
-			Tables:        []config.TargetTable{{Table: "public.clients"}},
+			Tables:        []config.TargetTable{{Table: "public.clients", Fields: nil}},
 		},
 		{
-			ID:            "pg-2",
-			Description:   "analytics",
-			Tags:          []string{"analytics"},
-			Type:          "postgres",
+			ID:          "pg-2",
+			Description: "analytics",
+			Tags:        []string{"analytics"},
+			Type:        "postgres",
+			Connection: config.Connection{
+				Host:        "",
+				Port:        0,
+				User:        "",
+				Password:    "",
+				DB:          "",
+				UseSSL:      false,
+				MaxPoolSize: 0,
+			},
 			DefaultSchema: "public",
-			Tables:        []config.TargetTable{{Table: "public.events"}},
+			Tables:        []config.TargetTable{{Table: "public.events", Fields: nil}},
 		},
 	}
 
@@ -78,17 +96,17 @@ func TestServiceGetTargets(t *testing.T) {
 	}{
 		{
 			name:    "allow by role",
-			user:    structs.User{ID: "bob@example.com", Role: config.RoleUser},
+			user:    structs.User{ID: "bob@example.com", Username: "", Role: config.RoleUser},
 			wantIDs: []config.TargetID{"pg-1"},
 		},
 		{
 			name:    "allow by user principal and role",
-			user:    structs.User{ID: "alice@example.com", Role: config.RoleUser},
+			user:    structs.User{ID: "alice@example.com", Username: "", Role: config.RoleUser},
 			wantIDs: []config.TargetID{"pg-1", "pg-2"},
 		},
 		{
 			name:    "no matching policy",
-			user:    structs.User{ID: "admin@example.com", Role: config.RoleAdmin},
+			user:    structs.User{ID: "admin@example.com", Username: "", Role: config.RoleAdmin},
 			wantIDs: []config.TargetID{},
 		},
 	}
@@ -99,12 +117,28 @@ func TestServiceGetTargets(t *testing.T) {
 
 			svc := &Service{
 				opts: Options{
-					targets:    targets,
-					users:      config.UsersProviderOIDC{},
+					logger:  nil,
+					targets: targets,
+					users: config.UsersProviderOIDC{
+						ClientID:            "",
+						ClientSecret:        "",
+						IssuerURL:           "",
+						RedirectURL:         "",
+						Scopes:              nil,
+						AccessTokenAudience: "",
+						RoleClaim:           "",
+						RoleMapping:         nil,
+					},
 					authorizer: mustAuthorizer(t, targetPolicy),
 					storage:    nil,
 				},
-				connsMu: new(sync.RWMutex),
+				connsMu:       new(sync.RWMutex),
+				conns:         nil,
+				oauthCfg:      nil,
+				oidcProvider:  nil,
+				tokenVerifier: nil,
+				oidcLogoutEP:  "",
+				oidcRevokeEP:  "",
 			}
 
 			got, err := svc.GetTargets(context.Background(), tc.user)
@@ -124,15 +158,24 @@ func TestServiceGetTargetByID(t *testing.T) {
 	t.Parallel()
 
 	target := config.Target{
-		ID:            "pg-1",
-		Description:   "main",
-		Tags:          []string{"prod"},
-		Type:          "postgres",
+		ID:          "pg-1",
+		Description: "main",
+		Tags:        []string{"prod"},
+		Type:        "postgres",
+		Connection: config.Connection{
+			Host:        "",
+			Port:        0,
+			User:        "",
+			Password:    "",
+			DB:          "",
+			UseSSL:      false,
+			MaxPoolSize: 0,
+		},
 		DefaultSchema: "public",
-		Tables:        []config.TargetTable{{Table: "public.clients"}},
+		Tables:        []config.TargetTable{{Table: "public.clients", Fields: nil}},
 	}
 
-	user := structs.User{ID: "alice@example.com", Role: config.RoleUser}
+	user := structs.User{ID: "alice@example.com", Username: "", Role: config.RoleUser}
 
 	testCases := []struct {
 		name       string
@@ -145,12 +188,13 @@ func TestServiceGetTargetByID(t *testing.T) {
 			name:       "allowed target",
 			authorizer: targetPolicy,
 			targetID:   "pg-1",
+			wantErrIs:  nil,
 			wantServer: &structs.Server{
 				ID:          "pg-1",
 				Description: "main",
 				Tags:        []structs.Tag{{Name: "prod"}},
 				Type:        "postgres",
-				Tables:      []config.TargetTable{{Table: "public.clients"}},
+				Tables:      []config.TargetTable{{Table: "public.clients", Fields: nil}},
 			},
 		},
 		{
@@ -160,14 +204,16 @@ package gateway
 default allow_target := false
 default allow_vector := false
 `,
-			targetID:  "pg-1",
-			wantErrIs: ErrNotFound,
+			targetID:   "pg-1",
+			wantErrIs:  ErrNotFound,
+			wantServer: nil,
 		},
 		{
 			name:       "target does not exist",
 			authorizer: targetPolicy,
 			targetID:   "pg-unknown",
 			wantErrIs:  ErrNotFound,
+			wantServer: nil,
 		},
 	}
 
@@ -177,11 +223,28 @@ default allow_vector := false
 
 			svc := &Service{
 				opts: Options{
-					targets:    []config.Target{target},
-					users:      config.UsersProviderOIDC{},
+					logger:  nil,
+					targets: []config.Target{target},
+					users: config.UsersProviderOIDC{
+						ClientID:            "",
+						ClientSecret:        "",
+						IssuerURL:           "",
+						RedirectURL:         "",
+						Scopes:              nil,
+						AccessTokenAudience: "",
+						RoleClaim:           "",
+						RoleMapping:         nil,
+					},
 					authorizer: mustAuthorizer(t, tc.authorizer),
+					storage:    nil,
 				},
-				connsMu: new(sync.RWMutex),
+				connsMu:       new(sync.RWMutex),
+				conns:         nil,
+				oauthCfg:      nil,
+				oidcProvider:  nil,
+				tokenVerifier: nil,
+				oidcLogoutEP:  "",
+				oidcRevokeEP:  "",
 			}
 
 			got, err := svc.GetTargetByID(context.Background(), user, tc.targetID)

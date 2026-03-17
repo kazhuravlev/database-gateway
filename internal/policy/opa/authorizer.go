@@ -61,6 +61,8 @@ func (a *Authorizer) AllowTarget(subjects []string, target string) bool {
 	return evalBool(a.targetQuery, policyInput{
 		Subjects: subjects,
 		Target:   target,
+		Op:       "",
+		Table:    "",
 	})
 }
 
