@@ -64,6 +64,18 @@ func TestParseSelectAggregateOnlyStillEmitsVector(t *testing.T) {
 	require.Equal(t, "clients", sel.Tbl)
 }
 
+func TestParseSelectQualifiedAggregateStarStillEmitsVector(t *testing.T) {
+	t.Parallel()
+
+	vecs, err := parser.Parse("SELECT count(c.*) FROM clients AS c")
+	require.NoError(t, err)
+	require.Len(t, vecs, 1)
+
+	sel, ok := vecs[0].(parser.SelectVec)
+	require.True(t, ok)
+	require.Equal(t, "clients", sel.Tbl)
+}
+
 // INSERT without explicit column list must still emit a vector for ACL checks.
 func TestParseInsertImplicitColumnsStillEmitsVector(t *testing.T) {
 	t.Parallel()

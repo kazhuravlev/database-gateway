@@ -75,6 +75,18 @@ func pNodeColumnRef(node *pg.Node_ColumnRef) (Column, error) {
 	return column, nil
 }
 
+func isFunctionStarArg(node *pg.Node_ColumnRef) bool {
+	fields := node.ColumnRef.GetFields()
+	if len(fields) == 0 {
+		return false
+	}
+
+	last := fields[len(fields)-1].GetNode()
+	_, ok := last.(*pg.Node_AStar)
+
+	return ok
+}
+
 func addRangeVar(tables *Tables, tbl *pg.RangeVar) error {
 	var alias string
 	if tbl.GetAlias() != nil {
@@ -221,6 +233,10 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 					default:
 						return nil, fmt.Errorf("unknown function argument type (%T)", node) //nolint:err113
 					case *pg.Node_ColumnRef:
+						if isFunctionStarArg(node) {
+							continue
+						}
+
 						column, err := pNodeColumnRef(node)
 						if err != nil {
 							return nil, fmt.Errorf("parse column: %w", err)
