@@ -90,6 +90,19 @@ func TestValidateSchema(t *testing.T) {
 	})
 }
 
+func TestCanonicalTable(t *testing.T) {
+	t.Parallel()
+
+	schema := validator.NewDbSchema("public", []config.TargetTable{
+		{Table: "public.clients", Fields: []string{"id"}},
+		{Table: "custom.orders", Fields: []string{"id"}},
+	})
+
+	require.Equal(t, "public.clients", schema.CanonicalTable("clients"))
+	require.Equal(t, "custom.orders", schema.CanonicalTable("custom.orders"))
+	require.Equal(t, "missing", schema.CanonicalTable("missing"))
+}
+
 func testTargetTables() []config.TargetTable {
 	return []config.TargetTable{
 		{

@@ -9,7 +9,7 @@
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go#database-tools)
 
 This service provides a unified web interface for secure, controlled access to company databases. It enables employees
-to run queries on `production` databases while enforcing access control (`ACL`) policies. For example, team leads may
+to run queries on `production` databases while enforcing Open Policy Agent (`OPA`) policies. For example, team leads may
 have permissions to execute both `SELECT` and `INSERT` queries on certain tables, while other team members are
 restricted to read-only (`SELECT`) access. This approach ensures that database interactions are managed safely and
 that each user's access is tailored to their role and responsibilities.
@@ -17,7 +17,7 @@ that each user's access is tailored to their role and responsibilities.
 ## TL;DR
 
 - Run approved SQL against multiple PostgreSQL targets from one web UI.
-- Authenticate users via OIDC and enforce ACL rules by user, target, operation, and table/column.
+- Authenticate users via OIDC and enforce OPA rules by user, target, operation, and table.
 - Store query results (with shareable links and execution metadata) for debugging and auditing.
 
 ## Table of Contents
@@ -35,7 +35,7 @@ that each user's access is tailored to their role and responsibilities.
 ## Architecture Overview
 
 This application acts as a secure gateway to multiple PostgreSQL instances, allowing authenticated users to run approved
-queries through a unified web interface, with fine-grained ACLs controlling access.
+queries through a unified web interface, with fine-grained OPA policies controlling access.
 
 
 ```
@@ -53,20 +53,20 @@ queries through a unified web interface, with fine-grained ACLs controlling acce
 ### Components
 
 1. **Local PostgreSQL Database**:
-    - Stores query results, user profiles, and ACLs.
+    - Stores query results and user profiles.
     - Acts as a cache for query results, allowing unique links for debugging without re-execution.
 
 2. **Remote PostgreSQL Instances**:
     - Host production data and are accessed only through the app.
-    - Queries are run only if authorized by ACLs, limiting access to specific users, tables, and query types.
+    - Queries are run only if authorized by OPA policies, limiting access to specific users, tables, and query types.
 
 3. **OIDC Authentication**:
     - Users authenticate via an external OIDC provider.
-    - User roles are mapped to ACLs, defining what queries each user can run.
+    - User roles are mapped to OPA subjects, defining what queries each user can run.
 
-4. **Access Control Lists (ACLs)**:
+4. **OPA Policies**:
     - Define user permissions at the instance, table, and query type levels.
-    - Stored in the local database, restricting queries based on user identity.
+    - Loaded from `.rego` files on disk and evaluated inside the gateway.
 
 5. **Web Interface**:
     - Provides login, query submission, and result viewing.
@@ -74,8 +74,8 @@ queries through a unified web interface, with fine-grained ACLs controlling acce
 
 ### Flow of Operations
 
-1. **Authentication**: Users log in via OIDC, and their identity maps to ACL permissions.
-2. **Query Submission**: Authorized queries are checked against ACLs, then run on remote instances.
+1. **Authentication**: Users log in via OIDC, and their identity maps to OPA subjects.
+2. **Query Submission**: Authorized queries are checked against OPA policies, then run on remote instances.
 3. **Result Caching**: Results are stored locally with unique links for easy access and debugging.
 
 This architecture ensures secure, controlled access to production data, balancing usability with data protection.
@@ -88,12 +88,14 @@ Run commands to get a local dbgw instance with 3 PostgreSQL instances.
 git clone https://github.com/kazhuravlev/database-gateway.git
 cd database-gateway/example
 docker compose up --pull always --force-recreate -d
-open 'http://127.0.0.1:8080'
+open 'http://localhost:8080'
 # Authentik and test users are bootstrapped automatically.
 ```
 
 The example setup uses self-hosted Authentik as the OIDC provider.
-ACLs are stored in [config.json](example/config.json).
+OPA policies are loaded from `example/opa/basic/` and configured in [config.json](example/config.json).
+Use `localhost` consistently for the example login flow, because the example OIDC redirect URL is
+`http://localhost:8080/auth/callback`.
 
 Bootstrap details for local Authentik:
 
@@ -120,9 +122,9 @@ Admins can inspect recent stored requests and open a detailed result view with e
 ### Security & Access Control
 
 - [x] Integrates with OpenID Connect for user authentication
-- [x] Enforces access filtering through ACLs
+- [x] Enforces access filtering through OPA
 - [x] Fine-grained table-level permissions
-- [x] Column-level access control
+- [x] Schema-backed column allowlists
 - [x] SQL parsing to enforce query type restrictions (SELECT, INSERT, etc.)
 - [x] Query validation and sanitization
 - [x] Session management with token expiration
@@ -202,39 +204,42 @@ The service uses OIDC authentication:
 
 `access_token_audience` is optional. If omitted, `client_id` is used for access-token audience validation.
 
-### Access Control Configuration
+### Policy Configuration
 
-Access control lists define user permissions with fine-grained control:
+OPA policy bundles are loaded from disk:
 
 ```json
 {
-  "acls": [
-    {
-      "user": "role:admin",
-      "op": "*",
-      "target": "*",
-      "tbl": "*",
-      "allow": true
-    },
-    {
-      "user": "role:user",
-      "op": "select",
-      "target": "pg-5433",
-      "tbl": "*",
-      "allow": true
-    },
-    {
-      "user": "user:max@example.com",
-      "op": "select",
-      "target": "pg-5434",
-      "tbl": "sales",
-      "allow": true
-    }
-  ]
+  "policy": {
+    "path": "./opa/basic"
+  }
 }
 ```
 
-Wildcards (`*`) allow all operations, targets, or tables. Specific permissions override broader ones.
+Each `.rego` file in the configured directory is compiled into the embedded OPA authorizer. Policies must define:
+
+- `data.gateway.allow_target`
+- `data.gateway.allow_query`
+
+`policy.path` is resolved relative to the config file when it is not absolute.
+
+Current OPA input:
+
+```json
+{
+  "subjects": ["user:alice@example.com", "role:user"],
+  "target": "local-1",
+  "op": "select",
+  "table": "public.clients"
+}
+```
+
+Notes:
+
+- `subjects` always includes both the concrete user principal and the mapped role principal
+- `table` is always sent to OPA in canonical `schema.table` form
+- unqualified SQL like `select id from clients` is normalized before policy evaluation
+- policies run once for target visibility and once for each parsed query vector
 
 ### Database Connection Settings
 
@@ -266,7 +271,7 @@ For a complete working config, see [example/config.json](example/config.json).
 
 - **SQL Injection Protection**: All queries are parsed and validated before execution
 - **No Direct Database Access**: Remote databases are only accessible through the gateway
-- **Column-Level Restrictions**: ACLs can limit which fields users can query
+- **Column-Level Restrictions**: schema validation limits which fields users can query
 - **Query Type Restrictions**: Limit users to specific operations (SELECT, INSERT, etc.)
 - **Session Security**: Secure cookie handling with configurable expiration
 - **Error Handling**: Error messages are sanitized to prevent information leakage
@@ -277,7 +282,7 @@ For a complete working config, see [example/config.json](example/config.json).
 - **Complex Query Handling**: Some complex queries might be rejected by the parser
 - **Connection Failures**: The service gracefully handles database connection failures
 - **Missing Tables/Fields**: Queries referencing unknown tables or fields are rejected
-- **ACL Conflicts**: When multiple ACL rules apply, the most specific rule takes precedence
+- **Policy Compilation Errors**: invalid `.rego` files fail startup
 
 ## Interesting projects
 

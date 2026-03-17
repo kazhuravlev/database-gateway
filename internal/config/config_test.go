@@ -19,7 +19,6 @@ package config_test
 import (
 	"testing"
 
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/stretchr/testify/require"
 )
@@ -45,49 +44,11 @@ func TestConfigValidate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "acl references unknown table",
+			name: "missing policy path",
 			prepare: func(cfg *config.Config) {
-				cfg.ACLs = []rules.ACL{
-					{
-						User:   "role:user",
-						Op:     "select",
-						Target: "pg-1",
-						Tbl:    "public.missing",
-						Allow:  true,
-					},
-				}
+				cfg.Policy.Path = ""
 			},
 			wantErr: true,
-		},
-		{
-			name: "acl with wildcard table is allowed",
-			prepare: func(cfg *config.Config) {
-				cfg.ACLs = []rules.ACL{
-					{
-						User:   "role:user",
-						Op:     "select",
-						Target: "pg-1",
-						Tbl:    rules.Star,
-						Allow:  true,
-					},
-				}
-			},
-			wantErr: false,
-		},
-		{
-			name: "acl with wildcard target is allowed",
-			prepare: func(cfg *config.Config) {
-				cfg.ACLs = []rules.ACL{
-					{
-						User:   "role:user",
-						Op:     "select",
-						Target: rules.Star,
-						Tbl:    "public.known",
-						Allow:  true,
-					},
-				}
-			},
-			wantErr: false,
 		},
 		{
 			name: "invalid role mapping",
@@ -151,14 +112,8 @@ func validConfigForTest() config.Config {
 				"dbgw-users":  config.RoleUser,
 			},
 		},
-		ACLs: []rules.ACL{
-			{
-				User:   "role:user",
-				Op:     "select",
-				Target: "pg-1",
-				Tbl:    "public.known",
-				Allow:  true,
-			},
+		Policy: config.PolicyConfig{
+			Path: "./opa",
 		},
 		Facade: config.FacadeConfig{
 			Port:               0,

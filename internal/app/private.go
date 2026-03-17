@@ -22,7 +22,6 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
@@ -71,7 +70,7 @@ func (s *Service) getTargetByID(_ context.Context, user structs.User, tID config
 	for i := range s.opts.targets {
 		target := s.opts.targets[i]
 		if target.ID == tID {
-			if s.opts.acls.Allow(rules.BySubjects(subjects...), rules.ByTargetID(target.ID.S())) {
+			if s.opts.authorizer.AllowTarget(subjects, target.ID.S()) {
 				schema := validator.NewDbSchema(target.DefaultSchema, target.Tables)
 
 				return &target, schema, nil

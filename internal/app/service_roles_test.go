@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
@@ -200,7 +199,11 @@ func TestNewRequiresRoleMapping(t *testing.T) {
 			RoleClaim:           "groups",
 			RoleMapping:         map[string]config.Role{},
 		},
-		rules.New([]rules.ACL{}),
+		mustAuthorizer(t, `
+package gateway
+default allow_target := false
+default allow_query := false
+`),
 		&storage.Service{},
 	)
 

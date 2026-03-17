@@ -114,22 +114,9 @@
 			"dbgw-users": "user"
 		}
 	},
-	"acls": [
-		{
-			"user": "user:admin@example.com",
-			"op": "*",
-			"target": "*",
-			"tbl": "*",
-			"allow": true
-		},
-		{
-			"user": "role:user",
-			"op": "select",
-			"target": "*",
-			"tbl": "*",
-			"allow": true
-		}
-	],
+	"policy": {
+		"path": "./opa/basic"
+	},
 	"facade": {
 		"port": 8080,
 		"cookie_secret": "secret",

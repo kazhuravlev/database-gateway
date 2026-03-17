@@ -14,44 +14,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package rules
+package app //nolint:testpackage
 
-import "slices"
+import (
+	"context"
+	"testing"
 
-type IFilter func(ACL) bool
+	"github.com/kazhuravlev/database-gateway/internal/policy/opa"
+	"github.com/stretchr/testify/require"
+)
 
-func BySubjects(subjects ...string) IFilter {
-	return func(acl ACL) bool {
-		if acl.User == Star {
-			return true
-		}
+func mustAuthorizer(t *testing.T, module string) *opa.Authorizer {
+	t.Helper()
 
-		return slices.Contains(subjects, acl.User)
-	}
-}
+	authz, err := opa.New(context.Background(), map[string]string{
+		"policy.rego": module,
+	})
+	require.NoError(t, err)
 
-func RolePrincipal(role string) string {
-	return "role:" + role
-}
-
-func UserPrincipal(uid string) string {
-	return "user:" + uid
-}
-
-func ByTargetID(tid string) IFilter {
-	return func(acl ACL) bool {
-		return acl.Target == tid || acl.Target == Star
-	}
-}
-
-func ByOp(op string) IFilter {
-	return func(acl ACL) bool {
-		return acl.Op == op || acl.Op == Star
-	}
-}
-
-func ByTable(tbl string) IFilter {
-	return func(acl ACL) bool {
-		return acl.Tbl == tbl || acl.Tbl == Star
-	}
+	return authz
 }

@@ -32,8 +32,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/policy/opa"
 	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
@@ -123,7 +123,7 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 func (s *Service) GetTargets(_ context.Context, user structs.User) ([]structs.Server, error) {
 	subjects := userSubjects(user)
 	availableTargets := just.SliceFilter(s.opts.targets, func(target config.Target) bool {
-		return s.opts.acls.Allow(rules.BySubjects(subjects...), rules.ByTargetID(target.ID.S()))
+		return s.opts.authorizer.AllowTarget(subjects, target.ID.S())
 	})
 
 	servers := just.SliceMap(availableTargets, adaptTarget)
@@ -155,11 +155,11 @@ func (s *Service) RunQuery(
 	subjects := userSubjects(user)
 
 	haveAccess := func(vec validator.Vec) bool {
-		return s.opts.acls.Allow(
-			rules.BySubjects(subjects...),
-			rules.ByTargetID(srvID.S()),
-			rules.ByOp(vec.Op.S()),
-			rules.ByTable(vec.Tbl),
+		return s.opts.authorizer.AllowQuery(
+			subjects,
+			srvID.S(),
+			vec.Op.S(),
+			schema.CanonicalTable(vec.Tbl),
 		)
 	}
 
@@ -638,8 +638,8 @@ func getClaimValues(claims map[string]json.RawMessage, claimName string) ([]stri
 
 func userSubjects(user structs.User) []string {
 	return []string{
-		rules.UserPrincipal(user.ID.S()),
-		rules.RolePrincipal(user.Role.S()),
+		opa.SubjectUser(user.ID.S()),
+		opa.SubjectRole(user.Role.S()),
 	}
 }
 

@@ -6,8 +6,8 @@ import (
 	fmt461e464ebed9 "fmt"
 	"log/slog"
 
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/policy"
 	"github.com/kazhuravlev/database-gateway/internal/storage"
 	errors461e464ebed9 "github.com/kazhuravlev/options-gen/pkg/errors"
 	validator461e464ebed9 "github.com/kazhuravlev/options-gen/pkg/validator"
@@ -19,7 +19,7 @@ func NewOptions(
 	logger *slog.Logger,
 	targets []config.Target,
 	users config.UsersProviderOIDC,
-	acls *rules.ACLs,
+	authorizer policy.Authorizer,
 	storage *storage.Service,
 	options ...OptOptionsSetter,
 ) Options {
@@ -30,7 +30,7 @@ func NewOptions(
 	o.logger = logger
 	o.targets = targets
 	o.users = users
-	o.acls = acls
+	o.authorizer = authorizer
 	o.storage = storage
 
 	for _, opt := range options {
@@ -44,7 +44,7 @@ func (o *Options) Validate() error {
 	errs.Add(errors461e464ebed9.NewValidationError("logger", _validate_Options_logger(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("targets", _validate_Options_targets(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("users", _validate_Options_users(o)))
-	errs.Add(errors461e464ebed9.NewValidationError("acls", _validate_Options_acls(o)))
+	errs.Add(errors461e464ebed9.NewValidationError("authorizer", _validate_Options_authorizer(o)))
 	errs.Add(errors461e464ebed9.NewValidationError("storage", _validate_Options_storage(o)))
 	return errs.AsError()
 }
@@ -70,9 +70,9 @@ func _validate_Options_users(o *Options) error {
 	return nil
 }
 
-func _validate_Options_acls(o *Options) error {
-	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.acls, "required"); err != nil {
-		return fmt461e464ebed9.Errorf("field `acls` did not pass the test: %w", err)
+func _validate_Options_authorizer(o *Options) error {
+	if err := validator461e464ebed9.GetValidatorFor(o).Var(o.authorizer, "required"); err != nil {
+		return fmt461e464ebed9.Errorf("field `authorizer` did not pass the test: %w", err)
 	}
 	return nil
 }

@@ -14,21 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package app
+package policy
 
-import (
-	"log/slog"
-
-	"github.com/kazhuravlev/database-gateway/internal/config"
-	"github.com/kazhuravlev/database-gateway/internal/policy"
-	"github.com/kazhuravlev/database-gateway/internal/storage"
-)
-
-//go:generate toolset run options-gen -from-struct=Options
-type Options struct {
-	logger     *slog.Logger             `option:"mandatory" validate:"required"`
-	targets    []config.Target          `option:"mandatory" validate:"required"`
-	users      config.UsersProviderOIDC `option:"mandatory" validate:"required"`
-	authorizer policy.Authorizer        `option:"mandatory" validate:"required"`
-	storage    *storage.Service         `option:"mandatory" validate:"required"`
+// Authorizer decides whether a subject can see a target or access a query vector.
+type Authorizer interface {
+	AllowTarget(subjects []string, target string) bool
+	AllowQuery(subjects []string, target, op, table string) bool
 }

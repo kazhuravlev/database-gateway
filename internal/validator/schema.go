@@ -52,3 +52,12 @@ func (s *DbSchema) GetTable(tblName string) (config.TargetTable, bool) {
 
 	return config.TargetTable{}, false //nolint:exhaustruct
 }
+
+func (s *DbSchema) CanonicalTable(tblName string) string {
+	tbl, ok := s.GetTable(tblName)
+	if !ok {
+		return tblName
+	}
+
+	return tbl.Table
+}

@@ -21,18 +21,40 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/kazhuravlev/database-gateway/internal/app/rules"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/stretchr/testify/require"
 )
+
+const targetPolicy = `
+package gateway
+
+default allow_target := false
+default allow_query := false
+
+allow_target if {
+	"role:user" in input.subjects
+	input.target == "pg-1"
+}
+
+allow_target if {
+	"user:alice@example.com" in input.subjects
+	input.target == "pg-2"
+}
+
+allow_query if {
+	allow_target
+	input.op == "select"
+}
+`
 
 func TestServiceGetTargets(t *testing.T) {
 	t.Parallel()
 
 	targets := []config.Target{
 		{
-			ID:          config.TargetID("pg-1"),
+			ID:          "pg-1",
 			Description: "main",
 			Tags:        []string{"prod"},
 			Type:        "postgres",
@@ -46,12 +68,10 @@ func TestServiceGetTargets(t *testing.T) {
 				MaxPoolSize: 0,
 			},
 			DefaultSchema: "public",
-			Tables: []config.TargetTable{
-				{Table: "public.clients", Fields: nil},
-			},
+			Tables:        []config.TargetTable{{Table: "public.clients", Fields: nil}},
 		},
 		{
-			ID:          config.TargetID("pg-2"),
+			ID:          "pg-2",
 			Description: "analytics",
 			Tags:        []string{"analytics"},
 			Type:        "postgres",
@@ -65,52 +85,28 @@ func TestServiceGetTargets(t *testing.T) {
 				MaxPoolSize: 0,
 			},
 			DefaultSchema: "public",
-			Tables: []config.TargetTable{
-				{Table: "public.events", Fields: nil},
-			},
+			Tables:        []config.TargetTable{{Table: "public.events", Fields: nil}},
 		},
 	}
 
 	testCases := []struct {
 		name    string
 		user    structs.User
-		acls    []rules.ACL
 		wantIDs []config.TargetID
 	}{
 		{
-			name: "allow by role",
-			user: structs.User{
-				ID:       config.UserID("alice@example.com"),
-				Username: "",
-				Role:     config.RoleUser,
-			},
-			acls: []rules.ACL{
-				{User: rules.RolePrincipal(config.RoleUser.S()), Target: "pg-1", Op: rules.Star, Tbl: rules.Star, Allow: true},
-			},
+			name:    "allow by role",
+			user:    structs.User{ID: "bob@example.com", Username: "", Role: config.RoleUser},
 			wantIDs: []config.TargetID{"pg-1"},
 		},
 		{
-			name: "allow by user principal",
-			user: structs.User{
-				ID:       config.UserID("alice@example.com"),
-				Username: "",
-				Role:     config.RoleUser,
-			},
-			acls: []rules.ACL{
-				{User: rules.UserPrincipal("alice@example.com"), Target: "pg-2", Op: rules.Star, Tbl: rules.Star, Allow: true},
-			},
-			wantIDs: []config.TargetID{"pg-2"},
+			name:    "allow by user principal and role",
+			user:    structs.User{ID: "alice@example.com", Username: "", Role: config.RoleUser},
+			wantIDs: []config.TargetID{"pg-1", "pg-2"},
 		},
 		{
-			name: "no matching acl",
-			user: structs.User{
-				ID:       config.UserID("alice@example.com"),
-				Username: "",
-				Role:     config.RoleUser,
-			},
-			acls: []rules.ACL{
-				{User: rules.RolePrincipal(config.RoleAdmin.S()), Target: rules.Star, Op: rules.Star, Tbl: rules.Star, Allow: true},
-			},
+			name:    "no matching policy",
+			user:    structs.User{ID: "admin@example.com", Username: "", Role: config.RoleAdmin},
 			wantIDs: []config.TargetID{},
 		},
 	}
@@ -133,8 +129,8 @@ func TestServiceGetTargets(t *testing.T) {
 						RoleClaim:           "",
 						RoleMapping:         nil,
 					},
-					acls:    rules.New(tc.acls),
-					storage: nil,
+					authorizer: mustAuthorizer(t, targetPolicy),
+					storage:    nil,
 				},
 				connsMu:       new(sync.RWMutex),
 				conns:         nil,
@@ -147,7 +143,6 @@ func TestServiceGetTargets(t *testing.T) {
 
 			got, err := svc.GetTargets(context.Background(), tc.user)
 			require.NoError(t, err)
-			require.Len(t, got, len(tc.wantIDs))
 
 			gotIDs := make([]config.TargetID, 0, len(got))
 			for _, server := range got {
@@ -163,7 +158,7 @@ func TestServiceGetTargetByID(t *testing.T) {
 	t.Parallel()
 
 	target := config.Target{
-		ID:          config.TargetID("pg-1"),
+		ID:          "pg-1",
 		Description: "main",
 		Tags:        []string{"prod"},
 		Type:        "postgres",
@@ -177,35 +172,25 @@ func TestServiceGetTargetByID(t *testing.T) {
 			MaxPoolSize: 0,
 		},
 		DefaultSchema: "public",
-		Tables: []config.TargetTable{
-			{Table: "public.clients", Fields: nil},
-		},
+		Tables:        []config.TargetTable{{Table: "public.clients", Fields: nil}},
 	}
 
-	user := structs.User{
-		ID:       config.UserID("alice@example.com"),
-		Username: "",
-		Role:     config.RoleUser,
-	}
+	user := structs.User{ID: "alice@example.com", Username: "", Role: config.RoleUser}
 
 	testCases := []struct {
 		name       string
-		acls       []rules.ACL
+		authorizer string
 		targetID   config.TargetID
-		wantErr    bool
 		wantErrIs  error
 		wantServer *structs.Server
 	}{
 		{
-			name: "allowed target",
-			acls: []rules.ACL{
-				{User: rules.RolePrincipal(config.RoleUser.S()), Target: "pg-1", Op: rules.Star, Tbl: rules.Star, Allow: true},
-			},
-			targetID:  config.TargetID("pg-1"),
-			wantErr:   false,
-			wantErrIs: nil,
+			name:       "allowed target",
+			authorizer: targetPolicy,
+			targetID:   "pg-1",
+			wantErrIs:  nil,
 			wantServer: &structs.Server{
-				ID:          config.TargetID("pg-1"),
+				ID:          "pg-1",
 				Description: "main",
 				Tags:        []structs.Tag{{Name: "prod"}},
 				Type:        "postgres",
@@ -214,21 +199,19 @@ func TestServiceGetTargetByID(t *testing.T) {
 		},
 		{
 			name: "target exists but forbidden",
-			acls: []rules.ACL{
-				{User: rules.RolePrincipal(config.RoleAdmin.S()), Target: "pg-1", Op: rules.Star, Tbl: rules.Star, Allow: true},
-			},
-			targetID:   config.TargetID("pg-1"),
-			wantErr:    true,
+			authorizer: `
+package gateway
+default allow_target := false
+default allow_query := false
+`,
+			targetID:   "pg-1",
 			wantErrIs:  ErrNotFound,
 			wantServer: nil,
 		},
 		{
-			name: "target does not exist",
-			acls: []rules.ACL{
-				{User: rules.RolePrincipal(config.RoleUser.S()), Target: "pg-1", Op: rules.Star, Tbl: rules.Star, Allow: true},
-			},
-			targetID:   config.TargetID("pg-unknown"),
-			wantErr:    true,
+			name:       "target does not exist",
+			authorizer: targetPolicy,
+			targetID:   "pg-unknown",
 			wantErrIs:  ErrNotFound,
 			wantServer: nil,
 		},
@@ -252,8 +235,8 @@ func TestServiceGetTargetByID(t *testing.T) {
 						RoleClaim:           "",
 						RoleMapping:         nil,
 					},
-					acls:    rules.New(tc.acls),
-					storage: nil,
+					authorizer: mustAuthorizer(t, tc.authorizer),
+					storage:    nil,
 				},
 				connsMu:       new(sync.RWMutex),
 				conns:         nil,
@@ -265,10 +248,9 @@ func TestServiceGetTargetByID(t *testing.T) {
 			}
 
 			got, err := svc.GetTargetByID(context.Background(), user, tc.targetID)
-			if tc.wantErr {
-				require.Error(t, err)
-				require.Nil(t, got)
+			if tc.wantErrIs != nil {
 				require.ErrorIs(t, err, tc.wantErrIs)
+				require.Nil(t, got)
 
 				return
 			}
@@ -279,64 +261,23 @@ func TestServiceGetTargetByID(t *testing.T) {
 	}
 }
 
-func TestGetTargetByIDReturnsSchema(t *testing.T) {
+func TestPolicyReceivesCanonicalTableName(t *testing.T) {
 	t.Parallel()
 
-	svc := &Service{
-		opts: Options{
-			logger: nil,
-			targets: []config.Target{
-				{
-					ID:          config.TargetID("pg-1"),
-					Description: "",
-					Tags:        nil,
-					Type:        "",
-					Connection: config.Connection{
-						Host:        "",
-						Port:        0,
-						User:        "",
-						Password:    "",
-						DB:          "",
-						UseSSL:      false,
-						MaxPoolSize: 0,
-					},
-					DefaultSchema: "public",
-					Tables: []config.TargetTable{
-						{Table: "public.clients", Fields: nil},
-					},
-				},
-			},
-			users: config.UsersProviderOIDC{
-				ClientID:            "",
-				ClientSecret:        "",
-				IssuerURL:           "",
-				RedirectURL:         "",
-				Scopes:              nil,
-				AccessTokenAudience: "",
-				RoleClaim:           "",
-				RoleMapping:         nil,
-			},
-			acls: rules.New([]rules.ACL{
-				{User: rules.RolePrincipal(config.RoleUser.S()), Target: "pg-1", Op: rules.Star, Tbl: rules.Star, Allow: true},
-			}),
-			storage: nil,
-		},
-		connsMu:       new(sync.RWMutex),
-		conns:         nil,
-		oauthCfg:      nil,
-		oidcProvider:  nil,
-		tokenVerifier: nil,
-		oidcLogoutEP:  "",
-		oidcRevokeEP:  "",
+	schema := validator.NewDbSchema("public", []config.TargetTable{
+		{Table: "public.clients", Fields: []string{"id", "name"}},
+	})
+
+	var seenTable string
+	haveAccess := func(vec validator.Vec) bool {
+		seenTable = schema.CanonicalTable(vec.Tbl)
+
+		return seenTable == "public.clients"
 	}
 
-	_, schema, err := svc.getTargetByID(context.Background(), structs.User{
-		ID:       config.UserID("alice@example.com"),
-		Username: "",
-		Role:     config.RoleUser,
-	}, config.TargetID("pg-1"))
+	vectors, err := validator.MakeVectors("select id, name from clients")
 	require.NoError(t, err)
-
-	_, exists := schema.GetTable("clients")
-	require.True(t, exists, "default schema should allow table lookup without schema prefix")
+	require.NoError(t, validator.ValidateSchema(vectors, schema))
+	require.NoError(t, validator.ValidateAccess(vectors, haveAccess))
+	require.Equal(t, "public.clients", seenTable)
 }
