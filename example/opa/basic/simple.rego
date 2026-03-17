@@ -39,5 +39,5 @@ allow_vector if {
 	"role:user" in input.subjects
 	input.target in {"pg-5435", "taxi-prod"}
 	input.op == "select"
-	input.table in {"public.drivers", "public.clients"}
+	input.table in {"public.drivers", "public.clients", "public.transfers"}
 }
