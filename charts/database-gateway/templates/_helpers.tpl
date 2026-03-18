@@ -75,8 +75,30 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "database-gateway.configPayload" -}}
+{{- $targets := list -}}
+{{- range .Values.config.targets }}
+{{- $connection := dict
+  "host" .connection.host
+  "port" .connection.port
+  "user" .connection.user
+  "password" .connection.password
+  "db" .connection.db
+  "use_ssl" .connection.useSSL
+  "max_pool_size" .connection.maxPoolSize
+-}}
+{{- $target := dict
+  "id" .id
+  "description" .description
+  "tags" .tags
+  "type" .type
+  "connection" $connection
+  "default_schema" .defaultSchema
+  "tables" .tables
+-}}
+{{- $targets = append $targets $target -}}
+{{- end -}}
 {{- $cfg := dict
-  "targets" .Values.config.targets
+  "targets" $targets
   "users" (dict
     "client_id" .Values.config.users.clientID
     "client_secret" .Values.config.users.clientSecret

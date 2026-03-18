@@ -199,10 +199,10 @@
                     "type": "string",
                     "minLength": 1
                   },
-                  "use_ssl": {
+                  "useSSL": {
                     "type": "boolean"
                   },
-                  "max_pool_size": {
+                  "maxPoolSize": {
                     "type": "integer",
                     "minimum": 1
                   }
@@ -213,11 +213,11 @@
                   "user",
                   "password",
                   "db",
-                  "use_ssl",
-                  "max_pool_size"
+                  "useSSL",
+                  "maxPoolSize"
                 ]
               },
-              "default_schema": {
+              "defaultSchema": {
                 "type": "string",
                 "minLength": 1
               },
@@ -248,7 +248,7 @@
               "tags",
               "type",
               "connection",
-              "default_schema",
+              "defaultSchema",
               "tables"
             ]
           }
