@@ -81,4 +81,4 @@ jobs:
         run: echo "${{ github.token }}" | helm registry login "${OCI_REGISTRY}" --username "${{ github.actor }}" --password-stdin
 
       - name: Publish chart to GHCR
-        run: helm push "${CHART_DIST_DIR}/helm/${CHART_NAME}-${CHART_VERSION}.tgz" "${OCI_REPOSITORY}"
+        run: helm push "${CHART_DIST_DIR}/${CHART_NAME}-${CHART_VERSION}.tgz" "${OCI_REPOSITORY}"
