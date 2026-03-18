@@ -1,0 +1,13 @@
+{{- if not .Values.policy.existingConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "database-gateway.policyConfigMapName" . }}
+  labels:
+    {{- include "database-gateway.labels" . | nindent 4 }}
+data:
+  {{- range $name, $content := .Values.policy.files }}
+  {{ $name }}: |
+    {{- $content | nindent 4 }}
+  {{- end }}
+{{- end }}

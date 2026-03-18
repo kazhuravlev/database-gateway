@@ -1,0 +1,8 @@
+1. Check the release status:
+   kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+
+2. If ingress is disabled, reach the UI with port-forward:
+   kubectl port-forward svc/{{ include "database-gateway.fullname" . }} 8080:{{ .Values.service.port }}
+
+3. Open the application:
+   http://127.0.0.1:8080/ui

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ printf "%s-test-connection" (include "database-gateway.fullname" .) | quote }}
+  labels:
+    {{- include "database-gateway.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  restartPolicy: Never
+  containers:
+    - name: wget
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - {{ printf "wget -qO- http://%s:%v/ >/dev/null" (include "database-gateway.fullname" .) .Values.service.port | quote }}
