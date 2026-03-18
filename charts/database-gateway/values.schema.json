@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pullPolicy": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      },
+      "required": ["repository", "pullPolicy"]
+    },
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "annotations": {
+          "type": "object"
+        }
+      },
+      "required": ["type", "port"]
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "existingSecret": {
+          "type": "string"
+        },
+        "secretKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mountPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facade": {
+          "type": "object",
+          "properties": {
+            "port": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "cookieSecret": {
+              "type": "string"
+            },
+            "unsafeCORSAllowAll": {
+              "type": "boolean"
+            }
+          },
+          "required": ["port", "cookieSecret", "unsafeCORSAllowAll"]
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "database": {
+              "type": "string"
+            },
+            "username": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            },
+            "useSSL": {
+              "type": "boolean"
+            },
+            "maxPoolSize": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "host",
+            "port",
+            "database",
+            "username",
+            "password",
+            "useSSL",
+            "maxPoolSize"
+          ]
+        },
+        "users": {
+          "type": "object",
+          "properties": {
+            "clientID": {
+              "type": "string"
+            },
+            "clientSecret": {
+              "type": "string"
+            },
+            "issuerURL": {
+              "type": "string"
+            },
+            "redirectURL": {
+              "type": "string"
+            },
+            "accessTokenAudience": {
+              "type": "string"
+            },
+            "scopes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "roleClaim": {
+              "type": "string"
+            },
+            "roleMapping": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": ["admin", "user"]
+              }
+            }
+          },
+          "required": [
+            "clientID",
+            "clientSecret",
+            "issuerURL",
+            "redirectURL",
+            "accessTokenAudience",
+            "scopes",
+            "roleClaim",
+            "roleMapping"
+          ]
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "connection": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "port": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "user": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "db": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "useSSL": {
+                    "type": "boolean"
+                  },
+                  "maxPoolSize": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "host",
+                  "port",
+                  "user",
+                  "password",
+                  "db",
+                  "useSSL",
+                  "maxPoolSize"
+                ]
+              },
+              "defaultSchema": {
+                "type": "string",
+                "minLength": 1
+              },
+              "tables": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "table": {
+                      "type": "string",
+                      "pattern": "^[^.]+\\.[^.]+$"
+                    },
+                    "fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": ["table", "fields"]
+                }
+              }
+            },
+            "required": [
+              "id",
+              "description",
+              "tags",
+              "type",
+              "connection",
+              "defaultSchema",
+              "tables"
+            ]
+          }
+        }
+      },
+      "required": [
+        "existingSecret",
+        "secretKey",
+        "filename",
+        "mountPath",
+        "facade",
+        "storage",
+        "users",
+        "targets"
+      ]
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "existingConfigMap": {
+          "type": "string"
+        },
+        "mountPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["existingConfigMap", "mountPath", "files"]
+    }
+  }
+}

@@ -1,0 +1,84 @@
+# Database Gateway provides access to servers with ACL for safe and restricted database interactions.
+# Copyright (C) 2024  Kirill Zhuravlev
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+name: Release Helm Chart
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      chart_version:
+        description: "Chart version to publish, for example 1.2.3"
+        required: true
+      app_version:
+        description: "Application version recorded in the chart, for example v1.2.3"
+        required: false
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: release-chart-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-chart:
+    name: Package & Publish Helm Chart
+    runs-on: ubuntu-latest
+    env:
+      CHART_DIR: charts/database-gateway
+      CHART_NAME: database-gateway
+      CHART_DIST_DIR: dist
+      RAW_CHART_VERSION: ${{ github.event.inputs.chart_version || github.ref_name }}
+      APP_VERSION: ${{ github.event.inputs.app_version || github.ref_name }}
+      OCI_REGISTRY: ghcr.io
+      OCI_REPOSITORY: oci://ghcr.io/${{ github.repository_owner }}/charts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set chart version
+        run: echo "CHART_VERSION=${RAW_CHART_VERSION#v}" >> "$GITHUB_ENV"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: helm lint "${CHART_DIR}"
+
+      - name: Package chart
+        run: |
+          mkdir -p "${CHART_DIST_DIR}"
+          helm package "${CHART_DIR}" \
+            --destination "${CHART_DIST_DIR}" \
+            --version "${CHART_VERSION}" \
+            --app-version "${APP_VERSION}"
+
+      - name: Upload packaged chart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-gateway-chart-${{ env.CHART_VERSION }}
+          path: ${{ env.CHART_DIST_DIR }}/*.tgz
+          if-no-files-found: error
+
+      - name: Login to GHCR
+        run: echo "${{ github.token }}" | helm registry login "${OCI_REGISTRY}" --username "${{ github.actor }}" --password-stdin
+
+      - name: Publish chart to GHCR
+        run: helm push "${CHART_DIST_DIR}/${CHART_NAME}-${CHART_VERSION}.tgz" "${OCI_REPOSITORY}"

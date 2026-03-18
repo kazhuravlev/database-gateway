@@ -1,0 +1,168 @@
+# Database Gateway provides access to servers with ACL for safe and restricted database interactions.
+# Copyright (C) 2024  Kirill Zhuravlev
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+replicaCount: 1
+
+image:
+  repository: kazhuravlev/database-gateway
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: dbgw.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+
+extraEnv: []
+extraEnvFrom: []
+extraVolumes: []
+extraVolumeMounts: []
+
+config:
+  existingSecret: ""
+  secretKey: config.json
+  filename: config.json
+  mountPath: /workdir/config.json
+  facade:
+    port: 8080
+    cookieSecret: ""
+    unsafeCORSAllowAll: false
+  storage:
+    host: ""
+    port: 5432
+    database: ""
+    username: ""
+    password: ""
+    useSSL: false
+    maxPoolSize: 16
+  users:
+    clientID: ""
+    clientSecret: ""
+    issuerURL: ""
+    redirectURL: ""
+    accessTokenAudience: ""
+    scopes:
+      - groups
+      - email
+      - profile
+    roleClaim: groups
+    roleMapping: {}
+  targets: []
+
+policy:
+  existingConfigMap: ""
+  mountPath: /workdir/policy
+  files:
+    gateway.rego: |
+      package gateway
+
+      default allow_target := false
+      default allow_query := false
+
+      allow_target if {
+        "role:admin" in input.subjects
+      }
+
+      allow_query if {
+        "role:admin" in input.subjects
+      }
+
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  startup:
+    enabled: true
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 30
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []
