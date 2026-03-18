@@ -44,6 +44,7 @@ jobs:
     env:
       CHART_DIR: charts/database-gateway
       CHART_NAME: database-gateway
+      CHART_DIST_DIR: dist
       RAW_CHART_VERSION: ${{ github.event.inputs.chart_version || github.ref_name }}
       APP_VERSION: ${{ github.event.inputs.app_version || github.ref_name }}
       OCI_REGISTRY: ghcr.io
@@ -63,9 +64,9 @@ jobs:
 
       - name: Package chart
         run: |
-          mkdir -p .dist
+          mkdir -p "${CHART_DIST_DIR}"
           helm package "${CHART_DIR}" \
-            --destination .dist \
+            --destination "${CHART_DIST_DIR}" \
             --version "${CHART_VERSION}" \
             --app-version "${APP_VERSION}"
 
@@ -73,11 +74,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: database-gateway-chart-${{ env.CHART_VERSION }}
-          path: .dist/*.tgz
+          path: ${{ env.CHART_DIST_DIR }}/*.tgz
           if-no-files-found: error
 
       - name: Login to GHCR
         run: echo "${{ github.token }}" | helm registry login "${OCI_REGISTRY}" --username "${{ github.actor }}" --password-stdin
 
       - name: Publish chart to GHCR
-        run: helm push .dist/"${CHART_NAME}"-"${CHART_VERSION}".tgz "${OCI_REPOSITORY}"
+        run: helm push "${CHART_DIST_DIR}/helm/${CHART_NAME}-${CHART_VERSION}.tgz" "${OCI_REPOSITORY}"
