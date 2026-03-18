@@ -1,6 +1,6 @@
 <script>
   import { getErrorMessage, getQueryResultsExportLink, listAdminRequests, withAuthorizedRequest } from "../api.js";
-  import { appHref } from "../routing.js";
+  import { appHref, navigate } from "../routing.js";
 
   let { page } = $props();
   let loadedPage = $state(0);
@@ -12,6 +12,11 @@
   let hasPrev = $state(false);
   let exportRequestIDInProgress = $state("");
   let exportFormatInProgress = $state("");
+  let liveMode = $state(false);
+  let refreshTicker = null;
+  let isRefreshing = false;
+
+  const liveRefreshIntervalMS = 5000;
 
   const panelClass =
     "rounded-xl border border-zinc-700/90 bg-zinc-900/90 shadow-[0_18px_42px_rgb(0_0_0_/_0.28)] backdrop-blur-xl";
@@ -19,8 +24,15 @@
   const buttonClass =
     "inline-flex min-h-8 items-center justify-center gap-2 rounded-lg border border-lime-300 bg-lime-200 px-2.5 text-[13px] font-semibold leading-none text-zinc-900 no-underline transition-colors hover:border-lime-300 hover:bg-lime-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-200";
 
-  async function loadAdminRequests() {
-    isLoading = true;
+  async function loadAdminRequests(showLoadingState = true) {
+    if (isRefreshing) {
+      return;
+    }
+
+    isRefreshing = true;
+    if (showLoadingState) {
+      isLoading = true;
+    }
     error = "";
     hasPrev = page > 1;
 
@@ -36,7 +48,10 @@
     } catch (loadError) {
       error = getErrorMessage(loadError, "Failed to load admin requests");
     } finally {
-      isLoading = false;
+      isRefreshing = false;
+      if (showLoadingState) {
+        isLoading = false;
+      }
     }
   }
 
@@ -45,6 +60,39 @@
       loadedPage = page;
       loadAdminRequests();
     }
+  });
+
+  function stopLiveRefresh() {
+    if (refreshTicker) {
+      window.clearInterval(refreshTicker);
+      refreshTicker = null;
+    }
+  }
+
+  function handleLiveModeChange(event) {
+    liveMode = Boolean(event.currentTarget?.checked);
+  }
+
+  $effect(() => {
+    if (!liveMode) {
+      stopLiveRefresh();
+      return;
+    }
+
+    if (page > 1) {
+      navigate("/admin/requests");
+      return;
+    }
+
+    loadAdminRequests(false);
+    stopLiveRefresh();
+    refreshTicker = window.setInterval(() => {
+      loadAdminRequests(false);
+    }, liveRefreshIntervalMS);
+
+    return () => {
+      stopLiveRefresh();
+    };
   });
 
   async function downloadRequest(requestID, format) {
@@ -74,7 +122,18 @@
 
 <div class="grid w-full gap-2.5">
   <div class={`${panelClass} flex items-center justify-between gap-2 p-3`}>
-    <div class="text-xs text-zinc-400">Page {page}</div>
+    <div class="flex items-center gap-3">
+      <div class="text-xs text-zinc-400">Page {page}</div>
+      <label class="inline-flex cursor-pointer items-center gap-2 text-xs text-zinc-300">
+        <input
+          type="checkbox"
+          class="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-lime-300 focus:ring-lime-300"
+          checked={liveMode}
+          onchange={handleLiveModeChange}
+        />
+        <span>live-mode</span>
+      </label>
+    </div>
     <div class="flex items-center gap-2">
       {#if hasPrev}
         <a class={buttonClass} href={appHref("/admin/requests", `?page=${page - 1}`)}>Previous</a>
