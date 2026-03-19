@@ -37,6 +37,8 @@ RUN CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 
 FROM alpine:3.23
 
+LABEL source=https://github.com/kazhuravlev/database-gateway
+
 ENV WORKDIR=/workdir
 
 RUN mkdir -p ${WORKDIR}
