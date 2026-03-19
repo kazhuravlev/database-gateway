@@ -183,6 +183,5 @@ tasks:
       - echo ">>> Docker build"
       - |
         docker buildx build \
-          --platform linux/amd64 \
           -t {{ .DOCKER_IMAGE_NAME }}:{{.GIT_TAG}} \
           -f Dockerfile .
