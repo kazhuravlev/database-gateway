@@ -14,6 +14,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG VERSION=dev
+
+WORKDIR /src
+
+RUN apk add --no-cache ca-certificates git gcc musl-dev
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+	go build \
+		-ldflags "-s -w -X github.com/kazhuravlev/database-gateway/internal/version.version=${VERSION}" \
+		-o /out/database-gateway \
+		./cmd/gateway
+
 FROM alpine:3.23
 
 ENV WORKDIR=/workdir
@@ -26,4 +47,4 @@ VOLUME ${WORKDIR}
 
 ENTRYPOINT ["/bin/gateway"]
 
-COPY database-gateway /bin/gateway
+COPY --from=builder /out/database-gateway /bin/gateway

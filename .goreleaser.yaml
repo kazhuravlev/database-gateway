@@ -31,24 +31,9 @@ builds:
     env:
       - CGO_ENABLED=1
     goos: ['linux']
-    goarch: ['amd64']
-
-dockers:
-  - id: 'database-gateway'
-    goos: linux
-    goarch: amd64
-    ids:
-      - 'build-linux'
-    image_templates:
-      - "kazhuravlev/database-gateway:latest"
-      - "kazhuravlev/database-gateway:{{ .Tag }}"
-      - "kazhuravlev/database-gateway:v{{ .Major }}"
-      - "kazhuravlev/database-gateway:v{{ .Major }}.{{ .Minor }}"
-    dockerfile: 'Dockerfile'
-    use: buildx
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--build-arg=CGO_ENABLED=1"
+    goarch:
+      - amd64
+      - arm64
 
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
