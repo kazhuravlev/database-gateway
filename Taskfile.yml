@@ -183,5 +183,6 @@ tasks:
       - echo ">>> Docker build"
       - |
         docker buildx build \
+          --build-arg VERSION=local \
           -t {{ .DOCKER_IMAGE_NAME }}:{{.GIT_TAG}} \
           -f Dockerfile .

@@ -31,7 +31,7 @@ COPY . .
 
 RUN CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 	go build \
-		-ldflags "-s -w -X github.com/kazhuravlev/database-gateway/internal/version.version=${VERSION}" \
+		-ldflags "-s -w -X github.com/dev-services42/version.version=${VERSION}" \
 		-o /out/database-gateway \
 		./cmd/gateway
 

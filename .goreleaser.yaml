@@ -26,7 +26,7 @@ builds:
     ldflags:
       - -s
       - -w
-      - -X github.com/kazhuravlev/database-gateway/internal/version.version={{.Summary}}
+      - -X github.com/dev-services42/version.version={{.Summary}}
     mod_timestamp: '{{ .CommitTimestamp }}'
     env:
       - CGO_ENABLED=1
