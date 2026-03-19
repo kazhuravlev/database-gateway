@@ -31,9 +31,7 @@ builds:
     env:
       - CGO_ENABLED=1
     goos: ['linux']
-    goarch:
-      - amd64
-      - arm64
+    goarch: ['amd64']
 
 archives:
   - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
