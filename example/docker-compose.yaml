@@ -16,7 +16,7 @@
 
 services:
   dbgw:
-    image: kazhuravlev/database-gateway:latest
+    image: ghcr.io/kazhuravlev/database-gateway:latest
     pull_policy: always
     restart: on-failure
     depends_on:
@@ -28,7 +28,7 @@ services:
       - './config.json:/app/config.json'
       - './opa:/app/opa:ro'
     command:
-      - "run" 
+      - "run"
 
   authentik-postgres:
     image: postgres:16-alpine
