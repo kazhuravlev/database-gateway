@@ -26,14 +26,71 @@ permissions:
   packages: write
 
 jobs:
-  release:
-    name: Build Release Artifacts and Publish Image
+  release-artifacts:
+    name: Build Release Artifacts
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Build release artifacts
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CGO_ENABLED: 1
+
+  docker-amd64:
+    name: Build amd64 image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute image name
+        id: image
+        shell: bash
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push amd64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.image.outputs.name }}:${{ github.ref_name }}-amd64
+          build-args: |
+            VERSION=${{ github.ref_name }}
+          cache-from: type=gha,scope=release-amd64
+          cache-to: type=gha,mode=max,scope=release-amd64
+
+  docker-arm64:
+    name: Build arm64 image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Compute image name
         id: image
@@ -43,20 +100,40 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
+      - name: Build and push arm64 image
+        uses: docker/build-push-action@v6
         with:
-          images: ${{ steps.image.outputs.name }}
-          flavor: |
-            latest=auto
-          tags: |
-            type=ref,event=tag
-            type=semver,pattern=v{{major}}
-            type=semver,pattern=v{{major}}.{{minor}}
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/arm64
+          tags: ${{ steps.image.outputs.name }}:${{ github.ref_name }}-arm64
+          build-args: |
+            VERSION=${{ github.ref_name }}
+          cache-from: type=gha,scope=release-arm64
+          cache-to: type=gha,mode=max,scope=release-arm64
+
+  docker-manifest:
+    name: Publish multi-arch manifest
+    runs-on: ubuntu-latest
+    needs:
+      - docker-amd64
+      - docker-arm64
+    steps:
+      - name: Compute image name
+        id: image
+        shell: bash
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -65,31 +142,34 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push multi-arch image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            VERSION=${{ github.ref_name }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.26'
-
-      - name: Build release artifacts
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: '~> v2'
-          args: release --clean
+      - name: Publish manifest list
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CGO_ENABLED: 1
+          IMAGE_NAME: ${{ steps.image.outputs.name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          tags=(
+            "-t" "${IMAGE_NAME}:${REF_NAME}"
+          )
+
+          version="${REF_NAME#v}"
+          major="${version%%.*}"
+          rest="${version#*.}"
+          minor="${rest%%.*}"
+
+          tags+=("-t" "${IMAGE_NAME}:v${major}")
+          tags+=("-t" "${IMAGE_NAME}:v${major}.${minor}")
+
+          if [[ "${version}" != *-* ]]; then
+            tags+=("-t" "${IMAGE_NAME}:latest")
+          fi
+
+          docker buildx imagetools create \
+            "${tags[@]}" \
+            "${IMAGE_NAME}:${REF_NAME}-amd64" \
+            "${IMAGE_NAME}:${REF_NAME}-arm64"
