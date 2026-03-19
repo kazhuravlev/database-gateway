@@ -17,7 +17,7 @@
 replicaCount: 1
 
 image:
-  repository: kazhuravlev/database-gateway
+  repository: ghcr.io/kazhuravlev/database-gateway
   pullPolicy: IfNotPresent
   tag: ""
 

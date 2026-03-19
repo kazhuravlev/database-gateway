@@ -29,6 +29,9 @@ on:
         description: "Application version recorded in the chart, for example v1.2.3"
         required: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 permissions:
   contents: read
   packages: write
@@ -51,7 +54,7 @@ jobs:
       OCI_REPOSITORY: oci://ghcr.io/${{ github.repository_owner }}/charts
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set chart version
         run: echo "CHART_VERSION=${RAW_CHART_VERSION#v}" >> "$GITHUB_ENV"
@@ -71,7 +74,7 @@ jobs:
             --app-version "${APP_VERSION}"
 
       - name: Upload packaged chart artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: database-gateway-chart-${{ env.CHART_VERSION }}
           path: ${{ env.CHART_DIST_DIR }}/*.tgz
