@@ -36,7 +36,6 @@ jobs:
           - "1.26"
         os:
           - "ubuntu-latest"
-          - "macOS-latest"
 
     steps:
       - name: Checkout
