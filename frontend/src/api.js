@@ -19,238 +19,238 @@
 const TOKEN_STORAGE_KEY = "dbgw_api_access_token";
 
 export const API_BASE = import.meta.env.DEV
-  ? "http://localhost:8080"
-  : window.location.origin;
+	? "http://localhost:8080"
+	: window.location.origin;
 export const AUTH_URL = `${API_BASE}/auth`;
 const BASE_URL = `${API_BASE}/api/v1`;
 
 function buildRPCError(payload, fallbackMessage = "Request failed") {
-  if (!payload?.error) {
-    return null;
-  }
+	if (!payload?.error) {
+		return null;
+	}
 
-  const message =
-    typeof payload.error.message === "string" && payload.error.message
-      ? payload.error.message
-      : `${fallbackMessage}${payload.error.code ? ` (${payload.error.code})` : ""}`;
+	const message =
+		typeof payload.error.message === "string" && payload.error.message
+			? payload.error.message
+			: `${fallbackMessage}${payload.error.code ? ` (${payload.error.code})` : ""}`;
 
-  return new Error(message);
+	return new Error(message);
 }
 
 export function getErrorMessage(error, fallbackMessage = "Request failed") {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+	if (error instanceof Error && error.message) {
+		return error.message;
+	}
 
-  return fallbackMessage;
+	return fallbackMessage;
 }
 
 function createRequestID() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
+	if (typeof crypto !== "undefined" && crypto.randomUUID) {
+		return crypto.randomUUID();
+	}
 
-  return `request-${Date.now()}`;
+	return `request-${Date.now()}`;
 }
 
 function isUnauthorizedStatus(status) {
-  return status === 401 || status === 403;
+	return status === 401 || status === 403;
 }
 
 export function startAuthFlow() {
-  window.location.href = AUTH_URL;
+	window.location.href = AUTH_URL;
 }
 
 export function getStoredToken() {
-  return window.localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+	return window.localStorage.getItem(TOKEN_STORAGE_KEY) || "";
 }
 
 export function setStoredToken(token) {
-  if (!token) {
-    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-    return;
-  }
+	if (!token) {
+		window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+		return;
+	}
 
-  window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+	window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
 }
 
 export function clearStoredToken() {
-  setStoredToken("");
+	setStoredToken("");
 }
 
 export function consumeTokenFromURL() {
-  const hash = window.location.hash.startsWith("#")
-    ? window.location.hash.slice(1)
-    : window.location.hash;
-  if (!hash) {
-    return "";
-  }
+	const hash = window.location.hash.startsWith("#")
+		? window.location.hash.slice(1)
+		: window.location.hash;
+	if (!hash) {
+		return "";
+	}
 
-  const params = new URLSearchParams(hash);
-  const token = params.get("access_token") || "";
-  if (!token) {
-    return "";
-  }
+	const params = new URLSearchParams(hash);
+	const token = params.get("access_token") || "";
+	if (!token) {
+		return "";
+	}
 
-  setStoredToken(token);
-  window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+	setStoredToken(token);
+	window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
 
-  return token;
+	return token;
 }
 
 async function rpcCall(token, method, params) {
-  let response;
+	let response;
 
-  try {
-    response = await fetch(`${BASE_URL}/${method}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        lrpc: "1",
-        id: createRequestID(),
-        params
-      })
-    });
-  } catch (error) {
-    throw new Error(getErrorMessage(error, "Network request failed"));
-  }
+	try {
+		response = await fetch(`${BASE_URL}/${method}`, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				lrpc: "1",
+				id: createRequestID(),
+				params
+			})
+		});
+	} catch (error) {
+		throw new Error(getErrorMessage(error, "Network request failed"));
+	}
 
-  let payload = null;
+	let payload = null;
 
-  try {
-    payload = await response.json();
-  } catch (error) {
-    if (isUnauthorizedStatus(response.status)) {
-      throw new Error(`Unauthorized (${response.status})`);
-    }
+	try {
+		payload = await response.json();
+	} catch (error) {
+		if (isUnauthorizedStatus(response.status)) {
+			throw new Error(`Unauthorized (${response.status})`);
+		}
 
-    if (!response.ok) {
-      throw new Error(`Failed to do request (${response.status})`);
-    }
+		if (!response.ok) {
+			throw new Error(`Failed to do request (${response.status})`);
+		}
 
-    throw new Error(getErrorMessage(error, "Failed to parse server response"));
-  }
+		throw new Error(getErrorMessage(error, "Failed to parse server response"));
+	}
 
-  const rpcError = buildRPCError(payload);
-  if (rpcError) {
-    throw rpcError;
-  }
+	const rpcError = buildRPCError(payload);
+	if (rpcError) {
+		throw rpcError;
+	}
 
-  if (isUnauthorizedStatus(response.status)) {
-    throw new Error(`Unauthorized (${response.status})`);
-  }
+	if (isUnauthorizedStatus(response.status)) {
+		throw new Error(`Unauthorized (${response.status})`);
+	}
 
-  if (!response.ok) {
-    throw new Error(`Failed to do request (${response.status})`);
-  }
+	if (!response.ok) {
+		throw new Error(`Failed to do request (${response.status})`);
+	}
 
-  return payload.result;
+	return payload.result;
 }
 
 export async function withAuthorizedRequest(run) {
-  const token = getStoredToken();
-  if (!token) {
-    startAuthFlow();
-    return null;
-  }
+	const token = getStoredToken();
+	if (!token) {
+		startAuthFlow();
+		return null;
+	}
 
-  try {
-    return await run(token);
-  } catch (error) {
-    const message = getErrorMessage(error, "");
-    if (!message.includes("Unauthorized")) {
-      throw error;
-    }
+	try {
+		return await run(token);
+	} catch (error) {
+		const message = getErrorMessage(error, "");
+		if (!message.includes("Unauthorized")) {
+			throw error;
+		}
 
-    clearStoredToken();
-    startAuthFlow();
-    return null;
-  }
+		clearStoredToken();
+		startAuthFlow();
+		return null;
+	}
 }
 
 export function listServers(token) {
-  return rpcCall(token, "targets.list.v1", {});
+	return rpcCall(token, "targets.list.v1", {});
 }
 
 export function getServer(token, targetID) {
-  return rpcCall(token, "targets.get.v1", {
-    target_id: targetID
-  });
+	return rpcCall(token, "targets.get.v1", {
+		target_id: targetID
+	});
 }
 
 export function getProfile(token) {
-  return rpcCall(token, "profile.get.v1", {});
+	return rpcCall(token, "profile.get.v1", {});
 }
 
 export function listBookmarks(token, targetID = "") {
-  return rpcCall(token, "bookmarks.list.v1", targetID ? { target_id: targetID } : {});
+	return rpcCall(token, "bookmarks.list.v1", targetID ? {target_id: targetID} : {});
 }
 
 export function listQueries(token, limit) {
-  return rpcCall(token, "queries.list.v1", typeof limit === "number" ? { limit } : {});
+	return rpcCall(token, "queries.list.v1", typeof limit === "number" ? {limit} : {});
 }
 
 export function runQuery(token, targetID, query) {
-  return rpcCall(token, "query.run.v1", {
-    target_id: targetID,
-    query
-  });
+	return rpcCall(token, "query.run.v1", {
+		target_id: targetID,
+		query
+	});
 }
 
 function normalizeQueryResults(result) {
-  if (!result) {
-    return result;
-  }
+	if (!result) {
+		return result;
+	}
 
-  const table = result.table ?? { headers: [], rows: [] };
-  const rawError = result.error;
-  const error = typeof rawError === "string" ? rawError : rawError?.error ?? "";
+	const table = result.table ?? {headers: [], rows: []};
+	const rawError = result.error;
+	const error = typeof rawError === "string" ? rawError : rawError?.error ?? "";
 
-  return {
-    ...result,
-    state: result.state ?? "",
-    status: result.state ?? result.status ?? "",
-    table: {
-      headers: table.headers ?? [],
-      rows: table.rows ?? []
-    },
-    meta: result.meta ?? null,
-    error
-  };
+	return {
+		...result,
+		state: result.state ?? "",
+		status: result.state ?? result.status ?? "",
+		table: {
+			headers: table.headers ?? [],
+			rows: table.rows ?? []
+		},
+		meta: result.meta ?? null,
+		error
+	};
 }
 
 export function listAdminRequests(token, page) {
-  return rpcCall(token, "admin.requests.list.v1", {
-    page
-  });
+	return rpcCall(token, "admin.requests.list.v1", {
+		page
+	});
 }
 
 export function getQueryResults(token, queryResultID) {
-  return rpcCall(token, "query-results.get.v1", {
-    id: queryResultID
-  }).then(normalizeQueryResults);
+	return rpcCall(token, "query-results.get.v1", {
+		id: queryResultID
+	}).then(normalizeQueryResults);
 }
 
 export function getQueryResultsExportLink(token, queryResultID, format) {
-  return rpcCall(token, "query-results.export-link.v1", {
-    query_result_id: queryResultID,
-    format
-  });
+	return rpcCall(token, "query-results.export-link.v1", {
+		query_result_id: queryResultID,
+		format
+	});
 }
 
 export function addBookmark(token, targetID, title, query) {
-  return rpcCall(token, "bookmarks.add.v1", {
-    target_id: targetID,
-    title,
-    query
-  });
+	return rpcCall(token, "bookmarks.add.v1", {
+		target_id: targetID,
+		title,
+		query
+	});
 }
 
 export function deleteBookmark(token, bookmarkID) {
-  return rpcCall(token, "bookmarks.delete.v1", {
-    id: bookmarkID
-  });
+	return rpcCall(token, "bookmarks.delete.v1", {
+		id: bookmarkID
+	});
 }
