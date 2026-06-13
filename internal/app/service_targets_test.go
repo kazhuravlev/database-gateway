@@ -18,15 +18,45 @@ package app //nolint:testpackage
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"sync"
 	"testing"
 
+	"github.com/go-jet/jet/v2/qrm"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/stretchr/testify/require"
 )
+
+type fakeQueryHistoryStorage struct {
+	*storage.Service
+
+	mu      sync.Mutex
+	inserts []storage.InsertQueryResultsReq
+}
+
+func (*fakeQueryHistoryStorage) Conn(context.Context) qrm.DB { //nolint:ireturn
+	return nil
+}
+
+func (s *fakeQueryHistoryStorage) InsertQueryResults(_ qrm.DB, req storage.InsertQueryResultsReq) error { //nolint:gocritic
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.inserts = append(s.inserts, req)
+
+	return nil
+}
+
+func (s *fakeQueryHistoryStorage) inserted() []storage.InsertQueryResultsReq {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]storage.InsertQueryResultsReq(nil), s.inserts...)
+}
 
 const targetPolicy = `
 package gateway
@@ -304,42 +334,6 @@ func TestRunQueryReturnsForbiddenWhenQueryPreflightDeniesAccess(t *testing.T) {
 		Tables:        []config.TargetTable{{Table: "public.clients", Fields: []string{"id"}}},
 	}
 
-	svc := &Service{
-		opts: Options{
-			logger:  slog.New(slog.DiscardHandler),
-			targets: []config.Target{target},
-			users: config.UsersProviderOIDC{
-				ClientID:            "",
-				ClientSecret:        "",
-				IssuerURL:           "",
-				RedirectURL:         "",
-				Scopes:              nil,
-				AccessTokenAudience: "",
-				RoleClaim:           "",
-				RoleMapping:         nil,
-			},
-			authorizer: mustAuthorizer(t, `
-package gateway
-
-default allow_target := false
-default allow_query := false
-
-allow_target if {
-	"role:user" in input.subjects
-	input.target == "pg-1"
-}
-`),
-			storage: nil,
-		},
-		connsMu:       new(sync.RWMutex),
-		conns:         nil,
-		oauthCfg:      nil,
-		oidcProvider:  nil,
-		tokenVerifier: nil,
-		oidcLogoutEP:  "",
-		oidcRevokeEP:  "",
-	}
-
 	testCases := []struct {
 		name  string
 		query string
@@ -358,6 +352,47 @@ allow_target if {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			history := &fakeQueryHistoryStorage{
+				Service: nil,
+				mu:      sync.Mutex{},
+				inserts: nil,
+			}
+			svc := &Service{
+				opts: Options{
+					logger:  slog.New(slog.DiscardHandler),
+					targets: []config.Target{target},
+					users: config.UsersProviderOIDC{
+						ClientID:            "",
+						ClientSecret:        "",
+						IssuerURL:           "",
+						RedirectURL:         "",
+						Scopes:              nil,
+						AccessTokenAudience: "",
+						RoleClaim:           "",
+						RoleMapping:         nil,
+					},
+					authorizer: mustAuthorizer(t, `
+package gateway
+
+default allow_target := false
+default allow_query := false
+
+allow_target if {
+	"role:user" in input.subjects
+	input.target == "pg-1"
+}
+`),
+					storage: history,
+				},
+				connsMu:       new(sync.RWMutex),
+				conns:         nil,
+				oauthCfg:      nil,
+				oidcProvider:  nil,
+				tokenVerifier: nil,
+				oidcLogoutEP:  "",
+				oidcRevokeEP:  "",
+			}
+
 			_, _, err := svc.RunQuery(
 				context.Background(),
 				structs.User{ID: "alice@example.com", Username: "alice", Role: config.RoleUser},
@@ -366,6 +401,19 @@ allow_target if {
 			)
 
 			require.ErrorIs(t, err, ErrForbidden)
+
+			inserted := history.inserted()
+			require.Len(t, inserted, 1)
+
+			item := inserted[0]
+			require.Equal(t, config.UserID("alice@example.com"), item.UserID)
+			require.Equal(t, config.TargetID("pg-1"), item.TargetID)
+			require.Equal(t, tc.query, item.Query)
+
+			var payload storedQueryResultPayload
+			require.NoError(t, json.Unmarshal(item.Response, &payload))
+			require.Equal(t, "failed", payload.Status)
+			require.Equal(t, "access denied", payload.Error)
 		})
 	}
 }

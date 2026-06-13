@@ -444,31 +444,40 @@ func (s *Service) downloadQueryResultsExport(c echo.Context) error {
 }
 
 func marshalQueryResultsJSON(qRes *app.QueryResults) ([]byte, error) {
-	qTbl := just.SliceMap(qRes.QTable.Rows, func(row []string) map[string]any {
-		m := make(map[string]any, len(qRes.QTable.Headers))
-		for i := range qRes.QTable.Headers {
-			m[qRes.QTable.Headers[i]] = row[i]
+	qTable := qRes.QTable.Val()
+	qTbl := just.SliceMap(qTable.Rows, func(row []string) map[string]any {
+		m := make(map[string]any, len(qTable.Headers))
+		for i := range qTable.Headers {
+			m[qTable.Headers[i]] = row[i]
 		}
 
 		return m
 	})
 
 	return json.Marshal(struct {
-		Meta structs.QMeta    `json:"meta"`
-		Rows []map[string]any `json:"rows"`
+		Meta  structs.QMeta      `json:"meta"`
+		State structs.QueryState `json:"state"`
+		Rows  []map[string]any   `json:"rows"`
+		Error structs.QError     `json:"error"`
 	}{
-		Meta: qRes.Meta,
-		Rows: qTbl,
+		Meta:  qRes.Meta,
+		Rows:  qTbl,
+		State: qRes.State,
+		Error: qRes.QError.Val(),
 	})
 }
 
 func marshalQueryResultsCSV(qRes *app.QueryResults) ([]byte, error) {
+	if qRes.State != structs.QueryStateCompleted {
+		return []byte(`state\nNot Completed`), nil
+	}
+
 	var csvBuf bytes.Buffer
 	csvWriter := csv.NewWriter(&csvBuf)
-	if err := csvWriter.Write(qRes.QTable.Headers); err != nil {
+	if err := csvWriter.Write(qRes.QTable.Val().Headers); err != nil {
 		return nil, err
 	}
-	if err := csvWriter.WriteAll(qRes.QTable.Rows); err != nil {
+	if err := csvWriter.WriteAll(qRes.QTable.Val().Rows); err != nil {
 		return nil, err
 	}
 	csvWriter.Flush()

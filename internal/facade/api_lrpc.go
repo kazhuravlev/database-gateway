@@ -29,6 +29,7 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 	"github.com/kazhuravlev/just"
 	"github.com/kazhuravlev/lrpc/ctypes"
+	"github.com/kazhuravlev/optional"
 )
 
 var errBadInput = errors.New("bad input")
@@ -336,13 +337,15 @@ type lrpcQueryResultsGetReq struct {
 }
 
 type lrpcQueryResultsGetResp struct {
-	ID        string          `json:"id"`
-	UserID    config.UserID   `json:"user_id"`
-	TargetID  config.TargetID `json:"target_id"`
-	Query     string          `json:"query"`
-	CreatedAt string          `json:"created_at"`
-	Table     structs.QTable  `json:"table"`
-	Meta      structs.QMeta   `json:"meta"`
+	ID        string                       `json:"id"`
+	UserID    config.UserID                `json:"user_id"`
+	TargetID  config.TargetID              `json:"target_id"`
+	Query     string                       `json:"query"`
+	CreatedAt string                       `json:"created_at"`
+	State     structs.QueryState           `json:"state"`
+	Meta      structs.QMeta                `json:"meta"`
+	Table     optional.Val[structs.QTable] `json:"table"`
+	Error     optional.Val[structs.QError] `json:"error"`
 }
 
 type lrpcQueryResultsExportLinkReq struct {
@@ -385,8 +388,10 @@ func (s *Service) lrpcQueryResultsGet(
 		TargetID:  config.TargetID(item.TargetID),
 		Query:     item.Query,
 		CreatedAt: item.CreatedAt.Format(time.RFC3339),
-		Table:     item.QTable,
+		State:     item.State,
 		Meta:      item.Meta,
+		Table:     item.QTable,
+		Error:     item.QError,
 	}, nil
 }
 

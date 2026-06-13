@@ -8,7 +8,6 @@ import (
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/policy"
-	"github.com/kazhuravlev/database-gateway/internal/storage"
 	errors461e464ebed9 "github.com/kazhuravlev/options-gen/pkg/errors"
 	validator461e464ebed9 "github.com/kazhuravlev/options-gen/pkg/validator"
 )
@@ -20,7 +19,7 @@ func NewOptions(
 	targets []config.Target,
 	users config.UsersProviderOIDC,
 	authorizer policy.Authorizer,
-	storage *storage.Service,
+	storage metadataStore,
 	options ...OptOptionsSetter,
 ) Options {
 	var o Options

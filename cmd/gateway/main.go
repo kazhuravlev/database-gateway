@@ -31,6 +31,7 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/facade"
 	"github.com/kazhuravlev/database-gateway/internal/pgdb"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 	_ "github.com/lib/pq"
 	"github.com/urfave/cli/v2"
@@ -119,6 +120,7 @@ func cmdGenerateModels(_ *cli.Context, cfg config.Config) error { //nolint:gocri
 			"user_id":   template.NewType(config.UserID("")),
 			"target_id": template.NewType(config.TargetID("")),
 			"response":  template.NewType([]byte{}),
+			"state":     template.NewType(structs.QueryState("")),
 		},
 	}
 
