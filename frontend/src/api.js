@@ -118,15 +118,15 @@ async function rpcCall(token, method, params) {
     throw new Error(getErrorMessage(error, "Network request failed"));
   }
 
-  if (isUnauthorizedStatus(response.status)) {
-    throw new Error(`Unauthorized (${response.status})`);
-  }
-
   let payload = null;
 
   try {
     payload = await response.json();
   } catch (error) {
+    if (isUnauthorizedStatus(response.status)) {
+      throw new Error(`Unauthorized (${response.status})`);
+    }
+
     if (!response.ok) {
       throw new Error(`Failed to do request (${response.status})`);
     }
@@ -137,6 +137,10 @@ async function rpcCall(token, method, params) {
   const rpcError = buildRPCError(payload);
   if (rpcError) {
     throw rpcError;
+  }
+
+  if (isUnauthorizedStatus(response.status)) {
+    throw new Error(`Unauthorized (${response.status})`);
   }
 
   if (!response.ok) {
