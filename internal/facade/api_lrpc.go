@@ -302,8 +302,7 @@ type lrpcQueryRunReq struct {
 }
 
 type lrpcQueryRunResp struct {
-	QueryID string         `json:"query_id"`
-	Table   structs.QTable `json:"table"`
+	QueryID string `json:"query_id"`
 }
 
 func (s *Service) lrpcQueryRun(ctx context.Context, _ ctypes.ID, req lrpcQueryRunReq) (*lrpcQueryRunResp, error) {
@@ -318,7 +317,7 @@ func (s *Service) lrpcQueryRun(ctx context.Context, _ ctypes.ID, req lrpcQueryRu
 		return nil, fmt.Errorf("target_id and query are required: %w", errBadInput)
 	}
 
-	queryID, table, err := s.opts.app.RunQuery(ctx, user, config.TargetID(targetID), query)
+	queryID, _, err := s.opts.app.RunQuery(ctx, user, config.TargetID(targetID), query)
 	if err != nil {
 		if errors.Is(err, app.ErrForbidden) {
 			return nil, fmt.Errorf("access denied: %w", app.ErrForbidden)
@@ -329,7 +328,6 @@ func (s *Service) lrpcQueryRun(ctx context.Context, _ ctypes.ID, req lrpcQueryRu
 
 	return &lrpcQueryRunResp{
 		QueryID: queryID.S(),
-		Table:   *table,
 	}, nil
 }
 
