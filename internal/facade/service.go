@@ -145,7 +145,8 @@ func (s *Service) Run(_ context.Context) error {
 				errMsg = reqVals.Error.Error()
 			}
 
-			logFn("req",
+			logFn(
+				"req",
 				slog.Time("start", reqVals.StartTime),
 				slog.String("method", reqVals.Method),
 				slog.String("uri", reqVals.URI),
