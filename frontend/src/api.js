@@ -200,6 +200,28 @@ export function runQuery(token, targetID, query) {
   });
 }
 
+function normalizeQueryResults(result) {
+  if (!result) {
+    return result;
+  }
+
+  const table = result.table ?? { headers: [], rows: [] };
+  const rawError = result.error;
+  const error = typeof rawError === "string" ? rawError : rawError?.error ?? "";
+
+  return {
+    ...result,
+    state: result.state ?? "",
+    status: result.state ?? result.status ?? "",
+    table: {
+      headers: table.headers ?? [],
+      rows: table.rows ?? []
+    },
+    meta: result.meta ?? null,
+    error
+  };
+}
+
 export function listAdminRequests(token, page) {
   return rpcCall(token, "admin.requests.list.v1", {
     page
@@ -209,7 +231,7 @@ export function listAdminRequests(token, page) {
 export function getQueryResults(token, queryResultID) {
   return rpcCall(token, "query-results.get.v1", {
     id: queryResultID
-  });
+  }).then(normalizeQueryResults);
 }
 
 export function getQueryResultsExportLink(token, queryResultID, format) {

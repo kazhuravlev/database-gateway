@@ -398,7 +398,15 @@
     {#if queryResult}
       <section class={`${panelClass} w-full p-3`}>
         <div class="flex flex-col gap-3">
-          <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+          <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
+            {#if queryResult.state}
+              <div class={`${chipClass} p-3`}>
+                <div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">State</div>
+                <div class={`mt-1 text-sm ${queryResult.state === "failed" ? "text-red-300" : "text-zinc-100"}`}>
+                  {queryResult.state}
+                </div>
+              </div>
+            {/if}
             <div class={`${chipClass} p-3`}>
               <div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Created</div>
               <div class="mt-1 break-words text-sm text-zinc-100">{queryResult.created_at}</div>
@@ -425,7 +433,13 @@
             </div>
           </div>
 
-          <QueryResultsTable table={queryResult.table} />
+          {#if queryResult.error}
+            <div class="rounded-md border border-red-500/70 bg-red-950/50 px-3 py-2 text-sm leading-6 text-red-200">
+              {queryResult.error}
+            </div>
+          {:else}
+            <QueryResultsTable table={queryResult.table} />
+          {/if}
         </div>
       </section>
     {/if}

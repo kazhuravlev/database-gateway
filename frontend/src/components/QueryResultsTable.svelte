@@ -1,5 +1,5 @@
 <script>
-  let { table } = $props();
+  let { table = { headers: [], rows: [] } } = $props();
 </script>
 
 <div class="w-full">

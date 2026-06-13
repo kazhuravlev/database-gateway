@@ -12,8 +12,10 @@
     userID = "",
     requestID = "",
     queryID = "",
-    table,
-    meta = null
+    table = { headers: [], rows: [] },
+    meta = null,
+    status = "",
+    error = ""
   } = $props();
 
   const panelClass =
@@ -37,6 +39,12 @@
       </div>
 
       <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {#if status}
+          <div class={`${chipClass} p-3`}>
+            <div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Status</div>
+            <div class={`mt-1 text-sm ${status === "failed" ? "text-red-300" : "text-zinc-100"}`}>{status}</div>
+          </div>
+        {/if}
         {#if createdAt}
           <div class={`${chipClass} p-3`}>
             <div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Created</div>
@@ -97,10 +105,18 @@
           {query}
         </div>
       </div>
+
+      {#if error}
+        <div class="rounded-xl border border-red-500/70 bg-red-950/30 p-4 text-sm leading-6 text-red-200">
+          {error}
+        </div>
+      {/if}
     </div>
   </section>
 
-  <section class={`${panelClass} p-3`}>
-    <QueryResultsTable {table} />
-  </section>
+  {#if !error}
+    <section class={`${panelClass} p-3`}>
+      <QueryResultsTable {table} />
+    </section>
+  {/if}
 </div>

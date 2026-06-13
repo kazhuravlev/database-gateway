@@ -55,5 +55,7 @@
     queryID={queryID}
     table={result.table}
     meta={result.meta}
+    status={result.state}
+    error={result.error}
   />
 {/if}
