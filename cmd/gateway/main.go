@@ -128,20 +128,21 @@ func cmdGenerateModels(_ *cli.Context, cfg config.Config) error { //nolint:gocri
 		UseSchema(func(schema metadata.Schema) template.Schema {
 			return template.DefaultSchema(schema).
 				// UsePath("../").
-				UseModel(template.DefaultModel().
-					UseTable(func(table metadata.Table) template.TableModel {
-						return template.DefaultTableModel(table).
-							UseField(func(column metadata.Column) template.TableModelField {
-								defaultTableModelField := template.DefaultTableModelField(column)
+				UseModel(
+					template.DefaultModel().
+						UseTable(func(table metadata.Table) template.TableModel {
+							return template.DefaultTableModel(table).
+								UseField(func(column metadata.Column) template.TableModelField {
+									defaultTableModelField := template.DefaultTableModelField(column)
 
-								customType, ok := customFields[table.Name][column.Name]
-								if ok {
-									defaultTableModelField.Type = customType
-								}
+									customType, ok := customFields[table.Name][column.Name]
+									if ok {
+										defaultTableModelField.Type = customType
+									}
 
-								return defaultTableModelField
-							})
-					}),
+									return defaultTableModelField
+								})
+						}),
 				)
 		})
 
