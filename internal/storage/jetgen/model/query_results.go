@@ -21,4 +21,5 @@ type QueryResults struct {
 	Query     string
 	Response  []byte
 	TargetID  config.TargetID
+	State     string
 }

@@ -23,6 +23,7 @@ type queryResultsTable struct {
 	Query     postgres.ColumnString
 	Response  postgres.ColumnString
 	TargetID  postgres.ColumnString
+	State     postgres.ColumnString
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -70,8 +71,9 @@ func newQueryResultsTableImpl(schemaName, tableName, alias string) queryResultsT
 		QueryColumn     = postgres.StringColumn("query")
 		ResponseColumn  = postgres.StringColumn("response")
 		TargetIDColumn  = postgres.StringColumn("target_id")
-		allColumns      = postgres.ColumnList{IDColumn, UserIDColumn, CreatedAtColumn, QueryColumn, ResponseColumn, TargetIDColumn}
-		mutableColumns  = postgres.ColumnList{UserIDColumn, CreatedAtColumn, QueryColumn, ResponseColumn, TargetIDColumn}
+		StateColumn     = postgres.StringColumn("state")
+		allColumns      = postgres.ColumnList{IDColumn, UserIDColumn, CreatedAtColumn, QueryColumn, ResponseColumn, TargetIDColumn, StateColumn}
+		mutableColumns  = postgres.ColumnList{UserIDColumn, CreatedAtColumn, QueryColumn, ResponseColumn, TargetIDColumn, StateColumn}
 		defaultColumns  = postgres.ColumnList{ResponseColumn}
 	)
 
@@ -85,6 +87,7 @@ func newQueryResultsTableImpl(schemaName, tableName, alias string) queryResultsT
 		Query:     QueryColumn,
 		Response:  ResponseColumn,
 		TargetID:  TargetIDColumn,
+		State:     StateColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
