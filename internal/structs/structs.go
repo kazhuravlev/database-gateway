@@ -18,7 +18,20 @@ package structs
 
 import (
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/trace"
 )
+
+type QueryState string
+
+const (
+	QueryStateNew       QueryState = "new"
+	QueryStateFailed    QueryState = "failed"
+	QueryStateCompleted QueryState = "completed"
+)
+
+func (s QueryState) S() string {
+	return string(s)
+}
 
 type Tag struct {
 	Name string
@@ -39,12 +52,14 @@ type QTable struct {
 }
 
 type QMeta struct {
-	ExecutionTimeMS    int64 `json:"execution_time_ms"`
-	ParsingTimeMS      int64 `json:"parsing_time_ms"`
-	NetworkRoundTripMS int64 `json:"network_round_trip_ms"`
-	RowsCount          int   `json:"rows_count,omitempty"`
-	ColumnsCount       int   `json:"columns_count,omitempty"`
-	VectorsCount       int   `json:"vectors_count,omitempty"`
+	Trace        trace.Trace `json:"trace"`
+	RowsCount    int         `json:"rows_count,omitempty"`
+	ColumnsCount int         `json:"columns_count,omitempty"`
+	VectorsCount int         `json:"vectors_count,omitempty"`
+}
+
+type QError struct {
+	Error string `json:"error"`
 }
 
 type User struct {
