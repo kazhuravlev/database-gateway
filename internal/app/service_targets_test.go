@@ -393,7 +393,7 @@ allow_target if {
 				oidcRevokeEP:  "",
 			}
 
-			_, _, err := svc.RunQuery(
+			_, err := svc.RunQuery(
 				context.Background(),
 				structs.User{ID: "alice@example.com", Username: "alice", Role: config.RoleUser},
 				"pg-1",

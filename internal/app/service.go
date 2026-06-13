@@ -143,15 +143,10 @@ func (s *Service) GetTargetByID(ctx context.Context, user structs.User, tID conf
 }
 
 // TODO: add RunQueryReq
-func (s *Service) RunQuery(
-	ctx context.Context,
-	user structs.User,
-	srvID config.TargetID,
-	query string,
-) (uuid6.UUID, *structs.QTable, error) {
+func (s *Service) RunQuery(ctx context.Context, user structs.User, srvID config.TargetID, query string) (uuid6.UUID, error) {
 	srv, schema, err := s.getTargetByID(ctx, user, srvID)
 	if err != nil {
-		return uuid6.Nil(), nil, fmt.Errorf("get target by id: %w", err)
+		return uuid6.Nil(), fmt.Errorf("get target by id: %w", err)
 	}
 
 	id := uuid6.New()
@@ -166,11 +161,10 @@ func (s *Service) RunQuery(
 			Query:     query,
 		},
 	); err != nil {
-		return uuid6.Nil(), nil, fmt.Errorf("insert query results: %w", err)
+		return uuid6.Nil(), fmt.Errorf("insert query results: %w", err)
 	}
 
-	qTable, err := s.runQuery(ctx, user, srv, schema, id, query)
-	if err != nil {
+	if _, err := s.runQuery(ctx, user, srv, schema, id, query); err != nil {
 		errorPayload, _ := json.Marshal(map[string]string{
 			"error": err.Error(),
 		})
@@ -183,13 +177,11 @@ func (s *Service) RunQuery(
 				Payload: errorPayload,
 			},
 		); err != nil {
-			return uuid6.Nil(), nil, fmt.Errorf("update query results: %w", err)
+			return uuid6.Nil(), fmt.Errorf("update query results: %w", err)
 		}
-
-		return uuid6.Nil(), nil, fmt.Errorf("run query: %w", err)
 	}
 
-	return id, qTable, nil
+	return id, nil
 }
 
 func (s *Service) runQuery(
