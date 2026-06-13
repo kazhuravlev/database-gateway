@@ -61,6 +61,13 @@
           <div class="flex flex-col items-start justify-between gap-2 sm:flex-row">
             <div class="min-w-0">
               <div class="text-xs font-bold text-zinc-300">{formatTimestamp(query.created_at)}</div>
+							{#if query.state === "completed"}
+								<div class="text-xs font-bold text-green-300">{query.state}</div>
+							{:else if query.state === "failed"}
+								<div class="text-xs font-bold text-red-300">{query.state}</div>
+							{:else}
+								<div class="text-xs font-bold text-zinc-300">unknown - {query.state}</div>
+							{/if}
               <div class="break-words text-xs leading-5 text-zinc-400">{query.target_id}</div>
             </div>
             <a class={`${buttonClass} min-w-[72px]`} href={appHref(`/servers/${query.target_id}/${query.id}`)}>
