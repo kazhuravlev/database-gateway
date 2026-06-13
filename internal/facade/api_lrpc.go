@@ -317,6 +317,10 @@ func (s *Service) lrpcQueryRun(ctx context.Context, _ ctypes.ID, req lrpcQueryRu
 
 	queryID, table, err := s.opts.app.RunQuery(ctx, user, config.TargetID(targetID), query)
 	if err != nil {
+		if errors.Is(err, app.ErrForbidden) {
+			return nil, fmt.Errorf("access denied: %w", app.ErrForbidden)
+		}
+
 		return nil, fmt.Errorf("run query: %w", err)
 	}
 

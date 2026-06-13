@@ -18,6 +18,7 @@ package app //nolint:testpackage
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"testing"
 
@@ -280,4 +281,91 @@ func TestPolicyReceivesCanonicalTableName(t *testing.T) {
 	require.NoError(t, validator.ValidateSchema(vectors, schema))
 	require.NoError(t, validator.ValidateAccess(vectors, haveAccess))
 	require.Equal(t, "public.clients", seenTable)
+}
+
+func TestRunQueryReturnsForbiddenWhenQueryPreflightDeniesAccess(t *testing.T) {
+	t.Parallel()
+
+	target := config.Target{
+		ID:          "pg-1",
+		Description: "main",
+		Tags:        []string{"prod"},
+		Type:        "postgres",
+		Connection: config.Connection{
+			Host:        "",
+			Port:        0,
+			User:        "",
+			Password:    "",
+			DB:          "",
+			UseSSL:      false,
+			MaxPoolSize: 0,
+		},
+		DefaultSchema: "public",
+		Tables:        []config.TargetTable{{Table: "public.clients", Fields: []string{"id"}}},
+	}
+
+	svc := &Service{
+		opts: Options{
+			logger:  slog.New(slog.DiscardHandler),
+			targets: []config.Target{target},
+			users: config.UsersProviderOIDC{
+				ClientID:            "",
+				ClientSecret:        "",
+				IssuerURL:           "",
+				RedirectURL:         "",
+				Scopes:              nil,
+				AccessTokenAudience: "",
+				RoleClaim:           "",
+				RoleMapping:         nil,
+			},
+			authorizer: mustAuthorizer(t, `
+package gateway
+
+default allow_target := false
+default allow_query := false
+
+allow_target if {
+	"role:user" in input.subjects
+	input.target == "pg-1"
+}
+`),
+			storage: nil,
+		},
+		connsMu:       new(sync.RWMutex),
+		conns:         nil,
+		oauthCfg:      nil,
+		oidcProvider:  nil,
+		tokenVerifier: nil,
+		oidcLogoutEP:  "",
+		oidcRevokeEP:  "",
+	}
+
+	testCases := []struct {
+		name  string
+		query string
+	}{
+		{
+			name:  "query policy denies known table",
+			query: "select id from clients",
+		},
+		{
+			name:  "schema validation hides unknown table",
+			query: "select id from unknown_table",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, _, err := svc.RunQuery(
+				context.Background(),
+				structs.User{ID: "alice@example.com", Username: "alice", Role: config.RoleUser},
+				"pg-1",
+				tc.query,
+			)
+
+			require.ErrorIs(t, err, ErrForbidden)
+		})
+	}
 }

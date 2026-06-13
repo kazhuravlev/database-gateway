@@ -175,13 +175,13 @@ func (s *Service) RunQuery(
 	if err := validator.ValidateSchema(vectors, schema); err != nil {
 		log.Error("err", err.Error())
 
-		return uuid6.Nil(), nil, fmt.Errorf("preflight check: validate schema: %w", err)
+		return uuid6.Nil(), nil, formatPreflightCheckError("validate schema", err)
 	}
 
 	if err := validator.ValidateAccess(vectors, haveAccess); err != nil {
 		log.Error("err", err.Error())
 
-		return uuid6.Nil(), nil, fmt.Errorf("preflight check: validate access: %w", err)
+		return uuid6.Nil(), nil, formatPreflightCheckError("validate access", err)
 	}
 
 	conn, err := s.getConnection(ctx, *srv)
@@ -244,6 +244,14 @@ func (s *Service) RunQuery(
 	}
 
 	return req.ID, &qTable, nil
+}
+
+func formatPreflightCheckError(step string, err error) error {
+	if errors.Is(err, validator.ErrAccessDenied) {
+		return fmt.Errorf("preflight check: %s: %w", step, ErrForbidden)
+	}
+
+	return fmt.Errorf("preflight check: %s: %w", step, err)
 }
 
 func (s *Service) InitOIDC(_ context.Context) (string, string, error) { //nolint:gocritic
