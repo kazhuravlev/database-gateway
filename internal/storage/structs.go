@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 )
 
@@ -38,5 +39,6 @@ type QueryResult struct {
 	TargetID  config.TargetID
 	CreatedAt time.Time
 	Query     string
+	State     structs.QueryState
 	Response  []byte
 }

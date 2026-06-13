@@ -177,10 +177,11 @@ func (s *Service) lrpcBookmarksDelete(
 }
 
 type Query struct {
-	ID        string          `json:"id"`
-	TargetID  config.TargetID `json:"target_id"`
-	Query     string          `json:"query"`
-	CreatedAt string          `json:"created_at"`
+	ID        string             `json:"id"`
+	TargetID  config.TargetID    `json:"target_id"`
+	Query     string             `json:"query"`
+	CreatedAt string             `json:"created_at"`
+	State     structs.QueryState `json:"state"`
 }
 
 type lrpcQueriesListResp struct {
@@ -214,6 +215,7 @@ func (s *Service) lrpcQueriesList(ctx context.Context, _ ctypes.ID, req lrpcQuer
 				TargetID:  query.TargetID,
 				Query:     query.Query,
 				CreatedAt: query.CreatedAt,
+				State:     query.State,
 			}
 		}),
 	}, nil

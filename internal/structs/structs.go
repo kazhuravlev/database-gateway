@@ -79,6 +79,7 @@ type Query struct {
 	ID        string
 	TargetID  config.TargetID
 	Query     string
+	State     QueryState
 	CreatedAt string
 }
 

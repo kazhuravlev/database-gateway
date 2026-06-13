@@ -15,3 +15,17 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package storage
+
+import "github.com/kazhuravlev/database-gateway/internal/storage/jetgen/model"
+
+func adaptQueryResult(item model.QueryResults) QueryResult {
+	return QueryResult{
+		ID:        item.ID,
+		UserID:    item.UserID,
+		TargetID:  item.TargetID,
+		CreatedAt: item.CreatedAt,
+		Query:     item.Query,
+		State:     item.State,
+		Response:  item.Response,
+	}
+}

@@ -649,6 +649,7 @@ func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limi
 			TargetID:  item.TargetID,
 			Query:     item.Query,
 			CreatedAt: item.CreatedAt.Format("2006-01-02 15:04:05"),
+			State:     item.State,
 		})
 	}
 

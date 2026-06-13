@@ -124,14 +124,7 @@ func (*Service) ListQueryResultsByUser(conn qrm.DB, uid config.UserID, limit int
 
 	out := make([]QueryResult, 0, len(items))
 	for _, item := range items {
-		out = append(out, QueryResult{
-			ID:        item.ID,
-			UserID:    item.UserID,
-			TargetID:  item.TargetID,
-			CreatedAt: item.CreatedAt,
-			Query:     item.Query,
-			Response:  item.Response,
-		})
+		out = append(out, adaptQueryResult(item))
 	}
 
 	return out, nil
@@ -156,14 +149,7 @@ func (*Service) ListQueryResults(conn qrm.DB, limit, offset int64) ([]QueryResul
 
 	out := make([]QueryResult, 0, len(items))
 	for _, item := range items {
-		out = append(out, QueryResult{
-			ID:        item.ID,
-			UserID:    item.UserID,
-			TargetID:  item.TargetID,
-			CreatedAt: item.CreatedAt,
-			Query:     item.Query,
-			Response:  item.Response,
-		})
+		out = append(out, adaptQueryResult(item))
 	}
 
 	return out, nil
