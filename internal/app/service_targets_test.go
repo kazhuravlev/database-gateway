@@ -26,16 +26,17 @@ import (
 	"github.com/go-jet/jet/v2/qrm"
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/storage"
+	"github.com/kazhuravlev/database-gateway/internal/storage/jetgen/model"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/stretchr/testify/require"
 )
 
 type fakeQueryHistoryStorage struct {
-	*storage.Service
-
 	mu      sync.Mutex
 	inserts []storage.InsertQueryResultsReq
+	states  []storage.SetQueryResultsStateReq
 }
 
 func (*fakeQueryHistoryStorage) Conn(context.Context) qrm.DB { //nolint:ireturn
@@ -51,11 +52,59 @@ func (s *fakeQueryHistoryStorage) InsertQueryResults(_ qrm.DB, req storage.Inser
 	return nil
 }
 
+func (s *fakeQueryHistoryStorage) SetQueryResultsState(_ qrm.DB, req storage.SetQueryResultsStateReq) error { //nolint:gocritic
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.states = append(s.states, req)
+
+	return nil
+}
+
+func (*fakeQueryHistoryStorage) GetQueryResultsByID(qrm.DB, uuid6.UUID) (*model.QueryResults, error) {
+	return nil, storage.ErrNotFound
+}
+
+func (*fakeQueryHistoryStorage) ListQueryResultsByUser(
+	qrm.DB,
+	config.UserID,
+	int64,
+) ([]storage.QueryResult, error) {
+	return []storage.QueryResult{}, nil
+}
+
+func (*fakeQueryHistoryStorage) ListQueryResults(qrm.DB, int64, int64) ([]storage.QueryResult, error) {
+	return []storage.QueryResult{}, nil
+}
+
+func (*fakeQueryHistoryStorage) InsertBookmark(qrm.DB, storage.InsertBookmarkReq) error {
+	return nil
+}
+
+func (*fakeQueryHistoryStorage) DeleteBookmark(qrm.DB, config.UserID, uuid6.UUID) error {
+	return nil
+}
+
+func (*fakeQueryHistoryStorage) ListBookmarks(qrm.DB, config.UserID, config.TargetID) ([]storage.Bookmark, error) {
+	return []storage.Bookmark{}, nil
+}
+
+func (*fakeQueryHistoryStorage) ListBookmarksByUser(qrm.DB, config.UserID) ([]storage.Bookmark, error) {
+	return []storage.Bookmark{}, nil
+}
+
 func (s *fakeQueryHistoryStorage) inserted() []storage.InsertQueryResultsReq {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	return append([]storage.InsertQueryResultsReq(nil), s.inserts...)
+}
+
+func (s *fakeQueryHistoryStorage) statesSet() []storage.SetQueryResultsStateReq {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]storage.SetQueryResultsStateReq(nil), s.states...)
 }
 
 const targetPolicy = `
@@ -335,16 +384,19 @@ func TestRunQueryReturnsForbiddenWhenQueryPreflightDeniesAccess(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name  string
-		query string
+		name      string
+		query     string
+		wantError string
 	}{
 		{
-			name:  "query policy denies known table",
-			query: "select id from clients",
+			name:      "query policy denies known table",
+			query:     "select id from clients",
+			wantError: "preflight check: validate access: forbidden",
 		},
 		{
-			name:  "schema validation hides unknown table",
-			query: "select id from unknown_table",
+			name:      "schema validation hides unknown table",
+			query:     "select id from unknown_table",
+			wantError: "preflight check: validate schema: forbidden",
 		},
 	}
 
@@ -353,9 +405,9 @@ func TestRunQueryReturnsForbiddenWhenQueryPreflightDeniesAccess(t *testing.T) {
 			t.Parallel()
 
 			history := &fakeQueryHistoryStorage{
-				Service: nil,
 				mu:      sync.Mutex{},
 				inserts: nil,
+				states:  nil,
 			}
 			svc := &Service{
 				opts: Options{
@@ -384,27 +436,32 @@ allow_target if {
 				oidcRevokeEP:  "",
 			}
 
-			_, err := svc.RunQuery(
+			queryID, err := svc.RunQuery(
 				context.Background(),
 				structs.User{ID: "alice@example.com", Username: "alice", Role: config.RoleUser},
 				"pg-1",
 				tc.query,
 			)
 
-			require.ErrorIs(t, err, ErrForbidden)
+			require.NoError(t, err)
 
 			inserted := history.inserted()
 			require.Len(t, inserted, 1)
 
 			item := inserted[0]
+			require.Equal(t, queryID, item.ID)
 			require.Equal(t, config.UserID("alice@example.com"), item.UserID)
 			require.Equal(t, config.TargetID("pg-1"), item.TargetID)
 			require.Equal(t, tc.query, item.Query)
 
-			var payload storedQueryResultPayload
-			require.NoError(t, json.Unmarshal(item.Response, &payload))
-			require.Equal(t, "failed", payload.Status)
-			require.Equal(t, "access denied", payload.Error)
+			statesSet := history.statesSet()
+			require.Len(t, statesSet, 1)
+			require.Equal(t, item.ID, statesSet[0].ID)
+			require.Equal(t, structs.QueryStateFailed, statesSet[0].State)
+
+			var payload structs.QError
+			require.NoError(t, json.Unmarshal(statesSet[0].Payload, &payload))
+			require.Equal(t, tc.wantError, payload.Error)
 		})
 	}
 }
