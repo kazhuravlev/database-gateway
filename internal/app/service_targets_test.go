@@ -18,14 +18,94 @@ package app //nolint:testpackage
 
 import (
 	"context"
+	"encoding/json"
+	"log/slog"
 	"sync"
 	"testing"
 
+	"github.com/go-jet/jet/v2/qrm"
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/storage"
+	"github.com/kazhuravlev/database-gateway/internal/storage/jetgen/model"
 	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 	"github.com/kazhuravlev/database-gateway/internal/validator"
 	"github.com/stretchr/testify/require"
 )
+
+type fakeQueryHistoryStorage struct {
+	mu      sync.Mutex
+	inserts []storage.InsertQueryResultsReq
+	states  []storage.SetQueryResultsStateReq
+}
+
+func (*fakeQueryHistoryStorage) Conn(context.Context) qrm.DB { //nolint:ireturn
+	return nil
+}
+
+func (s *fakeQueryHistoryStorage) InsertQueryResults(_ qrm.DB, req storage.InsertQueryResultsReq) error { //nolint:gocritic
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.inserts = append(s.inserts, req)
+
+	return nil
+}
+
+func (s *fakeQueryHistoryStorage) SetQueryResultsState(_ qrm.DB, req storage.SetQueryResultsStateReq) error { //nolint:gocritic
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.states = append(s.states, req)
+
+	return nil
+}
+
+func (*fakeQueryHistoryStorage) GetQueryResultsByID(qrm.DB, uuid6.UUID) (*model.QueryResults, error) {
+	return nil, storage.ErrNotFound
+}
+
+func (*fakeQueryHistoryStorage) ListQueryResultsByUser(
+	qrm.DB,
+	config.UserID,
+	int64,
+) ([]storage.QueryResult, error) {
+	return []storage.QueryResult{}, nil
+}
+
+func (*fakeQueryHistoryStorage) ListQueryResults(qrm.DB, int64, int64) ([]storage.QueryResult, error) {
+	return []storage.QueryResult{}, nil
+}
+
+func (*fakeQueryHistoryStorage) InsertBookmark(qrm.DB, storage.InsertBookmarkReq) error {
+	return nil
+}
+
+func (*fakeQueryHistoryStorage) DeleteBookmark(qrm.DB, config.UserID, uuid6.UUID) error {
+	return nil
+}
+
+func (*fakeQueryHistoryStorage) ListBookmarks(qrm.DB, config.UserID, config.TargetID) ([]storage.Bookmark, error) {
+	return []storage.Bookmark{}, nil
+}
+
+func (*fakeQueryHistoryStorage) ListBookmarksByUser(qrm.DB, config.UserID) ([]storage.Bookmark, error) {
+	return []storage.Bookmark{}, nil
+}
+
+func (s *fakeQueryHistoryStorage) inserted() []storage.InsertQueryResultsReq {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]storage.InsertQueryResultsReq(nil), s.inserts...)
+}
+
+func (s *fakeQueryHistoryStorage) statesSet() []storage.SetQueryResultsStateReq {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]storage.SetQueryResultsStateReq(nil), s.states...)
+}
 
 const targetPolicy = `
 package gateway
@@ -280,4 +360,117 @@ func TestPolicyReceivesCanonicalTableName(t *testing.T) {
 	require.NoError(t, validator.ValidateSchema(vectors, schema))
 	require.NoError(t, validator.ValidateAccess(vectors, haveAccess))
 	require.Equal(t, "public.clients", seenTable)
+}
+
+func TestRunQueryReturnsForbiddenWhenQueryPreflightDeniesAccess(t *testing.T) {
+	t.Parallel()
+
+	target := config.Target{
+		ID:          "pg-1",
+		Description: "main",
+		Tags:        []string{"prod"},
+		Type:        "postgres",
+		Connection: config.Connection{
+			Host:        "",
+			Port:        0,
+			User:        "",
+			Password:    "",
+			DB:          "",
+			UseSSL:      false,
+			MaxPoolSize: 0,
+		},
+		DefaultSchema: "public",
+		Tables:        []config.TargetTable{{Table: "public.clients", Fields: []string{"id"}}},
+	}
+
+	testCases := []struct {
+		name      string
+		query     string
+		wantError string
+	}{
+		{
+			name:      "query policy denies known table",
+			query:     "select id from clients",
+			wantError: "preflight check: validate access: forbidden",
+		},
+		{
+			name:      "schema validation hides unknown table",
+			query:     "select id from unknown_table",
+			wantError: "preflight check: validate schema: forbidden",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			history := &fakeQueryHistoryStorage{
+				mu:      sync.Mutex{},
+				inserts: nil,
+				states:  nil,
+			}
+			svc := &Service{
+				opts: Options{
+					logger:  slog.New(slog.DiscardHandler),
+					targets: []config.Target{target},
+					users: config.UsersProviderOIDC{
+						ClientID:            "",
+						ClientSecret:        "",
+						IssuerURL:           "",
+						RedirectURL:         "",
+						Scopes:              nil,
+						AccessTokenAudience: "",
+						RoleClaim:           "",
+						RoleMapping:         nil,
+					},
+					authorizer: mustAuthorizer(t, `
+package gateway
+
+default allow_target := false
+default allow_query := false
+
+allow_target if {
+	"role:user" in input.subjects
+	input.target == "pg-1"
+}
+`),
+					storage: history,
+				},
+				connsMu:       new(sync.RWMutex),
+				conns:         nil,
+				oauthCfg:      nil,
+				oidcProvider:  nil,
+				tokenVerifier: nil,
+				oidcLogoutEP:  "",
+				oidcRevokeEP:  "",
+			}
+
+			queryID, err := svc.RunQuery(
+				context.Background(),
+				structs.User{ID: "alice@example.com", Username: "alice", Role: config.RoleUser},
+				"pg-1",
+				tc.query,
+			)
+
+			require.NoError(t, err)
+
+			inserted := history.inserted()
+			require.Len(t, inserted, 1)
+
+			item := inserted[0]
+			require.Equal(t, queryID, item.ID)
+			require.Equal(t, config.UserID("alice@example.com"), item.UserID)
+			require.Equal(t, config.TargetID("pg-1"), item.TargetID)
+			require.Equal(t, tc.query, item.Query)
+
+			statesSet := history.statesSet()
+			require.Len(t, statesSet, 1)
+			require.Equal(t, item.ID, statesSet[0].ID)
+			require.Equal(t, structs.QueryStateFailed, statesSet[0].State)
+
+			var payload structs.QError
+			require.NoError(t, json.Unmarshal(statesSet[0].Payload, &payload))
+			require.Equal(t, tc.wantError, payload.Error)
+		})
+	}
 }

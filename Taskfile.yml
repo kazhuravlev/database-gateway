@@ -26,7 +26,7 @@ vars:
   FRONTEND_EMBED_DIST: ./internal/facade/ui/dist
   HELM_CHART_DIR: ./charts/database-gateway
   HELM_DIST_DIR: ./dist/helm
-  TOOLSET: "go run github.com/kazhuravlev/toolset/cmd/toolset@v0.40.0"
+  TOOLSET: "go run github.com/kazhuravlev/toolset/cmd/toolset@v0.43.0"
   GIT_TAG:
     sh: "gt t l -f tag"
 

@@ -26,6 +26,7 @@ linters:
     - wsl
     - wsl_v5
     - noinlineerr
+    - gomodguard
   settings:
     depguard:
       rules:
@@ -117,6 +118,7 @@ linters:
         - ok
         - fn
         - tc
+        - id
       ignore-decls:
         - c echo.Context
         - c *cli.Context
@@ -131,6 +133,7 @@ linters:
     rules:
       - linters:
           - dupl
+          - goconst
           - lll
           - mnd
         path: (.+)_test\.go

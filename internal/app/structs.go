@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/kazhuravlev/database-gateway/internal/structs"
+	"github.com/kazhuravlev/optional"
 )
 
 type QueryResults struct {
@@ -28,6 +29,8 @@ type QueryResults struct {
 	TargetID  string
 	CreatedAt time.Time
 	Query     string
-	QTable    structs.QTable
+	State     structs.QueryState
 	Meta      structs.QMeta
+	QTable    optional.Val[structs.QTable]
+	QError    optional.Val[structs.QError]
 }

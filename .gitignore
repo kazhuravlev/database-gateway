@@ -1,4 +1,6 @@
 dist/
+!internal/facade/ui/dist/
+!internal/facade/ui/dist/**
 bin/
 node_modules/
 .idea

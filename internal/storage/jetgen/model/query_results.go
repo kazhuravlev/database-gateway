@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 )
 
@@ -21,4 +22,5 @@ type QueryResults struct {
 	Query     string
 	Response  []byte
 	TargetID  config.TargetID
+	State     structs.QueryState
 }

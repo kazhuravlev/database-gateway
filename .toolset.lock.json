@@ -2,33 +2,91 @@
 	"tools": [
 		{
 			"runtime": "go",
-			"module": "golang.org/x/tools/cmd/goimports@v0.42.0",
+			"module": "golang.org/x/tools/cmd/goimports@v0.46.0",
 			"alias": null,
-			"tags": null
+			"tags": null,
+			"pin": {
+				"commit_hash": "3d6f8dfd4853c8b323940b931f1170c6d0df8d23"
+			}
 		},
 		{
 			"runtime": "go",
-			"module": "mvdan.cc/gofumpt@v0.9.2",
+			"module": "mvdan.cc/gofumpt@v0.10.0",
 			"alias": null,
-			"tags": null
+			"tags": null,
+			"pin": {
+				"commit_hash": "14050252a6d591bb7a3f0167c925c3d6e6f9bdf8"
+			}
 		},
 		{
 			"runtime": "go",
 			"module": "github.com/google/addlicense@v1.2.0",
 			"alias": null,
-			"tags": null
+			"tags": null,
+			"pin": {
+				"commit_hash": "b289835c0741ba2fb92dd5f61af070e79c69a55e"
+			}
 		},
 		{
 			"runtime": "gh",
-			"module": "golangci/golangci-lint@v2.11.1",
+			"module": "golangci/golangci-lint@v2.12.2",
 			"alias": null,
-			"tags": null
+			"tags": null,
+			"pin": {
+				"assets": [
+					{
+						"os": "darwin",
+						"arch": "arm64",
+						"name": "golangci-lint-2.12.2-darwin-arm64.tar.gz",
+						"digest": "sha256:a9c54498731b3128f79e090be6110f3e5fffccc617b08142ed244d4126c73f29"
+					},
+					{
+						"os": "darwin",
+						"arch": "amd64",
+						"name": "golangci-lint-2.12.2-darwin-amd64.tar.gz",
+						"digest": "sha256:f6f06d94b6241521c53d15450c5209b028270bf966f842afb11c030c79f5bc16"
+					},
+					{
+						"os": "linux",
+						"arch": "amd64",
+						"name": "golangci-lint-2.12.2-linux-amd64.tar.gz",
+						"digest": "sha256:8df580d2670fed8fa984aac0507099af8df275e665215f5c7a2ae3943893a553"
+					},
+					{
+						"os": "linux",
+						"arch": "arm64",
+						"name": "golangci-lint-2.12.2-linux-arm64.tar.gz",
+						"digest": "sha256:44cd40a8c76c86755375adfeea52cfd3533cb43d7bd647771e0ae065e166df3a"
+					},
+					{
+						"os": "linux",
+						"arch": "386",
+						"name": "golangci-lint-2.12.2-linux-386.tar.gz",
+						"digest": "sha256:8acadd219d421b89186438c095fd6da72bcb2cc6a334798d31732003c376233a"
+					},
+					{
+						"os": "windows",
+						"arch": "amd64",
+						"name": "golangci-lint-2.12.2-windows-amd64.zip",
+						"digest": "sha256:bd42e3ebc8cb4ececb86941983baaf1dc221bbb04d838e94ce63b49cc91e02bb"
+					},
+					{
+						"os": "windows",
+						"arch": "arm64",
+						"name": "golangci-lint-2.12.2-windows-arm64.zip",
+						"digest": "sha256:947b9a5bf762d465710b376c156f0184abb2168378b0826af1899e0ee7183742"
+					}
+				]
+			}
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.55.5",
+			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.55.6",
 			"alias": null,
-			"tags": null
+			"tags": null,
+			"pin": {
+				"commit_hash": "e8c923b00ffd3caecbb8f565f94a926f1b17a15e"
+			}
 		}
 	],
 	"remotes": []

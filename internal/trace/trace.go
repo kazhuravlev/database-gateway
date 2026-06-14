@@ -14,31 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package storage
+package trace
 
 import (
 	"time"
-
-	"github.com/kazhuravlev/database-gateway/internal/config"
-	"github.com/kazhuravlev/database-gateway/internal/structs"
-	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 )
 
-type Bookmark struct {
-	ID        uuid6.UUID
-	UserID    config.UserID
-	TargetID  config.TargetID
-	Title     string
-	Query     string
-	CreatedAt time.Time
+type Record struct {
+	Start    time.Time     `json:"start"`
+	Duration time.Duration `json:"duration"`
+	Name     string        `json:"name"`
 }
 
-type QueryResult struct {
-	ID        uuid6.UUID
-	UserID    config.UserID
-	TargetID  config.TargetID
-	CreatedAt time.Time
-	Query     string
-	State     structs.QueryState
-	Response  []byte
+type Trace struct {
+	Records []Record `json:"records"`
+}
+
+func (t *Trace) Start(name string) func() {
+	rec := Record{
+		Start:    time.Now(),
+		Duration: 0,
+		Name:     name,
+	}
+
+	return func() {
+		rec.Duration = time.Since(rec.Start)
+		t.Records = append(t.Records, rec)
+	}
 }

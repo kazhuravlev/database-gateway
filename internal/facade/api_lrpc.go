@@ -29,6 +29,7 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 	"github.com/kazhuravlev/just"
 	"github.com/kazhuravlev/lrpc/ctypes"
+	"github.com/kazhuravlev/optional"
 )
 
 var errBadInput = errors.New("bad input")
@@ -176,10 +177,11 @@ func (s *Service) lrpcBookmarksDelete(
 }
 
 type Query struct {
-	ID        string          `json:"id"`
-	TargetID  config.TargetID `json:"target_id"`
-	Query     string          `json:"query"`
-	CreatedAt string          `json:"created_at"`
+	ID        string             `json:"id"`
+	TargetID  config.TargetID    `json:"target_id"`
+	Query     string             `json:"query"`
+	CreatedAt string             `json:"created_at"`
+	State     structs.QueryState `json:"state"`
 }
 
 type lrpcQueriesListResp struct {
@@ -213,6 +215,7 @@ func (s *Service) lrpcQueriesList(ctx context.Context, _ ctypes.ID, req lrpcQuer
 				TargetID:  query.TargetID,
 				Query:     query.Query,
 				CreatedAt: query.CreatedAt,
+				State:     query.State,
 			}
 		}),
 	}, nil
@@ -299,8 +302,7 @@ type lrpcQueryRunReq struct {
 }
 
 type lrpcQueryRunResp struct {
-	QueryID string         `json:"query_id"`
-	Table   structs.QTable `json:"table"`
+	QueryID string `json:"query_id"`
 }
 
 func (s *Service) lrpcQueryRun(ctx context.Context, _ ctypes.ID, req lrpcQueryRunReq) (*lrpcQueryRunResp, error) {
@@ -315,14 +317,17 @@ func (s *Service) lrpcQueryRun(ctx context.Context, _ ctypes.ID, req lrpcQueryRu
 		return nil, fmt.Errorf("target_id and query are required: %w", errBadInput)
 	}
 
-	queryID, table, err := s.opts.app.RunQuery(ctx, user, config.TargetID(targetID), query)
+	queryID, err := s.opts.app.RunQuery(ctx, user, config.TargetID(targetID), query)
 	if err != nil {
+		if errors.Is(err, app.ErrForbidden) {
+			return nil, fmt.Errorf("access denied: %w", app.ErrForbidden)
+		}
+
 		return nil, fmt.Errorf("run query: %w", err)
 	}
 
 	return &lrpcQueryRunResp{
 		QueryID: queryID.S(),
-		Table:   *table,
 	}, nil
 }
 
@@ -332,13 +337,15 @@ type lrpcQueryResultsGetReq struct {
 }
 
 type lrpcQueryResultsGetResp struct {
-	ID        string          `json:"id"`
-	UserID    config.UserID   `json:"user_id"`
-	TargetID  config.TargetID `json:"target_id"`
-	Query     string          `json:"query"`
-	CreatedAt string          `json:"created_at"`
-	Table     structs.QTable  `json:"table"`
-	Meta      structs.QMeta   `json:"meta"`
+	ID        string                       `json:"id"`
+	UserID    config.UserID                `json:"user_id"`
+	TargetID  config.TargetID              `json:"target_id"`
+	Query     string                       `json:"query"`
+	CreatedAt string                       `json:"created_at"`
+	State     structs.QueryState           `json:"state"`
+	Meta      structs.QMeta                `json:"meta"`
+	Table     optional.Val[structs.QTable] `json:"table"`
+	Error     optional.Val[structs.QError] `json:"error"`
 }
 
 type lrpcQueryResultsExportLinkReq struct {
@@ -381,8 +388,10 @@ func (s *Service) lrpcQueryResultsGet(
 		TargetID:  config.TargetID(item.TargetID),
 		Query:     item.Query,
 		CreatedAt: item.CreatedAt.Format(time.RFC3339),
-		Table:     item.QTable,
+		State:     item.State,
 		Meta:      item.Meta,
+		Table:     item.QTable,
+		Error:     item.QError,
 	}, nil
 }
 

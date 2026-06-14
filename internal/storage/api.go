@@ -25,6 +25,7 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/database-gateway/internal/storage/jetgen/model"
 	tbl "github.com/kazhuravlev/database-gateway/internal/storage/jetgen/table"
+	"github.com/kazhuravlev/database-gateway/internal/structs"
 	"github.com/kazhuravlev/database-gateway/internal/uuid6"
 )
 
@@ -34,7 +35,6 @@ type InsertQueryResultsReq struct {
 	TargetID  config.TargetID
 	CreatedAt time.Time
 	Query     string
-	Response  json.RawMessage
 }
 
 func (*Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) error { //nolint:gocritic
@@ -44,7 +44,8 @@ func (*Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) error
 		TargetID:  req.TargetID,
 		CreatedAt: req.CreatedAt,
 		Query:     req.Query,
-		Response:  req.Response,
+		State:     structs.QueryStateNew,
+		Response:  json.RawMessage(`{}`),
 	}
 	//nolint:unqueryvet // ok while reading into model
 	res, err := tbl.QueryResults.
@@ -52,6 +53,41 @@ func (*Service) InsertQueryResults(conn qrm.DB, req InsertQueryResultsReq) error
 		MODEL(obj).
 		Exec(conn)
 	if err := handleError("insert query results", err, res); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type SetQueryResultsStateReq struct {
+	ID      uuid6.UUID
+	State   structs.QueryState
+	Payload json.RawMessage
+}
+
+func (*Service) SetQueryResultsState(conn qrm.DB, req SetQueryResultsStateReq) error { //nolint:gocritic
+	obj := model.QueryResults{
+		ID:        req.ID,
+		UserID:    "",
+		CreatedAt: time.Time{},
+		Query:     "",
+		Response:  req.Payload,
+		TargetID:  "",
+		State:     req.State,
+	}
+	//nolint:unqueryvet // ok while reading into model
+	res, err := tbl.QueryResults.
+		UPDATE(
+			tbl.QueryResults.State,
+			tbl.QueryResults.Response,
+		).
+		MODEL(obj).
+		WHERE(postgres.AND(
+			tbl.QueryResults.ID.EQ(postgres.UUID(req.ID.ToUUID())),
+			tbl.QueryResults.State.EQ(postgres.String(structs.QueryStateNew.S())),
+		)).
+		Exec(conn)
+	if err := handleError("set query result state", err, res); err != nil {
 		return err
 	}
 
@@ -91,15 +127,8 @@ func (*Service) ListQueryResultsByUser(conn qrm.DB, uid config.UserID, limit int
 	}
 
 	out := make([]QueryResult, 0, len(items))
-	for _, item := range items {
-		out = append(out, QueryResult{
-			ID:        item.ID,
-			UserID:    item.UserID,
-			TargetID:  item.TargetID,
-			CreatedAt: item.CreatedAt,
-			Query:     item.Query,
-			Response:  item.Response,
-		})
+	for i := range items {
+		out = append(out, adaptQueryResult(&items[i]))
 	}
 
 	return out, nil
@@ -123,15 +152,8 @@ func (*Service) ListQueryResults(conn qrm.DB, limit, offset int64) ([]QueryResul
 	}
 
 	out := make([]QueryResult, 0, len(items))
-	for _, item := range items {
-		out = append(out, QueryResult{
-			ID:        item.ID,
-			UserID:    item.UserID,
-			TargetID:  item.TargetID,
-			CreatedAt: item.CreatedAt,
-			Query:     item.Query,
-			Response:  item.Response,
-		})
+	for i := range items {
+		out = append(out, adaptQueryResult(&items[i]))
 	}
 
 	return out, nil
