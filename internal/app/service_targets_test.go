@@ -361,16 +361,7 @@ func TestRunQueryReturnsForbiddenWhenQueryPreflightDeniesAccess(t *testing.T) {
 				opts: Options{
 					logger:  slog.New(slog.DiscardHandler),
 					targets: []config.Target{target},
-					users: config.UsersProviderOIDC{
-						ClientID:            "",
-						ClientSecret:        "",
-						IssuerURL:           "",
-						RedirectURL:         "",
-						Scopes:              nil,
-						AccessTokenAudience: "",
-						RoleClaim:           "",
-						RoleMapping:         nil,
-					},
+					users:   *new(config.UsersProviderOIDC),
 					authorizer: mustAuthorizer(t, `
 package gateway
 
