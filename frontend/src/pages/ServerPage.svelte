@@ -13,6 +13,7 @@
 	import BookmarkList from "../components/BookmarkList.svelte";
 	import QueryResultsTable from "../components/QueryResultsTable.svelte";
 	import {navigate} from "../routing.js";
+	import Chip from "../components/Chip.svelte";
 
 	let {serverID, queryID = "", initialQuery = "", autoRun = false} = $props();
 
@@ -406,38 +407,17 @@
 			<section class={`${panelClass} w-full p-3`}>
 				<div class="flex flex-col gap-3">
 					<div class="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
-						{#if queryResult.state}
-							<div class={`${chipClass} p-3`}>
-								<div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">State</div>
-								<div class={`mt-1 text-sm ${queryResult.state === "failed" ? "text-red-300" : "text-zinc-100"}`}>
-									{queryResult.state}
-								</div>
-							</div>
-						{/if}
-						<div class={`${chipClass} p-3`}>
-							<div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Created</div>
-							<div class="mt-1 break-words text-sm text-zinc-100">{queryResult.created_at}</div>
-						</div>
-						<div class={`${chipClass} p-3`}>
-							<div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Rows</div>
-							<div class="mt-1 text-sm text-zinc-100">{queryResult.table.rows?.length ?? 0}</div>
-						</div>
-						<div class={`${chipClass} p-3`}>
-							<div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Columns</div>
-							<div class="mt-1 text-sm text-zinc-100">
-								{queryResult.meta?.columns_count > 0
-									? queryResult.meta.columns_count
-									: queryResult.table.headers?.length ?? 0}
-							</div>
-						</div>
-						<div class={`${chipClass} p-3`}>
-							<div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Execution</div>
-							<div class="mt-1 text-sm text-zinc-100">{queryResult.meta?.execution_time_ms ?? 0} ms</div>
-						</div>
-						<div class={`${chipClass} p-3`}>
-							<div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">Network</div>
-							<div class="mt-1 text-sm text-zinc-100">{queryResult.meta?.network_round_trip_ms ?? 0} ms</div>
-						</div>
+						<Chip title="ID" value={queryResult.id}/>
+						<Chip title="Status" value={queryResult.state} color={queryResult.state === "failed" ? "red" : "green"}/>
+						<Chip title="Created" value={queryResult.created_at}/>
+						<Chip title="Target" value={queryResult.target_id}/>
+						<Chip title="User" value={queryResult.user_id}/>
+						<Chip title="Rows" value={queryResult.meta.rows_count}/>
+						<Chip title="Columns" value={queryResult.meta.columns_count}/>
+						<Chip title="Vectors" value={queryResult.meta.vectors_count}/>
+						{#each queryResult.meta.trace.records as record}
+							<Chip title="{record.name} (ms)" value={record.duration/1000000}/>
+						{/each}
 					</div>
 
 					{#if queryResult.error}
