@@ -18,7 +18,7 @@ package storage
 
 import "github.com/kazhuravlev/database-gateway/internal/storage/jetgen/model"
 
-func adaptQueryResult(item model.QueryResults) QueryResult {
+func adaptQueryResult(item *model.QueryResults) QueryResult {
 	return QueryResult{
 		ID:        item.ID,
 		UserID:    item.UserID,

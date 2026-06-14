@@ -67,9 +67,13 @@ type SetQueryResultsStateReq struct {
 
 func (*Service) SetQueryResultsState(conn qrm.DB, req SetQueryResultsStateReq) error { //nolint:gocritic
 	obj := model.QueryResults{
-		ID:       req.ID,
-		State:    req.State,
-		Response: req.Payload,
+		ID:        req.ID,
+		UserID:    "",
+		CreatedAt: time.Time{},
+		Query:     "",
+		Response:  req.Payload,
+		TargetID:  "",
+		State:     req.State,
 	}
 	//nolint:unqueryvet // ok while reading into model
 	res, err := tbl.QueryResults.
@@ -123,8 +127,8 @@ func (*Service) ListQueryResultsByUser(conn qrm.DB, uid config.UserID, limit int
 	}
 
 	out := make([]QueryResult, 0, len(items))
-	for _, item := range items {
-		out = append(out, adaptQueryResult(item))
+	for i := range items {
+		out = append(out, adaptQueryResult(&items[i]))
 	}
 
 	return out, nil
@@ -148,8 +152,8 @@ func (*Service) ListQueryResults(conn qrm.DB, limit, offset int64) ([]QueryResul
 	}
 
 	out := make([]QueryResult, 0, len(items))
-	for _, item := range items {
-		out = append(out, adaptQueryResult(item))
+	for i := range items {
+		out = append(out, adaptQueryResult(&items[i]))
 	}
 
 	return out, nil

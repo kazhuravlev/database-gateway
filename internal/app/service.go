@@ -165,9 +165,12 @@ func (s *Service) RunQuery(ctx context.Context, user structs.User, srvID config.
 	}
 
 	if _, err := s.runQuery(ctx, user, srv, schema, id, query); err != nil {
-		errorPayload, _ := json.Marshal(map[string]string{
+		errorPayload, err := json.Marshal(map[string]string{
 			"error": err.Error(),
 		})
+		if err != nil {
+			return uuid6.Nil(), fmt.Errorf("marshal error payload: %w", err)
+		}
 
 		if err := s.opts.storage.SetQueryResultsState(
 			s.opts.storage.Conn(ctx),
@@ -182,124 +185,6 @@ func (s *Service) RunQuery(ctx context.Context, user structs.User, srvID config.
 	}
 
 	return id, nil
-}
-
-func (s *Service) runQuery(
-	ctx context.Context,
-	user structs.User,
-	srv *config.Target,
-	schema *validator.DbSchema,
-	id uuid6.UUID,
-	query string,
-) (*structs.QTable, error) {
-	tracer := new(trace.Trace)
-
-	stop := tracer.Start("parse_query")
-
-	vectors, err := validator.MakeVectors(query)
-	if err != nil {
-		log.Error("err", err.Error())
-
-		return nil, fmt.Errorf("preflight check: make vectors: %w", err)
-	}
-
-	stop()
-
-	stop = tracer.Start("validate_schema")
-
-	if err := validator.ValidateSchema(vectors, schema); err != nil {
-		log.Error("err", err.Error())
-
-		return nil, formatPreflightCheckError("validate schema", err)
-	}
-
-	stop()
-
-	stop = tracer.Start("validate_access")
-
-	subjects := userSubjects(user)
-	haveAccess := func(vec validator.Vec) bool {
-		return s.opts.authorizer.AllowQuery(
-			subjects,
-			srv.ID.S(),
-			vec.Op.S(),
-			schema.CanonicalTable(vec.Tbl),
-		)
-	}
-
-	if err := validator.ValidateAccess(vectors, haveAccess); err != nil {
-		log.Error("err", err.Error())
-
-		return nil, formatPreflightCheckError("validate access", err)
-	}
-
-	stop()
-
-	stop = tracer.Start("run_query")
-
-	qTable, err := s.execQuery(ctx, srv, query)
-	if err != nil {
-		return nil, fmt.Errorf("execute query: %w", err)
-	}
-	stop()
-
-	buf, err := json.Marshal(storedQueryResultPayload{
-		Table: *qTable,
-		Meta: structs.QMeta{
-			Trace:        *tracer,
-			RowsCount:    len(qTable.Rows),
-			ColumnsCount: len(qTable.Headers),
-			VectorsCount: len(vectors),
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("marshal meta: %w", err)
-	}
-
-	if err := s.opts.storage.SetQueryResultsState(
-		s.opts.storage.Conn(ctx),
-		storage.SetQueryResultsStateReq{
-			ID:      id,
-			State:   structs.QueryStateCompleted,
-			Payload: buf,
-		},
-	); err != nil {
-		return nil, fmt.Errorf("update query results: %w", err)
-	}
-
-	return qTable, nil
-}
-
-func (s *Service) execQuery(ctx context.Context, srv *config.Target, query string) (*structs.QTable, error) {
-	conn, err := s.getConnection(ctx, *srv)
-	if err != nil {
-		return nil, fmt.Errorf("get connection by id: %w", err)
-	}
-
-	res, err := conn.Query(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
-	}
-
-	rows, err := pgx.CollectRows(res, func(row pgx.CollectableRow) ([]any, error) {
-		return row.Values()
-	})
-	if err != nil {
-		return nil, fmt.Errorf("collect rowsL %w", err)
-	}
-
-	cols := just.SliceMap(res.FieldDescriptions(), func(fd pgconn.FieldDescription) string {
-		return fd.Name
-	})
-
-	qTable := structs.QTable{
-		Headers: cols,
-		Rows: just.SliceMap(rows, func(row []any) []string {
-			return just.SliceMap(row, adaptPgType)
-		}),
-	}
-
-	return &qTable, nil
 }
 
 func formatPreflightCheckError(step string, err error) error {
@@ -630,7 +515,8 @@ func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limi
 	}
 
 	out := make([]structs.Query, 0, len(items))
-	for _, item := range items {
+	for i := range items {
+		item := &items[i]
 		var payload storedQueryResultPayload
 		if err := json.Unmarshal(item.Response, &payload); err != nil {
 			continue
@@ -676,7 +562,8 @@ func (s *Service) ListAdminRequests(
 	}
 
 	out := make([]structs.AdminRequest, 0, len(items))
-	for _, item := range items {
+	for i := range items {
+		item := &items[i]
 		out = append(out, structs.AdminRequest{
 			ID:        item.ID.S(),
 			UserID:    item.UserID,
@@ -687,6 +574,124 @@ func (s *Service) ListAdminRequests(
 	}
 
 	return out, hasNext, nil
+}
+
+func (s *Service) runQuery(
+	ctx context.Context,
+	user structs.User,
+	srv *config.Target,
+	schema *validator.DbSchema,
+	id uuid6.UUID,
+	query string,
+) (*structs.QTable, error) {
+	tracer := new(trace.Trace)
+
+	stop := tracer.Start("parse_query")
+
+	vectors, err := validator.MakeVectors(query)
+	if err != nil {
+		log.Error("err", err.Error())
+
+		return nil, fmt.Errorf("preflight check: make vectors: %w", err)
+	}
+
+	stop()
+
+	stop = tracer.Start("validate_schema")
+
+	if err := validator.ValidateSchema(vectors, schema); err != nil {
+		log.Error("err", err.Error())
+
+		return nil, formatPreflightCheckError("validate schema", err)
+	}
+
+	stop()
+
+	stop = tracer.Start("validate_access")
+
+	subjects := userSubjects(user)
+	haveAccess := func(vec validator.Vec) bool {
+		return s.opts.authorizer.AllowQuery(
+			subjects,
+			srv.ID.S(),
+			vec.Op.S(),
+			schema.CanonicalTable(vec.Tbl),
+		)
+	}
+
+	if err := validator.ValidateAccess(vectors, haveAccess); err != nil {
+		log.Error("err", err.Error())
+
+		return nil, formatPreflightCheckError("validate access", err)
+	}
+
+	stop()
+
+	stop = tracer.Start("run_query")
+
+	qTable, err := s.execQuery(ctx, srv, query)
+	if err != nil {
+		return nil, fmt.Errorf("execute query: %w", err)
+	}
+	stop()
+
+	buf, err := json.Marshal(storedQueryResultPayload{
+		Table: *qTable,
+		Meta: structs.QMeta{
+			Trace:        *tracer,
+			RowsCount:    len(qTable.Rows),
+			ColumnsCount: len(qTable.Headers),
+			VectorsCount: len(vectors),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("marshal meta: %w", err)
+	}
+
+	if err := s.opts.storage.SetQueryResultsState(
+		s.opts.storage.Conn(ctx),
+		storage.SetQueryResultsStateReq{
+			ID:      id,
+			State:   structs.QueryStateCompleted,
+			Payload: buf,
+		},
+	); err != nil {
+		return nil, fmt.Errorf("update query results: %w", err)
+	}
+
+	return qTable, nil
+}
+
+func (s *Service) execQuery(ctx context.Context, srv *config.Target, query string) (*structs.QTable, error) {
+	conn, err := s.getConnection(ctx, *srv)
+	if err != nil {
+		return nil, fmt.Errorf("get connection by id: %w", err)
+	}
+
+	res, err := conn.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("query: %w", err)
+	}
+
+	rows, err := pgx.CollectRows(res, func(row pgx.CollectableRow) ([]any, error) {
+		return row.Values()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("collect rowsL %w", err)
+	}
+
+	cols := just.SliceMap(res.FieldDescriptions(), func(fd pgconn.FieldDescription) string {
+		return fd.Name
+	})
+
+	qTable := structs.QTable{
+		Headers: cols,
+		Rows: just.SliceMap(rows, func(row []any) []string {
+			return just.SliceMap(row, adaptPgType)
+		}),
+	}
+
+	return &qTable, nil
 }
 
 func resolveUserRole(claims map[string]json.RawMessage, roleClaim string, roleMapping map[string]config.Role) (config.Role, error) {
