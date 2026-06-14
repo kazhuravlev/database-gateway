@@ -142,6 +142,7 @@ func (s *Service) GetTargetByID(ctx context.Context, user structs.User, tID conf
 	return just.Pointer(adaptTarget(*res)), nil //nolint:modernize // false positive
 }
 
+// RunQuery starts query execution and stores the result state.
 // TODO: add RunQueryReq
 func (s *Service) RunQuery(ctx context.Context, user structs.User, srvID config.TargetID, query string) (uuid6.UUID, error) {
 	srv, schema, err := s.getTargetByID(ctx, user, srvID)
