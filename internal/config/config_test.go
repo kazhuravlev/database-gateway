@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package config_test
+package config_test //nolint:exhaustruct
 
 import (
 	"testing"
@@ -27,35 +27,40 @@ func TestConfigValidate(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name    string
-		prepare func(cfg *config.Config)
-		wantErr bool
+		name            string
+		prepare         func(cfg *config.Config)
+		wantErrContains string
 	}{
 		{
-			name:    "valid config",
+			name:    "valid config with schema-qualified table",
 			prepare: func(_ *config.Config) {},
-			wantErr: false,
 		},
 		{
-			name: "table without schema prefix",
+			name: "already-qualified table",
+			prepare: func(cfg *config.Config) {
+				cfg.Targets[0].Tables[0].Table = "custom.clients"
+			},
+		},
+		{
+			name: "schema-qualified table is required",
 			prepare: func(cfg *config.Config) {
 				cfg.Targets[0].Tables[0].Table = "clients"
 			},
-			wantErr: true,
+			wantErrContains: "use table notation with leading schema",
 		},
 		{
 			name: "missing policy path",
 			prepare: func(cfg *config.Config) {
 				cfg.Policy.Path = ""
 			},
-			wantErr: true,
+			wantErrContains: "policy.path is required",
 		},
 		{
-			name: "invalid role mapping",
+			name: "unsupported role",
 			prepare: func(cfg *config.Config) {
 				cfg.Users.RoleMapping["broken-group"] = config.Role("owner")
 			},
-			wantErr: true,
+			wantErrContains: `unsupported role "owner" for users.role_mapping["broken-group"]`,
 		},
 	}
 
@@ -67,8 +72,8 @@ func TestConfigValidate(t *testing.T) {
 			tc.prepare(&cfg)
 
 			err := cfg.Validate()
-			if tc.wantErr {
-				require.Error(t, err)
+			if tc.wantErrContains != "" {
+				require.ErrorContains(t, err, tc.wantErrContains)
 			} else {
 				require.NoError(t, err)
 			}

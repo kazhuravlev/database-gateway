@@ -133,6 +133,7 @@ linters:
     rules:
       - linters:
           - dupl
+          - exhaustruct
           - goconst
           - lll
           - mnd

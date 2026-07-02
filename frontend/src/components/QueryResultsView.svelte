@@ -17,7 +17,13 @@
 		status = "",
 		error = ""
 	} = $props();
-	console.log(meta)
+
+	const displayMeta = $derived(meta ?? {
+		rows_count: "",
+		columns_count: "",
+		vectors_count: "",
+		trace: {records: []}
+	});
 	const panelClass =
 		"rounded-xl border border-zinc-700/90 bg-zinc-900/90 shadow-[0_18px_42px_rgb(0_0_0_/_0.28)] backdrop-blur-xl";
 	const chipClass = "rounded-md border border-zinc-700/80 bg-zinc-800/90";
@@ -44,10 +50,10 @@
 				<Chip title="Created" value={createdAt}/>
 				<Chip title="Target" value={targetID}/>
 				<Chip title="User" value={userID}/>
-				<Chip title="Rows" value={meta.rows_count}/>
-				<Chip title="Columns" value={meta.columns_count}/>
-				<Chip title="Vectors" value={meta.vectors_count}/>
-				{#each meta.trace.records as record}
+				<Chip title="Rows" value={displayMeta.rows_count}/>
+				<Chip title="Columns" value={displayMeta.columns_count}/>
+				<Chip title="Vectors" value={displayMeta.vectors_count}/>
+				{#each displayMeta.trace.records as record}
 					<Chip title="{record.name} (ms)" value={record.duration/1000000}/>
 				{/each}
 			</div>

@@ -18,6 +18,8 @@ package opa_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/kazhuravlev/database-gateway/internal/policy/opa"
@@ -93,4 +95,56 @@ func TestNewFailsForInvalidModule(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.Nil(t, authz)
+}
+
+func TestLoadModulesFailsForUnreadablePolicyDir(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "policy-dir")
+
+	modules, err := opa.LoadModules(path)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "read policy dir")
+	require.Nil(t, modules)
+}
+
+func TestLoadModulesFailsForEmptyPolicyDir(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	modules, err := opa.LoadModules(dir)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "no .rego files found")
+	require.Nil(t, modules)
+}
+
+func TestLoadModulesIgnoresNonRegoFiles(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "README.txt"), []byte("ignored"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "policy.rego"), []byte(ExamplePolicySimple), 0o600))
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "nested.rego"), 0o700))
+
+	modules, err := opa.LoadModules(dir)
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{
+		"policy.rego": ExamplePolicySimple,
+	}, modules)
+}
+
+func TestLoadModulesFailsForUnreadableRegoModule(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	filename := filepath.Join(dir, "broken.rego")
+	require.NoError(t, os.Symlink(filepath.Join(dir, "missing.rego"), filename))
+
+	modules, err := opa.LoadModules(dir)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "read policy module")
+	require.ErrorContains(t, err, filename)
+	require.Nil(t, modules)
 }

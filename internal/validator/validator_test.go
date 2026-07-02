@@ -90,6 +90,33 @@ func TestValidateSchema(t *testing.T) {
 	})
 }
 
+func TestValidateSchemaUsesCanonicalDefaultSchemaTable(t *testing.T) {
+	t.Parallel()
+
+	schema := validator.NewDbSchema("public", []config.TargetTable{
+		{Table: "public.clients", Fields: []string{"id"}},
+	})
+
+	err := validator.ValidateSchema([]validator.Vec{
+		{
+			Op:   config.OpSelect,
+			Tbl:  "clients",
+			Cols: []string{"id"},
+		},
+	}, schema)
+	require.NoError(t, err)
+
+	err = validator.ValidateSchema([]validator.Vec{
+		{
+			Op:   config.OpSelect,
+			Tbl:  "clients",
+			Cols: []string{"unknown"},
+		},
+	}, schema)
+	require.ErrorIs(t, err, validator.ErrAccessDenied)
+	require.ErrorIs(t, err, validator.ErrUnknownColumn)
+}
+
 func TestCanonicalTable(t *testing.T) {
 	t.Parallel()
 
@@ -101,6 +128,41 @@ func TestCanonicalTable(t *testing.T) {
 	require.Equal(t, "public.clients", schema.CanonicalTable("clients"))
 	require.Equal(t, "custom.orders", schema.CanonicalTable("custom.orders"))
 	require.Equal(t, "missing", schema.CanonicalTable("missing"))
+}
+
+func TestValidatorRejectsUnknownSchemas(t *testing.T) {
+	t.Parallel()
+
+	schema := validator.NewDbSchema("public", []config.TargetTable{
+		{Table: "public.clients", Fields: []string{"id", "name"}},
+	})
+	testCases := []struct {
+		name  string
+		query string
+	}{
+		{name: "select", query: `select id from private.clients`},
+		{name: "insert", query: `insert into private.clients(id) values (42)`},
+		{name: "update", query: `update private.clients set name='john'`},
+		{name: "delete", query: `delete from private.clients where id=42`},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			accessChecked := false
+			haveAccess := func(_ validator.Vec) bool {
+				accessChecked = true
+
+				return true
+			}
+
+			err := validator.IsAllowed(schema, haveAccess, tc.query)
+			require.ErrorIs(t, err, validator.ErrAccessDenied)
+			require.ErrorIs(t, err, validator.ErrUnknownTable)
+			require.False(t, accessChecked)
+		})
+	}
 }
 
 func testTargetTables() []config.TargetTable {

@@ -51,8 +51,8 @@ func withConfig(action func(c *cli.Context, cfg config.Config) error) cli.Action
 	}
 }
 
-func newMigrator(cfg config.PostgresConfig) (*migrator.Migrator, error) { //nolint:gocritic
-	dbConn, err := pgdb.ConnectToPg(cfg)
+func newMigrator(ctx context.Context, cfg config.PostgresConfig) (*migrator.Migrator, error) { //nolint:gocritic
+	dbConn, err := pgdb.ConnectToPg(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("connect to postgres: %w", err)
 	}
@@ -85,7 +85,7 @@ func withApp(
 
 		logger.Info("start")
 
-		migratorInst, err := newMigrator(cfg.Storage)
+		migratorInst, err := newMigrator(ctx, cfg.Storage)
 		if err != nil {
 			return fmt.Errorf("create new migrator: %w", err)
 		}
@@ -94,7 +94,7 @@ func withApp(
 			return fmt.Errorf("up all migrations: %w", err)
 		}
 
-		dbConnWrite, err := pgdb.ConnectToPg(cfg.Storage)
+		dbConnWrite, err := pgdb.ConnectToPg(ctx, cfg.Storage)
 		if err != nil {
 			return fmt.Errorf("connect to db: %w", err)
 		}

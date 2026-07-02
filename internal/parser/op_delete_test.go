@@ -82,3 +82,20 @@ func TestParseDeleteInvalid(t *testing.T) {
 	test("DELETE FROM t1 USING t2", "using_clause")
 	test("DELETE FROM t1 WHERE EXISTS (SELECT 1 FROM t2)", "exists_subquery")
 }
+
+func TestParseDeleteAliasQualifiedColumns(t *testing.T) {
+	t.Parallel()
+
+	vecs, err := parser.Parse(
+		"DELETE FROM clients AS c WHERE c.email = 'a@example.com' RETURNING c.id, c.created_at",
+	)
+	require.NoError(t, err)
+	require.Len(t, vecs, 1)
+
+	del, ok := vecs[0].(parser.DeleteVec)
+	require.True(t, ok)
+	require.Equal(t, "clients", del.Tbl)
+	require.Empty(t, del.Target)
+	require.Equal(t, []string{"email"}, del.Filter)
+	require.Equal(t, []string{"id", "created_at"}, del.Returning)
+}

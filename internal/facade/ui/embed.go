@@ -18,6 +18,7 @@ package ui
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 )
 
@@ -26,10 +27,14 @@ var files embed.FS
 
 //nolint:gochecknoglobals
 var DistFS = func() fs.FS {
-	fsys, err := fs.Sub(files, "dist")
+	return subDistFS(files, "dist")
+}()
+
+func subDistFS(source fs.FS, dir string) fs.FS {
+	fsys, err := fs.Sub(source, dir)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("create embedded ui fs from %q: %w", dir, err))
 	}
 
 	return fsys
-}()
+}

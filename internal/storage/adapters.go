@@ -16,7 +16,20 @@
 
 package storage
 
-import "github.com/kazhuravlev/database-gateway/internal/storage/jetgen/model"
+import (
+	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/storage/jetgen/model"
+	"github.com/kazhuravlev/database-gateway/internal/uuid6"
+)
+
+func adaptQueryResults(items []model.QueryResults) []QueryResult {
+	out := make([]QueryResult, 0, len(items))
+	for i := range items {
+		out = append(out, adaptQueryResult(&items[i]))
+	}
+
+	return out
+}
 
 func adaptQueryResult(item *model.QueryResults) QueryResult {
 	return QueryResult{
@@ -27,5 +40,25 @@ func adaptQueryResult(item *model.QueryResults) QueryResult {
 		Query:     item.Query,
 		State:     item.State,
 		Response:  item.Response,
+	}
+}
+
+func adaptBookmarks(items []model.Bookmarks) []Bookmark {
+	out := make([]Bookmark, 0, len(items))
+	for i := range items {
+		out = append(out, adaptBookmark(&items[i]))
+	}
+
+	return out
+}
+
+func adaptBookmark(item *model.Bookmarks) Bookmark {
+	return Bookmark{
+		ID:        uuid6.FromUUID(item.ID),
+		UserID:    config.UserID(item.UserID),
+		TargetID:  config.TargetID(item.TargetID),
+		Title:     item.Title,
+		Query:     item.Query,
+		CreatedAt: item.CreatedAt,
 	}
 }

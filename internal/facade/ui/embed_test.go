@@ -14,32 +14,44 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package migrations
+package ui //nolint:testpackage
 
 import (
-	"embed"
 	"fmt"
-	"path/filepath"
+	"testing"
+	"testing/fstest"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-//go:embed *.sql
-var Migrations embed.FS
+func TestSubDistFSPanicIncludesOperationAndPath(t *testing.T) {
+	t.Parallel()
 
-// AbsMigrationsDir должен указывать на директорию, где хранятся миграции.
-var AbsMigrationsDir = func() string { //nolint:gochecknoglobals
-	return resolveAbsMigrationsDir(absMigrationsDir, filepath.Abs)
-}()
+	const dir = "../dist"
 
-func resolveAbsMigrationsDir(dir string, absPath func(string) (string, error)) string {
-	abs, err := absPath(dir)
-	if err != nil {
-		panic(fmt.Errorf("resolve absolute migrations dir %q: %w", dir, err))
-	}
+	panicValue := requirePanic(t, func() {
+		subDistFS(fstest.MapFS{}, dir)
+	})
 
-	return abs
+	message := fmt.Sprint(panicValue)
+	assert.Contains(t, message, "create embedded ui fs")
+	assert.Contains(t, message, dir)
 }
 
-const (
-	absMigrationsDir = "./internal/storage/migrations"
-	TableName        = "goose_migrations"
-)
+func requirePanic(t *testing.T, fn func()) any {
+	t.Helper()
+
+	var panicValue any
+	func() {
+		defer func() {
+			panicValue = recover()
+		}()
+
+		fn()
+	}()
+
+	require.NotNil(t, panicValue)
+
+	return panicValue
+}

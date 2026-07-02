@@ -122,16 +122,7 @@ func (*Service) ListQueryResultsByUser(conn qrm.DB, uid config.UserID, limit int
 		return nil, err
 	}
 
-	if items == nil {
-		return []QueryResult{}, nil
-	}
-
-	out := make([]QueryResult, 0, len(items))
-	for i := range items {
-		out = append(out, adaptQueryResult(&items[i]))
-	}
-
-	return out, nil
+	return adaptQueryResults(items), nil
 }
 
 func (*Service) ListQueryResults(conn qrm.DB, limit, offset int64) ([]QueryResult, error) {
@@ -147,16 +138,7 @@ func (*Service) ListQueryResults(conn qrm.DB, limit, offset int64) ([]QueryResul
 		return nil, err
 	}
 
-	if items == nil {
-		return []QueryResult{}, nil
-	}
-
-	out := make([]QueryResult, 0, len(items))
-	for i := range items {
-		out = append(out, adaptQueryResult(&items[i]))
-	}
-
-	return out, nil
+	return adaptQueryResults(items), nil
 }
 
 type InsertBookmarkReq struct {
@@ -220,23 +202,7 @@ func (*Service) ListBookmarks(conn qrm.DB, uid config.UserID, targetID config.Ta
 		return nil, err
 	}
 
-	if items == nil {
-		return []Bookmark{}, nil
-	}
-
-	out := make([]Bookmark, 0, len(items))
-	for _, item := range items {
-		out = append(out, Bookmark{
-			ID:        uuid6.FromUUID(item.ID),
-			UserID:    config.UserID(item.UserID),
-			TargetID:  config.TargetID(item.TargetID),
-			Title:     item.Title,
-			Query:     item.Query,
-			CreatedAt: item.CreatedAt,
-		})
-	}
-
-	return out, nil
+	return adaptBookmarks(items), nil
 }
 
 func (*Service) ListBookmarksByUser(conn qrm.DB, uid config.UserID) ([]Bookmark, error) {
@@ -251,21 +217,5 @@ func (*Service) ListBookmarksByUser(conn qrm.DB, uid config.UserID) ([]Bookmark,
 		return nil, err
 	}
 
-	if items == nil {
-		return []Bookmark{}, nil
-	}
-
-	out := make([]Bookmark, 0, len(items))
-	for _, item := range items {
-		out = append(out, Bookmark{
-			ID:        uuid6.FromUUID(item.ID),
-			UserID:    config.UserID(item.UserID),
-			TargetID:  config.TargetID(item.TargetID),
-			Title:     item.Title,
-			Query:     item.Query,
-			CreatedAt: item.CreatedAt,
-		})
-	}
-
-	return out, nil
+	return adaptBookmarks(items), nil
 }
