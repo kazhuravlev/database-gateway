@@ -156,6 +156,36 @@ func parseSelectJoinColumns(node *pg.Node) (Columns, error) {
 	}
 }
 
+func validateSelectLimit(name string, node *pg.Node, allowAll bool) error {
+	if node == nil {
+		return nil
+	}
+
+	switch node := node.GetNode().(type) {
+	default:
+		return fmt.Errorf("%s type (%T): %w", name, node, ErrNotImplemented)
+	case *pg.Node_AConst:
+		if node.AConst.GetIsnull() {
+			if allowAll {
+				return nil
+			}
+
+			return fmt.Errorf("%s all: %w", name, ErrNotImplemented)
+		}
+
+		switch val := node.AConst.GetVal().(type) {
+		default:
+			return fmt.Errorf("%s value type (%T): %w", name, val, ErrNotImplemented)
+		case *pg.A_Const_Ival:
+			if val.Ival.GetIval() < 0 {
+				return fmt.Errorf("%s cannot be negative", name) //nolint:err113
+			}
+
+			return nil
+		}
+	}
+}
+
 func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocognit,cyclop,funlen,maintidx
 	if sel.DistinctClause != nil ||
 		sel.GetIntoClause() != nil ||
@@ -186,7 +216,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		return nil, fmt.Errorf("failed to finalize tables: %w", err)
 	}
 
-	var allColumns Columns
+	var targetColumns Columns
 	// handle target fields
 	for _, target := range sel.GetTargetList() {
 		switch node := target.GetNode().(type) {
@@ -207,7 +237,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 					return nil, fmt.Errorf("parse column: %w", err)
 				}
 
-				allColumns = append(allColumns, column)
+				targetColumns = append(targetColumns, column)
 			case *pg.Node_FuncCall:
 				funcCall := node.FuncCall
 				if funcCall.GetOver() != nil || funcCall.GetAggFilter() != nil || funcCall.AggOrder != nil {
@@ -228,6 +258,10 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 					}
 				}
 
+				if len(funcCall.GetArgs()) > 1 {
+					return nil, fmt.Errorf("function arguments: %w", ErrNotImplemented)
+				}
+
 				for _, node := range funcCall.GetArgs() {
 					switch node := node.GetNode().(type) {
 					default:
@@ -241,27 +275,29 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 						if err != nil {
 							return nil, fmt.Errorf("parse column: %w", err)
 						}
-						allColumns = append(allColumns, column)
+						targetColumns = append(targetColumns, column)
 					}
 				}
 			}
 		}
 	}
 
+	var filterColumns Columns
 	if sel.GetWhereClause() != nil {
 		whereColumns, err := parseWhereClause(sel.GetWhereClause())
 		if err != nil {
 			return nil, fmt.Errorf("parse where clause: %w", err)
 		}
-		allColumns = append(allColumns, whereColumns...)
+		filterColumns = append(filterColumns, whereColumns...)
 	}
 
 	joinColumns, err := parseSelectJoinColumns(from)
 	if err != nil {
 		return nil, err
 	}
-	allColumns = append(allColumns, joinColumns...)
+	filterColumns = append(filterColumns, joinColumns...)
 
+	var sortColumns Columns
 	for _, node := range sel.GetSortClause() {
 		switch node := node.GetNode().(type) {
 		default:
@@ -280,15 +316,26 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 					return nil, fmt.Errorf("parse column: %w", err)
 				}
 
-				allColumns = append(allColumns, column)
+				sortColumns = append(sortColumns, column)
 			}
 		}
 	}
 
-	// NOTE: Implement checking of sel.LimitOffset
-	// NOTE: Implement checking of sel.LimitCount
-	// NOTE: Implement checking of sel.LimitOption
+	switch sel.GetLimitOption() { //nolint:exhaustive
+	default:
+		return nil, fmt.Errorf("limit option: %w", ErrNotImplemented)
+	case pg.LimitOption_LIMIT_OPTION_DEFAULT, pg.LimitOption_LIMIT_OPTION_COUNT:
+	}
 
+	if err := validateSelectLimit("limit", sel.GetLimitCount(), true); err != nil {
+		return nil, err
+	}
+
+	if err := validateSelectLimit("offset", sel.GetLimitOffset(), false); err != nil {
+		return nil, err
+	}
+
+	var groupColumns Columns
 	for _, node := range sel.GetGroupClause() {
 		switch node := node.GetNode().(type) {
 		default:
@@ -299,7 +346,7 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 				return nil, fmt.Errorf("parse group by column: %w", err)
 			}
 
-			allColumns = append(allColumns, column)
+			groupColumns = append(groupColumns, column)
 		}
 	}
 
@@ -308,32 +355,31 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		return nil, fmt.Errorf("failed to get all tables: %w", err)
 	}
 
-	table2target := make(map[string]Columns, len(allTables)+len(allColumns))
-	for _, tableName := range allTables {
-		table2target[tableName] = nil
+	table2target, err := columnsByTable(tables, allTables, targetColumns)
+	if err != nil {
+		return nil, err
+	}
+	table2filter, err := columnsByTable(tables, allTables, filterColumns)
+	if err != nil {
+		return nil, err
+	}
+	table2group, err := columnsByTable(tables, allTables, groupColumns)
+	if err != nil {
+		return nil, err
+	}
+	table2sort, err := columnsByTable(tables, allTables, sortColumns)
+	if err != nil {
+		return nil, err
 	}
 
-	for _, column := range allColumns {
-		if column.Table() == "" && tables.SourcesCount() > 1 {
-			return nil, fmt.Errorf("ambiguous column reference (%s): %w", column.column, ErrNotImplemented)
-		}
-
-		tbl, ok := tables.Get(column.Table())
-		if !ok {
-			return nil, fmt.Errorf("table not found: %s", column.Table()) //nolint:err113
-		}
-
-		table2target[tbl] = append(table2target[tbl], column)
-	}
-
-	vectors := make([]Vector, 0, len(table2target))
-	for tbl, cols := range table2target {
+	vectors := make([]Vector, 0, len(allTables))
+	for _, tbl := range allTables {
 		vectors = append(vectors, SelectVec{
 			Tbl:    tbl,
-			Target: cols.ListNames(),
-			Filter: nil, // TODO: impl
-			Group:  nil, // TODO: impl
-			Sort:   nil, // TODO: impl
+			Target: table2target[tbl].ListNames(),
+			Filter: table2filter[tbl].ListNames(),
+			Group:  table2group[tbl].ListNames(),
+			Sort:   table2sort[tbl].ListNames(),
 		})
 	}
 

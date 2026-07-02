@@ -229,3 +229,25 @@ func (c Columns) ListNames() []string {
 
 	return res
 }
+
+func columnsByTable(tables *Tables, allTables []string, columns Columns) (map[string]Columns, error) {
+	res := make(map[string]Columns, len(allTables))
+	for _, tableName := range allTables {
+		res[tableName] = nil
+	}
+
+	for _, column := range columns {
+		if column.Table() == "" && tables.SourcesCount() > 1 {
+			return nil, fmt.Errorf("ambiguous column reference (%s): %w", column.column, ErrNotImplemented)
+		}
+
+		tbl, ok := tables.Get(column.Table())
+		if !ok {
+			return nil, fmt.Errorf("table not found: %s", column.Table()) //nolint:err113
+		}
+
+		res[tbl] = append(res[tbl], column)
+	}
+
+	return res, nil
+}

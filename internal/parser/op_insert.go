@@ -18,19 +18,19 @@ package parser
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/kazhuravlev/just"
 	pg "github.com/pganalyze/pg_query_go/v6"
 )
 
 type InsertVec struct { //nolint:recvcheck
-	Tbl    string
-	Target []string
+	Tbl       string
+	Target    []string
+	Returning []string
 }
 
 func (s *InsertVec) Columns() []string {
-	columns := just.SliceUniq(s.Target)
+	columns := just.SliceUniq(append(append([]string{}, s.Target...), s.Returning...))
 
 	return columns
 }
@@ -116,8 +116,6 @@ func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		return nil, fmt.Errorf("parse returning columns: %w", err)
 	}
 
-	allColumns := slices.Concat(targetCols, retCols)
-
 	if confl := req.GetOnConflictClause(); confl != nil {
 		switch confl.GetAction() { //nolint:exhaustive
 		default:
@@ -136,30 +134,35 @@ func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 			return nil, fmt.Errorf("parse conflict columns: %w", err)
 		}
 
-		targetCols, err := pNodes2Columns(confl.GetTargetList(), fqTableName)
+		conflictTargetCols, err := pNodes2Columns(confl.GetTargetList(), fqTableName)
 		if err != nil {
 			return nil, fmt.Errorf("parse target columns: %w", err)
 		}
 
-		allColumns = slices.Concat(allColumns, conflictCols, targetCols)
+		targetCols = append(targetCols, conflictCols...)
+		targetCols = append(targetCols, conflictTargetCols...)
 	}
 
-	table2target := make(map[string]Columns, len(allColumns))
-	table2target[fqTableName] = nil
-	for _, column := range allColumns {
-		tbl, ok := tables.Get(column.Table())
-		if !ok {
-			return nil, fmt.Errorf("table not found: %s", column.Table()) //nolint:err113
-		}
-
-		table2target[tbl] = append(table2target[tbl], column)
+	allTables, err := tables.GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all tables: %w", err)
 	}
 
-	vectors := make([]Vector, 0, len(table2target))
-	for tbl, cols := range table2target {
+	table2target, err := columnsByTable(tables, allTables, targetCols)
+	if err != nil {
+		return nil, err
+	}
+	table2returning, err := columnsByTable(tables, allTables, retCols)
+	if err != nil {
+		return nil, err
+	}
+
+	vectors := make([]Vector, 0, len(allTables))
+	for _, tbl := range allTables {
 		vectors = append(vectors, InsertVec{
-			Tbl:    tbl,
-			Target: cols.ListNames(),
+			Tbl:       tbl,
+			Target:    table2target[tbl].ListNames(),
+			Returning: table2returning[tbl].ListNames(),
 		})
 	}
 

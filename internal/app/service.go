@@ -46,8 +46,9 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("not found")
-	ErrForbidden = errors.New("forbidden")
+	ErrNotFound        = errors.New("not found")
+	ErrForbidden       = errors.New("forbidden")
+	errInvalidArgument = errors.New("invalid argument")
 )
 
 type storedQueryResultPayload struct {
@@ -507,7 +508,7 @@ func (s *Service) ListAllBookmarks(ctx context.Context, uid config.UserID) ([]st
 
 func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limit int64) ([]structs.Query, error) {
 	if limit <= 0 {
-		limit = 50
+		return nil, fmt.Errorf("limit must be positive: %w", errInvalidArgument)
 	}
 
 	items, err := s.opts.storage.ListQueryResultsByUser(s.opts.storage.Conn(ctx), uid, limit)
@@ -518,9 +519,11 @@ func (s *Service) ListRecentQueries(ctx context.Context, uid config.UserID, limi
 	out := make([]structs.Query, 0, len(items))
 	for i := range items {
 		item := &items[i]
-		var payload storedQueryResultPayload
-		if err := json.Unmarshal(item.Response, &payload); err != nil {
-			continue
+		if len(item.Response) != 0 {
+			var payload storedQueryResultPayload
+			if err := json.Unmarshal(item.Response, &payload); err != nil {
+				continue
+			}
 		}
 
 		out = append(out, structs.Query{
@@ -545,10 +548,10 @@ func (s *Service) ListAdminRequests(
 	}
 
 	if page <= 0 {
-		page = 1
+		return nil, false, fmt.Errorf("page must be positive: %w", errInvalidArgument)
 	}
 	if pageSize <= 0 {
-		pageSize = 50
+		return nil, false, fmt.Errorf("page size must be positive: %w", errInvalidArgument)
 	}
 
 	offset := (page - 1) * pageSize

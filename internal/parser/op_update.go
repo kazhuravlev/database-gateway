@@ -26,13 +26,14 @@ import (
 )
 
 type UpdateVec struct { //nolint:recvcheck
-	Tbl    string
-	Target []string
-	Filter []string
+	Tbl       string
+	Target    []string
+	Filter    []string
+	Returning []string
 }
 
 func (s *UpdateVec) Columns() []string {
-	columns := just.SliceUniq(slices.Concat(s.Target, s.Filter))
+	columns := just.SliceUniq(slices.Concat(s.Target, s.Filter, s.Returning))
 
 	return columns
 }
@@ -191,24 +192,31 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclo
 		return nil, fmt.Errorf("parse where clause: %w", err)
 	}
 
-	allColumns := slices.Concat(targetCols, retCols, whereColumns)
-
-	table2target := make(map[string]Columns, len(allColumns))
-	for _, column := range allColumns {
-		tbl, ok := tables.Get(column.Table())
-		if !ok {
-			return nil, fmt.Errorf("table not found: %s", column.Table()) //nolint:err113
-		}
-
-		table2target[tbl] = append(table2target[tbl], column)
+	allTables, err := tables.GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all tables: %w", err)
 	}
 
-	vectors := make([]Vector, 0, len(table2target))
-	for tbl, cols := range table2target {
+	table2target, err := columnsByTable(tables, allTables, targetCols)
+	if err != nil {
+		return nil, err
+	}
+	table2filter, err := columnsByTable(tables, allTables, whereColumns)
+	if err != nil {
+		return nil, err
+	}
+	table2returning, err := columnsByTable(tables, allTables, retCols)
+	if err != nil {
+		return nil, err
+	}
+
+	vectors := make([]Vector, 0, len(allTables))
+	for _, tbl := range allTables {
 		vectors = append(vectors, UpdateVec{
-			Tbl:    tbl,
-			Target: cols.ListNames(),
-			Filter: nil, // TODO: impl
+			Tbl:       tbl,
+			Target:    table2target[tbl].ListNames(),
+			Filter:    table2filter[tbl].ListNames(),
+			Returning: table2returning[tbl].ListNames(),
 		})
 	}
 

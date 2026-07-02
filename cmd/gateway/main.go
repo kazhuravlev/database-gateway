@@ -155,8 +155,8 @@ func cmdGenerateModels(_ *cli.Context, cfg config.Config) error { //nolint:gocri
 	return nil
 }
 
-func cmdMigrateUp(_ *cli.Context, cfg config.Config) error { //nolint:gocritic
-	migratorInst, err := newMigrator(cfg.Storage)
+func cmdMigrateUp(c *cli.Context, cfg config.Config) error { //nolint:gocritic
+	migratorInst, err := newMigrator(c.Context, cfg.Storage)
 	if err != nil {
 		return fmt.Errorf("create new migrator: %w", err)
 	}
@@ -168,8 +168,8 @@ func cmdMigrateUp(_ *cli.Context, cfg config.Config) error { //nolint:gocritic
 	return nil
 }
 
-func cmdMigrateDownOne(_ *cli.Context, cfg config.Config) error { //nolint:gocritic
-	migratorInst, err := newMigrator(cfg.Storage)
+func cmdMigrateDownOne(c *cli.Context, cfg config.Config) error { //nolint:gocritic
+	migratorInst, err := newMigrator(c.Context, cfg.Storage)
 	if err != nil {
 		return fmt.Errorf("create new migrator: %w", err)
 	}
@@ -181,8 +181,8 @@ func cmdMigrateDownOne(_ *cli.Context, cfg config.Config) error { //nolint:gocri
 	return nil
 }
 
-func cmdMigrateCreateNew(_ *cli.Context, cfg config.Config) error { //nolint:gocritic
-	migratorInst, err := newMigrator(cfg.Storage)
+func cmdMigrateCreateNew(c *cli.Context, cfg config.Config) error { //nolint:gocritic
+	migratorInst, err := newMigrator(c.Context, cfg.Storage)
 	if err != nil {
 		return fmt.Errorf("create new migrator: %w", err)
 	}

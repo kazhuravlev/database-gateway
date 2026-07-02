@@ -75,3 +75,20 @@ func TestParseUpdateInvalid(t *testing.T) {
 	test("UPDATE t1 SET c1 = (SELECT MAX(c1) FROM t2)", "subquery_in_target_field")
 	test("UPDATE t1 SET c1 = 'value' WHERE id IN (SELECT id FROM t2 WHERE active = true)", "subquery_in_where")
 }
+
+func TestParseUpdateAliasQualifiedColumns(t *testing.T) {
+	t.Parallel()
+
+	vecs, err := parser.Parse(
+		"UPDATE clients AS c SET name = 'alice' WHERE c.email = 'a@example.com' RETURNING c.id, c.created_at",
+	)
+	require.NoError(t, err)
+	require.Len(t, vecs, 1)
+
+	upd, ok := vecs[0].(parser.UpdateVec)
+	require.True(t, ok)
+	require.Equal(t, "clients", upd.Tbl)
+	require.Equal(t, []string{"name"}, upd.Target)
+	require.Equal(t, []string{"email"}, upd.Filter)
+	require.Equal(t, []string{"id", "created_at"}, upd.Returning)
+}

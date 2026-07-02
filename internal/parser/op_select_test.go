@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package parser_test
+package parser_test //nolint:exhaustruct
 
 import (
 	"sort"
@@ -106,6 +106,144 @@ func TestParseSelectInvalid(t *testing.T) {
 
 	fInvalid("SELECT id FROM (SELECT id FROM clients) AS sub", "nested_select")
 	fInvalid("SELECT id FROM clients UNION SELECT id FROM orders", "union_expression")
+}
+
+func TestParseSelectLimitOffset(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		query   string
+		wantErr bool
+	}{
+		{
+			name:  "limit",
+			query: `SELECT id FROM clients LIMIT 10`,
+		},
+		{
+			name:  "offset",
+			query: `SELECT id FROM clients OFFSET 5`,
+		},
+		{
+			name:  "limit_with_offset",
+			query: `SELECT id FROM clients LIMIT 10 OFFSET 5`,
+		},
+		{
+			name:  "limit_all",
+			query: `SELECT id FROM clients LIMIT ALL`,
+		},
+		{
+			name:    "negative_limit",
+			query:   `SELECT id FROM clients LIMIT -1`,
+			wantErr: true,
+		},
+		{
+			name:    "negative_offset",
+			query:   `SELECT id FROM clients OFFSET -1`,
+			wantErr: true,
+		},
+		{
+			name:    "param_limit",
+			query:   `SELECT id FROM clients LIMIT $1`,
+			wantErr: true,
+		},
+		{
+			name:    "expression_limit",
+			query:   `SELECT id FROM clients LIMIT 1 + 1`,
+			wantErr: true,
+		},
+		{
+			name:    "expression_offset",
+			query:   `SELECT id FROM clients OFFSET 1 + 1`,
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := parser.Parse(tc.query)
+			if tc.wantErr {
+				require.Error(t, err)
+
+				return
+			}
+
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestParseSelectFunctionEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		testCases := []struct {
+			name  string
+			query string
+		}{
+			{
+				name:  "disallowed_function",
+				query: `SELECT avg(total_sales) FROM sales_olap_42`,
+			},
+			{
+				name:  "multiple_arguments",
+				query: `SELECT sum(total_sales, tax) FROM sales_olap_42`,
+			},
+			{
+				name:  "nested_expression",
+				query: `SELECT sum(total_sales + tax) FROM sales_olap_42`,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				_, err := parser.Parse(tc.query)
+				require.Error(t, err)
+			})
+		}
+	})
+
+	t.Run("qualified_columns", func(t *testing.T) {
+		t.Parallel()
+
+		testCases := []struct {
+			name  string
+			query string
+		}{
+			{
+				name:  "table_qualified",
+				query: `SELECT sum(sales_olap_42.total_sales) FROM sales_olap_42`,
+			},
+			{
+				name:  "schema_qualified",
+				query: `SELECT sum(public.sales_olap_42.total_sales) FROM public.sales_olap_42`,
+			},
+			{
+				name:  "alias_qualified",
+				query: `SELECT sum(s.total_sales) FROM public.sales_olap_42 AS s`,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				vecs, err := parser.Parse(tc.query)
+				require.NoError(t, err)
+				require.Len(t, vecs, 1)
+
+				sel, ok := vecs[0].(parser.SelectVec)
+				require.True(t, ok)
+				require.Equal(t, []string{"total_sales"}, sel.Target)
+			})
+		}
+	})
 }
 
 func TestParseSelectJoinVectors(t *testing.T) {

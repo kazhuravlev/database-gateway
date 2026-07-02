@@ -34,9 +34,19 @@ import (
 )
 
 type fakeQueryHistoryStorage struct {
-	mu      sync.Mutex
-	inserts []storage.InsertQueryResultsReq
-	states  []storage.SetQueryResultsStateReq
+	mu                 sync.Mutex
+	inserts            []storage.InsertQueryResultsReq
+	states             []storage.SetQueryResultsStateReq
+	queryResult        *model.QueryResults
+	queryResultErr     error
+	queryResultIDs     []uuid6.UUID
+	listByUserItems    []storage.QueryResult
+	listByUserErr      error
+	listByUserLimits   []int64
+	listRequestsItems  []storage.QueryResult
+	listRequestsErr    error
+	listRequestsLimits []int64
+	listRequestsOffset []int64
 }
 
 func (*fakeQueryHistoryStorage) Conn(context.Context) qrm.DB { //nolint:ireturn
@@ -61,20 +71,51 @@ func (s *fakeQueryHistoryStorage) SetQueryResultsState(_ qrm.DB, req storage.Set
 	return nil
 }
 
-func (*fakeQueryHistoryStorage) GetQueryResultsByID(qrm.DB, uuid6.UUID) (*model.QueryResults, error) {
-	return nil, storage.ErrNotFound
+func (s *fakeQueryHistoryStorage) GetQueryResultsByID(_ qrm.DB, queryID uuid6.UUID) (*model.QueryResults, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.queryResultIDs = append(s.queryResultIDs, queryID)
+	if s.queryResultErr != nil {
+		return nil, s.queryResultErr
+	}
+	if s.queryResult == nil {
+		return nil, storage.ErrNotFound
+	}
+
+	res := *s.queryResult
+	res.Response = append([]byte(nil), s.queryResult.Response...)
+
+	return &res, nil
 }
 
-func (*fakeQueryHistoryStorage) ListQueryResultsByUser(
-	qrm.DB,
-	config.UserID,
-	int64,
+func (s *fakeQueryHistoryStorage) ListQueryResultsByUser(
+	_ qrm.DB,
+	_ config.UserID,
+	limit int64,
 ) ([]storage.QueryResult, error) {
-	return []storage.QueryResult{}, nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.listByUserLimits = append(s.listByUserLimits, limit)
+	if s.listByUserErr != nil {
+		return nil, s.listByUserErr
+	}
+
+	return append([]storage.QueryResult(nil), s.listByUserItems...), nil
 }
 
-func (*fakeQueryHistoryStorage) ListQueryResults(qrm.DB, int64, int64) ([]storage.QueryResult, error) {
-	return []storage.QueryResult{}, nil
+func (s *fakeQueryHistoryStorage) ListQueryResults(_ qrm.DB, limit, offset int64) ([]storage.QueryResult, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.listRequestsLimits = append(s.listRequestsLimits, limit)
+	s.listRequestsOffset = append(s.listRequestsOffset, offset)
+	if s.listRequestsErr != nil {
+		return nil, s.listRequestsErr
+	}
+
+	return append([]storage.QueryResult(nil), s.listRequestsItems...), nil
 }
 
 func (*fakeQueryHistoryStorage) InsertBookmark(qrm.DB, storage.InsertBookmarkReq) error {
@@ -105,6 +146,34 @@ func (s *fakeQueryHistoryStorage) statesSet() []storage.SetQueryResultsStateReq 
 	defer s.mu.Unlock()
 
 	return append([]storage.SetQueryResultsStateReq(nil), s.states...)
+}
+
+func (s *fakeQueryHistoryStorage) queryResultIDsSet() []uuid6.UUID {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]uuid6.UUID(nil), s.queryResultIDs...)
+}
+
+func (s *fakeQueryHistoryStorage) listByUserLimitsSet() []int64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]int64(nil), s.listByUserLimits...)
+}
+
+func (s *fakeQueryHistoryStorage) listRequestsLimitsSet() []int64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]int64(nil), s.listRequestsLimits...)
+}
+
+func (s *fakeQueryHistoryStorage) listRequestsOffsetsSet() []int64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return append([]int64(nil), s.listRequestsOffset...)
 }
 
 const targetPolicy = `

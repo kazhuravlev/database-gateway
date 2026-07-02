@@ -51,11 +51,13 @@ import (
 )
 
 const (
-	ctxUser        = "c-user"
-	keySession     = "session"
-	keyUserID      = "uid"
-	keyOIDCState   = "oidc-state"
-	exportNonceLen = 8
+	ctxUser          = "c-user"
+	keySession       = "session"
+	keyUserID        = "uid"
+	keyOIDCState     = "oidc-state"
+	exportFormatJSON = "json"
+	exportFormatCSV  = "csv"
+	exportNonceLen   = 8
 )
 
 var (
@@ -468,12 +470,23 @@ func marshalQueryResultsJSON(qRes *app.QueryResults) ([]byte, error) {
 }
 
 func marshalQueryResultsCSV(qRes *app.QueryResults) ([]byte, error) {
-	if qRes.State != structs.QueryStateCompleted {
-		return []byte(`state\nNot Completed`), nil
-	}
-
 	var csvBuf bytes.Buffer
 	csvWriter := csv.NewWriter(&csvBuf)
+	if qRes.State != structs.QueryStateCompleted {
+		if err := csvWriter.Write([]string{"state"}); err != nil {
+			return nil, err
+		}
+		if err := csvWriter.Write([]string{"Not Completed"}); err != nil {
+			return nil, err
+		}
+		csvWriter.Flush()
+		if err := csvWriter.Error(); err != nil {
+			return nil, err
+		}
+
+		return csvBuf.Bytes(), nil
+	}
+
 	if err := csvWriter.Write(qRes.QTable.Val().Headers); err != nil {
 		return nil, err
 	}
@@ -617,13 +630,13 @@ func serveExport(c echo.Context, format string, qRes *app.QueryResults) error {
 	)
 
 	switch format {
-	case "json":
+	case exportFormatJSON:
 		filename = "response.json"
 		payload, err = marshalQueryResultsJSON(qRes)
 		if err != nil {
 			return fmt.Errorf("marshal query results json: %w", err)
 		}
-	case "csv":
+	case exportFormatCSV:
 		filename = "response.csv"
 		payload, err = marshalQueryResultsCSV(qRes)
 		if err != nil {
@@ -641,7 +654,7 @@ func serveExport(c echo.Context, format string, qRes *app.QueryResults) error {
 
 func isSupportedExportFormat(format string) bool {
 	switch format {
-	case "json", "csv":
+	case exportFormatJSON, exportFormatCSV:
 		return true
 	default:
 		return false

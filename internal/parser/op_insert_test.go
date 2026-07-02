@@ -69,20 +69,25 @@ func TestParseInsertValid(t *testing.T) {
 func TestParseInsertInvalid(t *testing.T) {
 	t.Parallel()
 
-	test := func(input, name string) {
+	test := func(input, name, expErr string) {
 		t.Helper()
 		t.Run(name, func(t *testing.T) {
 			t.Helper()
 			_, err := parser.Parse(input)
 			require.Error(t, err)
+			require.ErrorIs(t, err, parser.ErrNotImplemented)
+			require.ErrorContains(t, err, expErr)
 		})
 	}
 
-	test("insert into t1(c1) values(1) returning *", "star_returning")
-	test("insert into t1(c1) select t2.c1 from t2", "insert_from_select")
+	test("insert into t1(c1) values(1) returning *", "star_returning", "star expressions")
+	test("insert into t1(c1) select t2.c1 from t2", "insert_from_select", "unknown clause")
 
-	test("INSERT INTO t1(c1) VALUES (5 * 10)", "multiplication")
-	test("INSERT INTO t1(c1) VALUES ('prefix_' || 'suffix')", "concatenation")
+	test("INSERT INTO t1(c1) VALUES (5 * 10)", "multiplication", "unknown node list node type")
+	test("INSERT INTO t1(c1) VALUES ('prefix_' || 'suffix')", "concatenation", "unknown node list node type")
 
-	test("WITH source AS (SELECT 1 AS id, 'test' AS name) INSERT INTO table1(id, name) SELECT id, name FROM source", "with_clause")
+	test("WITH source AS (SELECT 1 AS id, 'test' AS name) INSERT INTO table1(id, name) SELECT id, name FROM source", "with_clause", "unknown clause")
+	test("INSERT INTO t1(id, name) VALUES (1, 'test') ON CONFLICT ON CONSTRAINT t1_id_key DO NOTHING", "on_conflict_constraint", "unknown on-conflict clause")
+	test("INSERT INTO t1(id, active) VALUES (1, true) ON CONFLICT (id) WHERE active DO NOTHING", "on_conflict_partial_index_where", "unknown on-conflict clause")
+	test("INSERT INTO t1(email) VALUES ('a@example.com') ON CONFLICT (lower(email)) DO NOTHING", "on_conflict_expression_index_elem", "unknown index elem")
 }

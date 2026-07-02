@@ -25,33 +25,29 @@ import (
 )
 
 type DeleteVec struct { //nolint:recvcheck
-	Tbl    string
-	Target []string
-	Filter []string
+	Tbl       string
+	Target    []string
+	Filter    []string
+	Returning []string
 }
 
 func (s *DeleteVec) Columns() []string {
-	columns := just.SliceUniq(slices.Concat(s.Target, s.Filter))
+	columns := just.SliceUniq(slices.Concat(s.Target, s.Filter, s.Returning))
 
 	return columns
 }
 
 func (DeleteVec) isVector() {}
 
-func handleDelete(req *pg.DeleteStmt) ([]Vector, error) { //nolint:gocyclo
+func handleDelete(req *pg.DeleteStmt) ([]Vector, error) {
 	if req.UsingClause != nil ||
 		req.GetWithClause() != nil {
 		return nil, fmt.Errorf("unknown clause: %w", ErrNotImplemented)
 	}
 
-	tables := NewTables("public")
-	rel := req.GetRelation()
-	fqTableName, err := tables.Put(rel.GetCatalogname(), rel.GetSchemaname(), rel.GetRelname(), rel.GetAlias().GetAliasname())
+	tables, fqTableName, err := deleteTables(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to add table: %w", err)
-	}
-	if err := tables.Finalize(); err != nil {
-		return nil, fmt.Errorf("failed to finalize tables: %w", err)
+		return nil, err
 	}
 
 	retCols, err := pNodes2Columns(req.GetReturningList(), fqTableName)
@@ -64,27 +60,43 @@ func handleDelete(req *pg.DeleteStmt) ([]Vector, error) { //nolint:gocyclo
 		return nil, fmt.Errorf("parse where: %w", err)
 	}
 
-	allColumns := slices.Concat(retCols, whereColumns)
-
-	table2target := make(map[string]Columns, len(allColumns))
-	table2target[fqTableName] = nil
-	for _, column := range allColumns {
-		tbl, ok := tables.Get(column.Table())
-		if !ok {
-			return nil, fmt.Errorf("table not found: %s", column.Table()) //nolint:err113
-		}
-
-		table2target[tbl] = append(table2target[tbl], column)
+	allTables, err := tables.GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all tables: %w", err)
 	}
 
-	vectors := make([]Vector, 0, len(table2target))
-	for tbl, cols := range table2target {
+	table2filter, err := columnsByTable(tables, allTables, whereColumns)
+	if err != nil {
+		return nil, err
+	}
+	table2returning, err := columnsByTable(tables, allTables, retCols)
+	if err != nil {
+		return nil, err
+	}
+
+	vectors := make([]Vector, 0, len(allTables))
+	for _, tbl := range allTables {
 		vectors = append(vectors, DeleteVec{
-			Tbl:    tbl,
-			Target: cols.ListNames(),
-			Filter: nil, // TODO: impl
+			Tbl:       tbl,
+			Target:    nil,
+			Filter:    table2filter[tbl].ListNames(),
+			Returning: table2returning[tbl].ListNames(),
 		})
 	}
 
 	return vectors, nil
+}
+
+func deleteTables(req *pg.DeleteStmt) (*Tables, string, error) {
+	tables := NewTables("public")
+	rel := req.GetRelation()
+	fqTableName, err := tables.Put(rel.GetCatalogname(), rel.GetSchemaname(), rel.GetRelname(), rel.GetAlias().GetAliasname())
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to add table: %w", err)
+	}
+	if err := tables.Finalize(); err != nil {
+		return nil, "", fmt.Errorf("failed to finalize tables: %w", err)
+	}
+
+	return tables, fqTableName, nil
 }

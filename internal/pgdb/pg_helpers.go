@@ -19,12 +19,15 @@ package pgdb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
 	"github.com/kazhuravlev/just"
 )
+
+var errNilContext = errors.New("context is nil")
 
 func BuildDBDsn(cfg config.PostgresConfig) string { //nolint:gocritic
 	return fmt.Sprintf(
@@ -38,7 +41,11 @@ func BuildDBDsn(cfg config.PostgresConfig) string { //nolint:gocritic
 	)
 }
 
-func ConnectToPg(cfg config.PostgresConfig) (*sql.DB, error) { //nolint:gocritic
+func ConnectToPg(ctx context.Context, cfg config.PostgresConfig) (*sql.DB, error) { //nolint:gocritic
+	if ctx == nil {
+		return nil, errNilContext
+	}
+
 	postgresDSN := BuildDBDsn(cfg)
 	dbConn, err := sql.Open("postgres", postgresDSN)
 	if err != nil {
@@ -49,7 +56,7 @@ func ConnectToPg(cfg config.PostgresConfig) (*sql.DB, error) { //nolint:gocritic
 	dbConn.SetConnMaxLifetime(5 * time.Minute) //nolint:mnd
 	dbConn.SetMaxOpenConns(cfg.MaxPoolSize)
 
-	if err := dbConn.PingContext(context.TODO()); err != nil {
+	if err := dbConn.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
 
