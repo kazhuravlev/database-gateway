@@ -39,8 +39,8 @@ import (
 
 const keyConfig = "config"
 
-func main() {
-	application := &cli.App{ //nolint:exhaustruct
+func newCLIApp() *cli.App {
+	return &cli.App{ //nolint:exhaustruct
 		Name:    "gateway",
 		Version: version.GetVersion(),
 		Flags: []cli.Flag{
@@ -76,8 +76,10 @@ func main() {
 			},
 		},
 	}
+}
 
-	if err := application.Run(os.Args); err != nil {
+func main() {
+	if err := newCLIApp().Run(os.Args); err != nil {
 		fmt.Println(err) //nolint:forbidigo
 		os.Exit(1)
 	}
