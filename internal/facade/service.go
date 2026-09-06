@@ -58,6 +58,7 @@ const (
 	exportFormatJSON = "json"
 	exportFormatCSV  = "csv"
 	exportNonceLen   = 8
+	pathHealthz      = "/healthz"
 )
 
 var (
@@ -132,11 +133,21 @@ func New(opts Options) (*Service, error) {
 }
 
 func (s *Service) Run(_ context.Context) error {
+	echoInst := s.buildRouter()
+
+	echoInst.Logger.Fatal(echoInst.Start(":" + strconv.Itoa(s.opts.port)))
+
+	return nil
+}
+
+func (s *Service) buildRouter() *echo.Echo {
 	echoInst := echo.New()
 	echoInst.HideBanner = true
 	echoInst.Use(middleware.Recover())
 	echoInst.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		Skipper:        middleware.DefaultSkipper,
+		Skipper: func(c echo.Context) bool {
+			return c.Request().URL.Path == pathHealthz
+		},
 		BeforeNextFunc: nil,
 		LogValuesFunc: func(_ echo.Context, reqVals middleware.RequestLoggerValues) error {
 			logFn := s.opts.logger.Info
@@ -188,6 +199,9 @@ func (s *Service) Run(_ context.Context) error {
 	echoInst.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			path := c.Request().URL.Path
+			if path == pathHealthz {
+				return next(c)
+			}
 			if strings.HasPrefix(path, "/auth") {
 				return next(c)
 			}
@@ -217,6 +231,10 @@ func (s *Service) Run(_ context.Context) error {
 
 			return next(c)
 		}
+	})
+
+	echoInst.GET(pathHealthz, func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
 	})
 
 	echoInst.GET("/ui", s.getApp)
@@ -266,9 +284,7 @@ func (s *Service) Run(_ context.Context) error {
 		return c.Redirect(http.StatusSeeOther, "/ui")
 	})
 
-	echoInst.Logger.Fatal(echoInst.Start(":" + strconv.Itoa(s.opts.port)))
-
-	return nil
+	return echoInst
 }
 
 func (s *Service) withAPIBearerAuth() echo.MiddlewareFunc { //nolint:contextcheck
