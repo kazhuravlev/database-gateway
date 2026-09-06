@@ -164,5 +164,41 @@ podDisruptionBudget:
 
 networkPolicy:
   enabled: false
+  # Raw NetworkPolicy ingress rules, rendered as-is into the policy spec.
   ingress: []
+  # Raw NetworkPolicy egress rules, rendered as-is into the policy spec.
   egress: []
+  # Structured egress destinations below describe the outbound connections the
+  # gateway needs when networkPolicy.enabled is true. Each entry defines one
+  # destination and carries enough information to render an egress rule:
+  # an optional peer (podSelector and/or namespaceSelector for in-cluster
+  # destinations, or cidr with optional except for destinations outside the
+  # cluster) plus a required port and an optional protocol (defaults to TCP).
+  # An entry with only a port allows that port to any destination.
+  #
+  # Egress to the metadata PostgreSQL database (internal storage,
+  # config.storage). Example:
+  # egressMetadataDatabase:
+  #   - namespaceSelector:
+  #       matchLabels:
+  #         kubernetes.io/metadata.name: databases
+  #     podSelector:
+  #       matchLabels:
+  #         app.kubernetes.io/name: postgresql
+  #     port: 5432
+  egressMetadataDatabase: []
+  # Egress to the external target PostgreSQL databases (config.targets).
+  # Example:
+  # egressTargetDatabases:
+  #   - cidr: 10.20.0.5/32
+  #     port: 5432
+  #   - cidr: 10.20.0.6/32
+  #     port: 5433
+  egressTargetDatabases: []
+  # Egress to the OIDC provider (config.users.issuerURL). Example:
+  # egressOIDC:
+  #   - cidr: 0.0.0.0/0
+  #     except:
+  #       - 10.0.0.0/8
+  #     port: 443
+  egressOIDC: []

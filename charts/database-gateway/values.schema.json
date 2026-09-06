@@ -1,6 +1,44 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
+  "definitions": {
+    "networkPolicyEgressDestinations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "podSelector": {
+            "type": "object"
+          },
+          "namespaceSelector": {
+            "type": "object"
+          },
+          "cidr": {
+            "type": "string",
+            "minLength": 1
+          },
+          "except": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "protocol": {
+            "type": "string",
+            "enum": ["TCP", "UDP", "SCTP"]
+          }
+        },
+        "required": ["port"],
+        "additionalProperties": false
+      }
+    }
+  },
   "properties": {
     "replicaCount": {
       "type": "integer",
@@ -283,6 +321,37 @@
         }
       },
       "required": ["existingConfigMap", "mountPath", "files"]
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "ingress": {
+          "type": "array"
+        },
+        "egress": {
+          "type": "array"
+        },
+        "egressMetadataDatabase": {
+          "$ref": "#/definitions/networkPolicyEgressDestinations"
+        },
+        "egressTargetDatabases": {
+          "$ref": "#/definitions/networkPolicyEgressDestinations"
+        },
+        "egressOIDC": {
+          "$ref": "#/definitions/networkPolicyEgressDestinations"
+        }
+      },
+      "required": [
+        "enabled",
+        "ingress",
+        "egress",
+        "egressMetadataDatabase",
+        "egressTargetDatabases",
+        "egressOIDC"
+      ]
     }
   }
 }
