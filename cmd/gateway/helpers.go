@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 
 	"github.com/kazhuravlev/database-gateway/internal/app"
 	"github.com/kazhuravlev/database-gateway/internal/config"
@@ -30,7 +29,6 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/policy/opa"
 	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/storage/migrations"
-	"github.com/kazhuravlev/just"
 	"github.com/urfave/cli/v2"
 )
 
@@ -38,13 +36,9 @@ func withConfig(action func(c *cli.Context, cfg config.Config) error) cli.Action
 	return func(c *cli.Context) error {
 		configFilename := c.String(keyConfig)
 
-		cfg, err := just.JsonParseTypeF[config.Config](configFilename)
+		cfg, err := config.ParseFile(configFilename)
 		if err != nil {
 			return fmt.Errorf("parse config: %w", err)
-		}
-
-		if !filepath.IsAbs(cfg.Policy.Path) {
-			cfg.Policy.Path = filepath.Join(filepath.Dir(configFilename), cfg.Policy.Path)
 		}
 
 		return action(c, *cfg)

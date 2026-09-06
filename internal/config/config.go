@@ -17,8 +17,11 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -124,6 +127,31 @@ type Config struct {
 	Policy  PolicyConfig      `json:"policy"`
 	Facade  FacadeConfig      `json:"facade"`
 	Storage PostgresConfig    `json:"storage"`
+}
+
+// ParseFile reads and parses a JSON config file. A relative policy.path is
+// resolved against the config file directory, not the process working directory.
+func ParseFile(filename string) (*Config, error) {
+	buf, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("read config file: %w", err)
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(buf, &cfg); err != nil {
+		return nil, fmt.Errorf("parse config file: %w", err)
+	}
+
+	if cfg.Policy.Path != "" && !filepath.IsAbs(cfg.Policy.Path) {
+		absFilename, err := filepath.Abs(filename)
+		if err != nil {
+			return nil, fmt.Errorf("resolve config file path: %w", err)
+		}
+
+		cfg.Policy.Path = filepath.Join(filepath.Dir(absFilename), cfg.Policy.Path)
+	}
+
+	return &cfg, nil
 }
 
 func (c *Config) Validate() error {

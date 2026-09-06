@@ -17,6 +17,9 @@
 package config_test //nolint:exhaustruct
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/kazhuravlev/database-gateway/internal/config"
@@ -79,6 +82,45 @@ func TestConfigValidate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseFilePolicyPathResolution(t *testing.T) { //nolint:paralleltest // t.Chdir is incompatible with t.Parallel
+	cfgDir := t.TempDir()
+
+	// Run from a different working directory to make sure resolution is not cwd-based.
+	t.Chdir(t.TempDir())
+
+	writeConfig := func(policyPath string) string {
+		t.Helper()
+
+		filename := filepath.Join(cfgDir, "config.json")
+		body := `{"policy": {"path": ` + strconv.Quote(policyPath) + `}}`
+		require.NoError(t, os.WriteFile(filename, []byte(body), 0o600))
+
+		return filename
+	}
+
+	t.Run("relative path is resolved from config file dir", func(t *testing.T) { //nolint:paralleltest
+		cfg, err := config.ParseFile(writeConfig("./opa/basic"))
+		require.NoError(t, err)
+		require.Equal(t, filepath.Join(cfgDir, "opa", "basic"), cfg.Policy.Path)
+	})
+
+	t.Run("absolute path is kept as-is", func(t *testing.T) { //nolint:paralleltest
+		absPath := filepath.Join(t.TempDir(), "opa", "basic")
+
+		cfg, err := config.ParseFile(writeConfig(absPath))
+		require.NoError(t, err)
+		require.Equal(t, absPath, cfg.Policy.Path)
+	})
+
+	t.Run("relative config filename still resolves to absolute policy path", func(t *testing.T) { //nolint:paralleltest
+		t.Chdir(cfgDir)
+
+		cfg, err := config.ParseFile(filepath.Base(writeConfig("./opa/basic")))
+		require.NoError(t, err)
+		require.Equal(t, filepath.Join(cfgDir, "opa", "basic"), cfg.Policy.Path)
+	})
 }
 
 func validConfigForTest() config.Config {
