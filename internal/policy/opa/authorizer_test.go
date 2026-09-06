@@ -135,6 +135,40 @@ func TestLoadModulesIgnoresNonRegoFiles(t *testing.T) {
 	}, modules)
 }
 
+func TestLoadModulesAndNewSucceedForValidFixtureDir(t *testing.T) {
+	t.Parallel()
+
+	modules, err := opa.LoadModules(filepath.Join("testdata", "valid"))
+	require.NoError(t, err)
+	require.Len(t, modules, 2)
+	require.Contains(t, modules, "policy.rego")
+	require.Contains(t, modules, "admin.rego")
+
+	authz, err := opa.New(context.Background(), modules)
+	require.NoError(t, err)
+	require.NotNil(t, authz)
+
+	require.True(t, authz.AllowTarget([]string{"role:user"}, "local-1"))
+	require.False(t, authz.AllowTarget([]string{"role:user"}, "local-2"))
+	require.True(t, authz.AllowTarget([]string{"role:admin"}, "anything"))
+
+	require.True(t, authz.AllowQuery([]string{"role:user"}, "local-1", "select", "public.clients"))
+	require.False(t, authz.AllowQuery([]string{"role:user"}, "local-1", "select", "public.orders"))
+	require.True(t, authz.AllowQuery([]string{"role:admin"}, "local-1", "delete", "public.orders"))
+}
+
+func TestLoadModulesSucceedsButNewFailsForInvalidFixtureDir(t *testing.T) {
+	t.Parallel()
+
+	modules, err := opa.LoadModules(filepath.Join("testdata", "invalid"))
+	require.NoError(t, err)
+	require.Contains(t, modules, "broken.rego")
+
+	authz, err := opa.New(context.Background(), modules)
+	require.Error(t, err)
+	require.Nil(t, authz)
+}
+
 func TestLoadModulesFailsForUnreadableRegoModule(t *testing.T) {
 	t.Parallel()
 
