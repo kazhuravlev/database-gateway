@@ -157,16 +157,29 @@ func TestLoadModulesAndNewSucceedForValidFixtureDir(t *testing.T) {
 	require.True(t, authz.AllowQuery([]string{"role:admin"}, "local-1", "delete", "public.orders"))
 }
 
-func TestLoadModulesSucceedsButNewFailsForInvalidFixtureDir(t *testing.T) {
+func TestLoadModulesFailsForInvalidFixtureDir(t *testing.T) {
 	t.Parallel()
 
 	modules, err := opa.LoadModules(filepath.Join("testdata", "invalid"))
-	require.NoError(t, err)
-	require.Contains(t, modules, "broken.rego")
-
-	authz, err := opa.New(context.Background(), modules)
 	require.Error(t, err)
-	require.Nil(t, authz)
+	require.ErrorContains(t, err, "compile policy module")
+	require.ErrorContains(t, err, filepath.Join("testdata", "invalid", "broken.rego"))
+	require.Nil(t, modules)
+}
+
+func TestLoadModulesFailsWhenOneFileIsInvalid(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "good.rego"), []byte(ExamplePolicySimple), 0o600))
+	brokenFile := filepath.Join(dir, "broken.rego")
+	require.NoError(t, os.WriteFile(brokenFile, []byte("package gateway\nallow_target if { this is bad }"), 0o600))
+
+	modules, err := opa.LoadModules(dir)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "compile policy module")
+	require.ErrorContains(t, err, brokenFile)
+	require.Nil(t, modules)
 }
 
 func TestLoadModulesFailsForUnreadableRegoModule(t *testing.T) {

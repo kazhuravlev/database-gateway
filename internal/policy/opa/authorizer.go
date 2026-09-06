@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/kazhuravlev/database-gateway/internal/policy"
+	"github.com/open-policy-agent/opa/v1/ast"
 	oparego "github.com/open-policy-agent/opa/v1/rego"
 )
 
@@ -98,6 +99,10 @@ func LoadModules(dir string) (map[string]string, error) {
 		buf, err := os.ReadFile(filename)
 		if err != nil {
 			return nil, fmt.Errorf("read policy module %q: %w", filename, err)
+		}
+
+		if _, err := ast.CompileModules(map[string]string{filename: string(buf)}); err != nil {
+			return nil, fmt.Errorf("compile policy module %q: %w", filename, err)
 		}
 
 		modules[entry.Name()] = string(buf)
