@@ -42,25 +42,29 @@ func newTestConnService() *Service {
 
 // freeLocalAddr reserves a local TCP port and immediately releases it, so that
 // nothing is listening on it and any connection attempt is refused.
-func freeLocalAddr(t *testing.T) (string, int) {
+func freeLocalAddr(t *testing.T) *net.TCPAddr {
 	t.Helper()
 
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	var lc net.ListenConfig
+	listener, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	addr, ok := l.Addr().(*net.TCPAddr)
+	addr, ok := listener.Addr().(*net.TCPAddr)
 	require.True(t, ok)
 
-	require.NoError(t, l.Close())
+	require.NoError(t, listener.Close())
 
-	return addr.IP.String(), addr.Port
+	return addr
 }
 
 func TestGetConnection_UnreachableTargetReturnsError(t *testing.T) {
-	host, port := freeLocalAddr(t)
+	t.Parallel()
+
+	addr := freeLocalAddr(t)
+	host, port := addr.IP.String(), addr.Port
 
 	svc := newTestConnService()
-	target := config.Target{ //nolint:exhaustruct
+	target := config.Target{ //nolint:exhaustruct_v5
 		ID: "unreachable-target",
 		Connection: config.Connection{
 			Host:     host,
@@ -92,11 +96,14 @@ func TestGetConnection_UnreachableTargetReturnsError(t *testing.T) {
 }
 
 func TestGetConnection_ErrorDoesNotLeakPassword(t *testing.T) {
-	host, port := freeLocalAddr(t)
+	t.Parallel()
+
+	addr := freeLocalAddr(t)
+	host, port := addr.IP.String(), addr.Port
 
 	svc := newTestConnService()
 	const password = "very-secret-password"
-	target := config.Target{ //nolint:exhaustruct
+	target := config.Target{ //nolint:exhaustruct_v5
 		ID: "unreachable-target",
 		Connection: config.Connection{
 			Host:     host,

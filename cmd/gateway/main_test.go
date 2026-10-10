@@ -61,12 +61,14 @@ func writeRunConfig(t *testing.T, policyDir string) string {
 	return cfgPath
 }
 
+// The tests below drive newCLIApp().Run in-process. urfave/cli mutates its
+// package-level HelpFlag and VersionFlag on every App.Run, so running these
+// tests in parallel is a data race under -race. They must stay sequential.
+
 // The service must refuse to start when any .rego module fails to compile:
 // the run action returns an error naming the broken file, which makes main()
 // exit with a non-zero code.
-func TestRunFailsOnInvalidPolicy(t *testing.T) {
-	t.Parallel()
-
+func TestRunFailsOnInvalidPolicy(t *testing.T) { //nolint:paralleltest // shares urfave/cli global flags, see above
 	policyDir := t.TempDir()
 	brokenFile := filepath.Join(policyDir, "broken.rego")
 	require.NoError(t, os.WriteFile(brokenFile, []byte("package gateway\n\nallow_target :=\n"), 0o600))
@@ -81,9 +83,7 @@ func TestRunFailsOnInvalidPolicy(t *testing.T) {
 // With compilable policies the startup must get past policy loading; here it
 // fails later, on the (intentionally unreachable) metadata database. This pins
 // the fail-fast ordering: policies are checked before any DB access.
-func TestRunWithValidPolicyReachesDatabase(t *testing.T) {
-	t.Parallel()
-
+func TestRunWithValidPolicyReachesDatabase(t *testing.T) { //nolint:paralleltest // shares urfave/cli global flags, see above
 	policyDir := t.TempDir()
 	validPolicy := "package gateway\n\ndefault allow_target := false\ndefault allow_query := false\n"
 	require.NoError(t, os.WriteFile(filepath.Join(policyDir, "policy.rego"), []byte(validPolicy), 0o600))

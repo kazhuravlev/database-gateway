@@ -106,7 +106,7 @@ func New(opts Options) (*Service, error) { //nolint:gocritic
 		Scopes:       append([]string{oidc.ScopeOpenID}, oidcCfg.Scopes...),
 	}
 	accessTokenAudience := strings.TrimSpace(oidcCfg.AccessTokenAudience)
-	tokenVerifier := oidcProvider.Verifier(&oidc.Config{ //nolint:exhaustruct
+	tokenVerifier := oidcProvider.Verifier(&oidc.Config{ //nolint:exhaustruct_v5
 		ClientID: accessTokenAudience,
 	})
 
@@ -222,7 +222,7 @@ func (s *Service) CompleteOIDC( //nolint:cyclop
 		return nil, time.Time{}, nil, errors.New("id_token not found in response") //nolint:err113
 	}
 
-	idToken, err := s.oidcProvider.Verifier(&oidc.Config{ClientID: s.oauthCfg.ClientID}).Verify(ctx, rawIDToken) //nolint:exhaustruct
+	idToken, err := s.oidcProvider.Verifier(&oidc.Config{ClientID: s.oauthCfg.ClientID}).Verify(ctx, rawIDToken) //nolint:exhaustruct_v5
 	if err != nil {
 		return nil, time.Time{}, nil, fmt.Errorf("verify id_token: %w", err)
 	}
@@ -363,7 +363,7 @@ func (s *Service) RevokeOIDCToken(ctx context.Context, token string) error {
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	httpClient := &http.Client{ //nolint:exhaustruct
+	httpClient := &http.Client{ //nolint:exhaustruct_v5
 		Timeout: 10 * time.Second,
 	}
 	resp, err := httpClient.Do(req)

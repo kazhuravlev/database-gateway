@@ -133,7 +133,7 @@ func New(opts Options) (*Service, error) {
 }
 
 func (s *Service) Run(_ context.Context) error {
-	echoInst := s.buildRouter()
+	echoInst := s.buildRouter() //nolint:contextcheck
 
 	echoInst.Logger.Fatal(echoInst.Start(":" + strconv.Itoa(s.opts.port)))
 
@@ -196,42 +196,7 @@ func (s *Service) buildRouter() *echo.Echo {
 		echoInst.Use(corsMwForDevelopment)
 	}
 
-	echoInst.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			path := c.Request().URL.Path
-			if path == pathHealthz {
-				return next(c)
-			}
-			if strings.HasPrefix(path, "/auth") {
-				return next(c)
-			}
-			if strings.HasPrefix(path, "/logout") {
-				return next(c)
-			}
-			if strings.HasPrefix(path, "/api/v1/") {
-				return next(c)
-			}
-
-			sess, err := session.Get(keySession, c)
-			if err != nil {
-				return fmt.Errorf("have no session: %w", err)
-			}
-
-			user, ok := sess.Values[keyUserID]
-			if !ok {
-				return c.Redirect(http.StatusSeeOther, "/auth")
-			}
-
-			strUser, ok := user.(structs.User)
-			if !ok {
-				return c.Redirect(http.StatusSeeOther, "/logout")
-			}
-
-			c.Set(ctxUser, strUser)
-
-			return next(c)
-		}
-	})
+	echoInst.Use(withSessionAuth)
 
 	echoInst.GET(pathHealthz, func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok")
@@ -285,6 +250,43 @@ func (s *Service) buildRouter() *echo.Echo {
 	})
 
 	return echoInst
+}
+
+func withSessionAuth(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		path := c.Request().URL.Path
+		if path == pathHealthz {
+			return next(c)
+		}
+		if strings.HasPrefix(path, "/auth") {
+			return next(c)
+		}
+		if strings.HasPrefix(path, "/logout") {
+			return next(c)
+		}
+		if strings.HasPrefix(path, "/api/v1/") {
+			return next(c)
+		}
+
+		sess, err := session.Get(keySession, c)
+		if err != nil {
+			return fmt.Errorf("have no session: %w", err)
+		}
+
+		user, ok := sess.Values[keyUserID]
+		if !ok {
+			return c.Redirect(http.StatusSeeOther, "/auth")
+		}
+
+		strUser, ok := user.(structs.User)
+		if !ok {
+			return c.Redirect(http.StatusSeeOther, "/logout")
+		}
+
+		c.Set(ctxUser, strUser)
+
+		return next(c)
+	}
 }
 
 func (s *Service) withAPIBearerAuth() echo.MiddlewareFunc { //nolint:contextcheck
@@ -356,7 +358,7 @@ func (s *Service) getAuth(c echo.Context) error {
 		return fmt.Errorf("get session: %w", err)
 	}
 
-	sess.Options = &sessions.Options{ //nolint:exhaustruct
+	sess.Options = &sessions.Options{ //nolint:exhaustruct_v5
 		Path:     "/",
 		MaxAge:   300, // 5 minutes - state is short-lived
 		HttpOnly: true,
@@ -390,7 +392,7 @@ func (s *Service) getAuthCallback(c echo.Context) error {
 	}
 
 	// Clear the one-time state from session and set user session
-	sess.Options = &sessions.Options{ //nolint:exhaustruct
+	sess.Options = &sessions.Options{ //nolint:exhaustruct_v5
 		Path:     "/",
 		MaxAge:   int(time.Until(expiry).Seconds()),
 		HttpOnly: true,
@@ -410,7 +412,7 @@ func (s *Service) logout(c echo.Context) error {
 		return fmt.Errorf("get session: %w", err)
 	}
 
-	sess.Options = &sessions.Options{ //nolint:exhaustruct
+	sess.Options = &sessions.Options{ //nolint:exhaustruct_v5
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
