@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package config_test //nolint:exhaustruct
+package config_test //nolint:exhaustruct_v5
 
 import (
 	"os"

@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-FROM --platform=$TARGETPLATFORM golang:1.26-alpine AS builder
+FROM --platform=$TARGETPLATFORM golang:1.27-alpine AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -35,7 +35,7 @@ RUN CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 		-o /out/database-gateway \
 		./cmd/gateway
 
-FROM alpine:3.23
+FROM alpine:3.24
 
 LABEL source=https://github.com/kazhuravlev/database-gateway
 

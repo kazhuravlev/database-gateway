@@ -107,7 +107,7 @@ type Service struct {
 }
 
 func New(opts Options) (*Service, error) {
-	gob.Register(structs.User{}) //nolint:exhaustruct
+	gob.Register(structs.User{}) //nolint:exhaustruct_v5
 	gob.Register(config.UserID(""))
 
 	if err := opts.Validate(); err != nil {

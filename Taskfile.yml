@@ -62,6 +62,12 @@ tasks:
       - echo '>>> Run install tools'
       - "{{ .TOOLSET }} sync"
 
+  tools:upgrade:
+    desc: Upgrade tools to the latest versions and refresh supply-chain pins
+    cmds:
+      - echo ">>> Upgrade tools"
+      - "{{ .TOOLSET }} upgrade --pin"
+
   lint:
     desc: Run static analysis
     cmds:

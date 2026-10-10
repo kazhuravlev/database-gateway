@@ -33,7 +33,7 @@ jobs:
     strategy:
       matrix:
         go_version:
-          - "1.26"
+          - "1.27"
         os:
           - "ubuntu-latest"
 

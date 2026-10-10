@@ -40,36 +40,36 @@ import (
 const keyConfig = "config"
 
 func newCLIApp() *cli.App {
-	return &cli.App{ //nolint:exhaustruct
+	return &cli.App{ //nolint:exhaustruct_v5
 		Name:    "gateway",
 		Version: version.GetVersion(),
 		Flags: []cli.Flag{
-			&cli.StringFlag{ //nolint:exhaustruct
+			&cli.StringFlag{ //nolint:exhaustruct_v5
 				Aliases: []string{"c"},
 				Name:    keyConfig,
 				Value:   "config.json",
 			},
 		},
 		Commands: []*cli.Command{
-			{
+			{ //nolint:exhaustruct_v5
 				Name:   "run",
 				Action: withConfig(withApp(cmdRun)),
 			},
-			{
+			{ //nolint:exhaustruct_v5
 				Name:   "jet-generate",
 				Action: withConfig(cmdGenerateModels),
 			},
-			{
+			{ //nolint:exhaustruct_v5
 				Name:        "migrate-up",
 				Description: "Run all migrations up",
 				Action:      withConfig(cmdMigrateUp),
 			},
-			{
+			{ //nolint:exhaustruct_v5
 				Name:        "migrate-down-one",
 				Description: "Rollback migration to down one-by-one",
 				Action:      withConfig(cmdMigrateDownOne),
 			},
-			{
+			{ //nolint:exhaustruct_v5
 				Name:        "migrate-new",
 				Description: "Create new migration file",
 				Action:      withConfig(cmdMigrateCreateNew),

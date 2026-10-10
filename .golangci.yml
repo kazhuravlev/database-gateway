@@ -25,6 +25,7 @@ linters:
     - wrapcheck
     - wsl
     - wsl_v5
+    - exhaustruct
     - noinlineerr
     - gomodguard
   settings:
@@ -133,7 +134,7 @@ linters:
     rules:
       - linters:
           - dupl
-          - exhaustruct
+          - exhaustruct_v5
           - goconst
           - lll
           - mnd

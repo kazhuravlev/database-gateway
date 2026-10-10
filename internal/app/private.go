@@ -47,7 +47,7 @@ func (s *Service) getConnection(ctx context.Context, target config.Target) (*pgx
 		return fmt.Errorf("connect to target %q (%s:%d): %w", target.ID, pgCfg.Host, pgCfg.Port, reason)
 	}
 
-	connURL := url.URL{ //nolint:exhaustruct
+	connURL := url.URL{ //nolint:exhaustruct_v5
 		Scheme: "postgres",
 		User:   url.UserPassword(pgCfg.User, pgCfg.Password),
 		Host:   fmt.Sprintf("%s:%d", pgCfg.Host, pgCfg.Port),

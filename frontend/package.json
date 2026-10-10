@@ -9,14 +9,14 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "esbuild": ">=0.28.1",
-    "svelte": ">=5.55.7",
-    "vite": "^8.0.16"
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "esbuild": ">=0.28.2",
+    "svelte": ">=5.57.2",
+    "vite": "^8.3.4"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.2.1",
-    "tailwindcss": "^4.2.1"
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3"
   },
   "overrides": {
     "esbuild": "$esbuild"

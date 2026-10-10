@@ -31,8 +31,8 @@ import (
 )
 
 func newTestConnService() *Service {
-	return &Service{ //nolint:exhaustruct
-		opts: Options{ //nolint:exhaustruct
+	return &Service{ //nolint:exhaustruct_v5
+		opts: Options{ //nolint:exhaustruct_v5
 			logger: slog.Default(),
 		},
 		connsMu: new(sync.RWMutex),
