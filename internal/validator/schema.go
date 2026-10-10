@@ -50,7 +50,7 @@ func (s *DbSchema) GetTable(tblName string) (config.TargetTable, bool) {
 		}
 	}
 
-	return config.TargetTable{}, false //nolint:exhaustruct
+	return config.TargetTable{}, false //nolint:exhaustruct_v5
 }
 
 func (s *DbSchema) CanonicalTable(tblName string) string {

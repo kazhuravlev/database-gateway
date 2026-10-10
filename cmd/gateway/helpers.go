@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 
 	"github.com/kazhuravlev/database-gateway/internal/app"
 	"github.com/kazhuravlev/database-gateway/internal/config"
@@ -30,7 +29,6 @@ import (
 	"github.com/kazhuravlev/database-gateway/internal/policy/opa"
 	"github.com/kazhuravlev/database-gateway/internal/storage"
 	"github.com/kazhuravlev/database-gateway/internal/storage/migrations"
-	"github.com/kazhuravlev/just"
 	"github.com/urfave/cli/v2"
 )
 
@@ -38,13 +36,9 @@ func withConfig(action func(c *cli.Context, cfg config.Config) error) cli.Action
 	return func(c *cli.Context) error {
 		configFilename := c.String(keyConfig)
 
-		cfg, err := just.JsonParseTypeF[config.Config](configFilename)
+		cfg, err := config.ParseFile(configFilename)
 		if err != nil {
 			return fmt.Errorf("parse config: %w", err)
-		}
-
-		if !filepath.IsAbs(cfg.Policy.Path) {
-			cfg.Policy.Path = filepath.Join(filepath.Dir(configFilename), cfg.Policy.Path)
 		}
 
 		return action(c, *cfg)
@@ -85,6 +79,22 @@ func withApp(
 
 		logger.Info("start")
 
+		// Load and compile policies before touching the database: the service
+		// must not start (and must exit non-zero) if any .rego module fails to compile.
+		modules, err := opa.LoadModules(cfg.Policy.Path)
+		if err != nil {
+			logger.Error("load policy modules", slog.String("error", err.Error()))
+
+			return fmt.Errorf("load policy modules: %w", err)
+		}
+
+		authorizer, err := opa.New(ctx, modules)
+		if err != nil {
+			logger.Error("init opa authorizer", slog.String("error", err.Error()))
+
+			return fmt.Errorf("init opa authorizer: %w", err)
+		}
+
 		migratorInst, err := newMigrator(ctx, cfg.Storage)
 		if err != nil {
 			return fmt.Errorf("create new migrator: %w", err)
@@ -102,16 +112,6 @@ func withApp(
 		storageInst, err := storage.New(storage.NewOptions(logger, dbConnWrite))
 		if err != nil {
 			return fmt.Errorf("init storage: %w", err)
-		}
-
-		modules, err := opa.LoadModules(cfg.Policy.Path)
-		if err != nil {
-			return fmt.Errorf("load policy modules: %w", err)
-		}
-
-		authorizer, err := opa.New(ctx, modules)
-		if err != nil {
-			return fmt.Errorf("init opa authorizer: %w", err)
 		}
 
 		appInst, err := app.New(app.NewOptions(logger, cfg.Targets, cfg.Users, authorizer, storageInst))

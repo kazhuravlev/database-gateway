@@ -67,14 +67,17 @@ func TestAuthFlowStoresStateAndCreatesSession(t *testing.T) {
 			require.Equal(t, state, expectedState)
 			require.Equal(t, state, receivedState)
 
-			return &structs.User{
-					ID:       config.UserID("alice@example.com"),
-					Username: "alice",
-					Role:     config.RoleUser,
-				}, time.Now().Add(time.Hour), &app.OIDCTokens{
-					IDToken:     "",
-					AccessToken: "access-token-1",
-				}, nil
+			user := &structs.User{
+				ID:       config.UserID("alice@example.com"),
+				Username: "alice",
+				Role:     config.RoleUser,
+			}
+			tokens := &app.OIDCTokens{
+				IDToken:     "",
+				AccessToken: "access-token-1",
+			}
+
+			return user, time.Now().Add(time.Hour), tokens, nil
 		},
 		buildOIDCLogoutURL: func(_, _ string) (string, error) {
 			return "", errNotUsed
@@ -169,14 +172,17 @@ func TestLogoutRedirectsToOIDCEndSession(t *testing.T) {
 			return authURL, state, nil
 		},
 		completeOIDC: func(context.Context, string, string, string) (*structs.User, time.Time, *app.OIDCTokens, error) {
-			return &structs.User{
-					ID:       config.UserID("alice@example.com"),
-					Username: "alice",
-					Role:     config.RoleUser,
-				}, time.Now().Add(time.Hour), &app.OIDCTokens{
-					IDToken:     "",
-					AccessToken: "access-token-1",
-				}, nil
+			user := &structs.User{
+				ID:       config.UserID("alice@example.com"),
+				Username: "alice",
+				Role:     config.RoleUser,
+			}
+			tokens := &app.OIDCTokens{
+				IDToken:     "",
+				AccessToken: "access-token-1",
+			}
+
+			return user, time.Now().Add(time.Hour), tokens, nil
 		},
 		buildOIDCLogoutURL: func(_ string, postLogoutRedirectURL string) (string, error) {
 			gotPostLogoutRedirectURL = postLogoutRedirectURL
@@ -260,7 +266,7 @@ func TestBuildAuthRedirectURL(t *testing.T) {
 }
 
 func authTestEcho(svc *Service) *echo.Echo {
-	gob.Register(structs.User{}) //nolint:exhaustruct
+	gob.Register(structs.User{}) //nolint:exhaustruct_v5
 	gob.Register(config.UserID(""))
 
 	echoInst := echo.New()

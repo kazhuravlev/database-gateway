@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package facade //nolint:exhaustruct,testpackage
+package facade //nolint:exhaustruct_v5,testpackage
 
 import (
 	"context"

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package parser_test //nolint:exhaustruct
+package parser_test //nolint:exhaustruct_v5
 
 import (
 	"sort"

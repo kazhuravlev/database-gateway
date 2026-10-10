@@ -2,20 +2,20 @@
 	"tools": [
 		{
 			"runtime": "go",
-			"module": "golang.org/x/tools/cmd/goimports@v0.46.0",
+			"module": "golang.org/x/tools/cmd/goimports@v0.51.0",
 			"alias": null,
 			"tags": null,
 			"pin": {
-				"commit_hash": "3d6f8dfd4853c8b323940b931f1170c6d0df8d23"
+				"commit_hash": "ea2f152dc35325e4b9b639583972375972350a84"
 			}
 		},
 		{
 			"runtime": "go",
-			"module": "mvdan.cc/gofumpt@v0.10.0",
+			"module": "mvdan.cc/gofumpt@v0.12.0",
 			"alias": null,
 			"tags": null,
 			"pin": {
-				"commit_hash": "14050252a6d591bb7a3f0167c925c3d6e6f9bdf8"
+				"commit_hash": "3e07e7e70ac93761d8e79ca0083a19e3d59f753d"
 			}
 		},
 		{
@@ -29,7 +29,7 @@
 		},
 		{
 			"runtime": "gh",
-			"module": "golangci/golangci-lint@v2.12.2",
+			"module": "golangci/golangci-lint@v2.14.0",
 			"alias": null,
 			"tags": null,
 			"pin": {
@@ -37,55 +37,55 @@
 					{
 						"os": "darwin",
 						"arch": "arm64",
-						"name": "golangci-lint-2.12.2-darwin-arm64.tar.gz",
-						"digest": "sha256:a9c54498731b3128f79e090be6110f3e5fffccc617b08142ed244d4126c73f29"
+						"name": "golangci-lint-2.14.0-darwin-arm64.tar.gz",
+						"digest": "sha256:5ef5f36a7147e91dc58ef9ef4d11bb7bad5ead0c76eb6c01327a73c641d1dcc3"
 					},
 					{
 						"os": "darwin",
 						"arch": "amd64",
-						"name": "golangci-lint-2.12.2-darwin-amd64.tar.gz",
-						"digest": "sha256:f6f06d94b6241521c53d15450c5209b028270bf966f842afb11c030c79f5bc16"
+						"name": "golangci-lint-2.14.0-darwin-amd64.tar.gz",
+						"digest": "sha256:a5667c1c3536be1740133213e1e822bfb8f0d98ea12903174d6d5f635e4ed68d"
 					},
 					{
 						"os": "linux",
 						"arch": "amd64",
-						"name": "golangci-lint-2.12.2-linux-amd64.tar.gz",
-						"digest": "sha256:8df580d2670fed8fa984aac0507099af8df275e665215f5c7a2ae3943893a553"
+						"name": "golangci-lint-2.14.0-linux-amd64.tar.gz",
+						"digest": "sha256:ab90aeb7b066f92a33415b638a50fe5344bbb75a0d32ad30cc248d88f81032ab"
 					},
 					{
 						"os": "linux",
 						"arch": "arm64",
-						"name": "golangci-lint-2.12.2-linux-arm64.tar.gz",
-						"digest": "sha256:44cd40a8c76c86755375adfeea52cfd3533cb43d7bd647771e0ae065e166df3a"
+						"name": "golangci-lint-2.14.0-linux-arm64.tar.gz",
+						"digest": "sha256:ee7ec5f3453d15ddf106fae5a4d6c71737712348a979d1fe9cd52ec7ea299bae"
 					},
 					{
 						"os": "linux",
 						"arch": "386",
-						"name": "golangci-lint-2.12.2-linux-386.tar.gz",
-						"digest": "sha256:8acadd219d421b89186438c095fd6da72bcb2cc6a334798d31732003c376233a"
+						"name": "golangci-lint-2.14.0-linux-386.tar.gz",
+						"digest": "sha256:72e168d307e03c974ded75ee91f427c1395646915fe4f2bfe63731c3b935c2eb"
 					},
 					{
 						"os": "windows",
 						"arch": "amd64",
-						"name": "golangci-lint-2.12.2-windows-amd64.zip",
-						"digest": "sha256:bd42e3ebc8cb4ececb86941983baaf1dc221bbb04d838e94ce63b49cc91e02bb"
+						"name": "golangci-lint-2.14.0-windows-amd64.zip",
+						"digest": "sha256:b15f903d1649283a2ab6e8d2f0c317eaf1f9f6b3763950e7e8b7e72a43dd724f"
 					},
 					{
 						"os": "windows",
 						"arch": "arm64",
-						"name": "golangci-lint-2.12.2-windows-arm64.zip",
-						"digest": "sha256:947b9a5bf762d465710b376c156f0184abb2168378b0826af1899e0ee7183742"
+						"name": "golangci-lint-2.14.0-windows-arm64.zip",
+						"digest": "sha256:6399496aef883e5d2f77ea93e6e54fdd05bc2695f64071d8de0b0579cad92274"
 					}
 				]
 			}
 		},
 		{
 			"runtime": "go",
-			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.55.6",
+			"module": "github.com/kazhuravlev/options-gen/cmd/options-gen@v0.58.0",
 			"alias": null,
 			"tags": null,
 			"pin": {
-				"commit_hash": "e8c923b00ffd3caecbb8f565f94a926f1b17a15e"
+				"commit_hash": "dd2dced33a36cff690eddd670e0342bd1bb955f6"
 			}
 		}
 	],

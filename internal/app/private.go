@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/url"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kazhuravlev/database-gateway/internal/config"
@@ -42,18 +43,29 @@ func (s *Service) getConnection(ctx context.Context, target config.Target) (*pgx
 	s.opts.logger.Info("connect to target", slog.String("target", string(target.ID)))
 	pgCfg := target.Connection
 
-	urlExample := fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		pgCfg.User,
-		pgCfg.Password,
-		pgCfg.Host,
-		pgCfg.Port,
-		pgCfg.DB,
-		just.If(pgCfg.UseSSL, "enable", "disable"),
-	)
-	dbpool, err := pgxpool.New(ctx, urlExample)
+	connErr := func(reason error) error {
+		return fmt.Errorf("connect to target %q (%s:%d): %w", target.ID, pgCfg.Host, pgCfg.Port, reason)
+	}
+
+	connURL := url.URL{ //nolint:exhaustruct_v5
+		Scheme: "postgres",
+		User:   url.UserPassword(pgCfg.User, pgCfg.Password),
+		Host:   fmt.Sprintf("%s:%d", pgCfg.Host, pgCfg.Port),
+		Path:   "/" + pgCfg.DB,
+		RawQuery: url.Values{
+			"sslmode": {just.If(pgCfg.UseSSL, "enable", "disable")},
+		}.Encode(),
+	}
+
+	dbpool, err := pgxpool.New(ctx, connURL.String())
 	if err != nil {
-		return nil, fmt.Errorf("create db pool: %w", err)
+		return nil, connErr(fmt.Errorf("create db pool: %w", err))
+	}
+
+	if err := dbpool.Ping(ctx); err != nil {
+		dbpool.Close()
+
+		return nil, connErr(fmt.Errorf("ping: %w", err))
 	}
 	// TODO: we cann disconnect on shutdown. But this is not so important.
 	// dbpool.Close()

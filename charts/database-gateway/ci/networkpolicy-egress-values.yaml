@@ -1,0 +1,23 @@
+# CI values exercising the structured networkPolicy egress destinations
+# against values.schema.json.
+networkPolicy:
+  enabled: true
+  egressMetadataDatabase:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: databases
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: postgresql
+      port: 5432
+  egressTargetDatabases:
+    - cidr: 10.20.0.5/32
+      port: 5432
+    - cidr: 10.20.0.6/32
+      port: 5433
+      protocol: TCP
+  egressOIDC:
+    - cidr: 0.0.0.0/0
+      except:
+        - 10.0.0.0/8
+      port: 443
