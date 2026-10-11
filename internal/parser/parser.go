@@ -210,7 +210,7 @@ func (c Column) Table() string {
 
 func ParseColumn(tokens ...string) (Column, error) {
 	if len(tokens) == 0 || len(tokens) > 4 {
-		return Column{}, errors.New("expected 0-4 tokens") //nolint:err113
+		return Column{}, errors.New("expected 1-4 tokens") //nolint:err113
 	}
 
 	return Column{
