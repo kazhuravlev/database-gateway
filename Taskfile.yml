@@ -137,7 +137,7 @@ tasks:
     desc: Install frontend dependencies
     dir: '{{ .FRONTEND_DIR }}'
     cmds:
-      - npm install
+      - npm ci
 
   frontend:dev:
     desc: Run frontend in dev mode with autoreload

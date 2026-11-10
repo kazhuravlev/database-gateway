@@ -1,0 +1,47 @@
+version: 2
+
+multi-ecosystem-groups:
+  dependencies:
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Madrid
+
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    allow:
+      - dependency-type: all
+    # Goose still requires Interpolate and Env.Get, removed in interpolate v0.2.
+    ignore:
+      - dependency-name: github.com/mfridman/interpolate
+        versions: [">=0.2.0"]
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+
+  - package-ecosystem: npm
+    directory: /frontend
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+
+  - package-ecosystem: github-actions
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+
+  - package-ecosystem: docker
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+
+  - package-ecosystem: docker-compose
+    directories:
+      - /.cicd/local
+      - /example
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+    # PostgreSQL major upgrades require a separate data migration.
+    ignore:
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]

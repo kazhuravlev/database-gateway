@@ -31,7 +31,7 @@ services:
       - "run"
 
   authentik-postgres:
-    image: postgres:16-alpine
+    image: postgres:16.15-alpine
     restart: on-failure
     environment:
       POSTGRES_DB: authentik
@@ -39,7 +39,7 @@ services:
       POSTGRES_PASSWORD: authentik
 
   authentik-server:
-    image: ghcr.io/goauthentik/server:2026.2.1
+    image: ghcr.io/goauthentik/server:2026.8.5
     restart: on-failure
     command:
       - server
@@ -60,7 +60,7 @@ services:
       - "./authentik-blueprint.yaml:/blueprints/custom/dbgw.yaml:ro"
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2026.2.1
+    image: ghcr.io/goauthentik/server:2026.8.5
     restart: on-failure
     command:
       - worker
@@ -79,7 +79,7 @@ services:
       - "./authentik-blueprint.yaml:/blueprints/custom/dbgw.yaml:ro"
 
   storage-postgres:
-    image: postgres:16
+    image: postgres:16.15
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready", "-d", "local__dbgw" ]
       interval: 10s
@@ -92,7 +92,7 @@ services:
       POSTGRES_PASSWORD: local__dbgw
 
   postgres1:
-    image: postgres:16
+    image: postgres:16.15
     environment:
       POSTGRES_DB: pg01
       POSTGRES_USER: pg01
@@ -101,7 +101,7 @@ services:
       - './init-01.sql:/docker-entrypoint-initdb.d/init.sql'
 
   postgres2:
-    image: postgres:16
+    image: postgres:16.15
     environment:
       POSTGRES_DB: pg02
       POSTGRES_USER: pg02
@@ -110,7 +110,7 @@ services:
       - './init-02.sql:/docker-entrypoint-initdb.d/init.sql'
 
   postgres3:
-    image: postgres:16
+    image: postgres:16.15
     environment:
       POSTGRES_DB: pg03
       POSTGRES_USER: pg03
