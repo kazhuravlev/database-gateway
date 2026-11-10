@@ -80,6 +80,7 @@ func TestParseColumn(t *testing.T) {
 			if tc.wantErr {
 				require.Error(t, err)
 				require.ErrorContains(t, err, tc.errContains)
+
 				return
 			}
 

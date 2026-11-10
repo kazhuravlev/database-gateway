@@ -284,6 +284,21 @@ For a complete working config, see [example/config.json](example/config.json).
 - **Missing Tables/Fields**: Queries referencing unknown tables or fields are rejected
 - **Policy Compilation Errors**: invalid `.rego` files fail startup
 
+## Dependency maintenance
+
+Dependabot checks Go modules, frontend packages, GitHub Actions, and container
+images every Monday at 09:00 Europe/Madrid and groups available updates into one
+pull request. PostgreSQL stays on major version 16; a major upgrade requires a
+separate data migration.
+`github.com/mfridman/interpolate` stays on v0.1.0 until Goose supports the API
+introduced in v0.2.0.
+
+Developer tools in `.toolset.json` and `.toolset.lock.json` are maintained with
+`task tools:upgrade`; Dependabot does not support the Toolset manifest format.
+After updating frontend dependencies, run `task frontend:build` to refresh the
+checked-in assets embedded in the Go binary. CI, release builds, and Docker builds
+also rebuild the frontend from `frontend/package-lock.json`.
+
 ## Interesting projects
 
 - https://github.com/antlr/grammars-v4/tree/master/sql/postgresql/Go

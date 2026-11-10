@@ -14,7 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-FROM --platform=$TARGETPLATFORM golang:1.27-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:26-alpine AS frontend
+
+WORKDIR /src/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+FROM --platform=$TARGETPLATFORM golang:1.27.4-alpine AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -28,6 +36,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+RUN rm -rf internal/facade/ui/dist
+COPY --from=frontend /src/frontend/dist/ ./internal/facade/ui/dist/
 
 RUN CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 	go build \
@@ -35,7 +45,7 @@ RUN CGO_ENABLED=1 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 		-o /out/database-gateway \
 		./cmd/gateway
 
-FROM alpine:3.24
+FROM alpine:3.24.4
 
 LABEL source=https://github.com/kazhuravlev/database-gateway
 

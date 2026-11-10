@@ -16,7 +16,7 @@
 
 services:
   authentik-postgres:
-    image: postgres:16
+    image: postgres:16.15
     ports:
       - '127.0.0.1:5436:5432'
     environment:
@@ -25,7 +25,7 @@ services:
       POSTGRES_PASSWORD: authentik
 
   authentik-server:
-    image: ghcr.io/goauthentik/server:2026.2.1
+    image: ghcr.io/goauthentik/server:2026.8.5
     depends_on:
       - authentik-postgres
     command:
@@ -45,7 +45,7 @@ services:
       - './authentik-blueprint.yaml:/blueprints/custom/dbgw.yaml:ro'
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2026.2.1
+    image: ghcr.io/goauthentik/server:2026.8.5
     depends_on:
       - authentik-postgres
     command:
@@ -64,7 +64,7 @@ services:
 
   # This is a primary application storage
   storage-postgres:
-    image: postgres:16
+    image: postgres:16.15
     ports:
       - '127.0.0.1:5432:5432'
     environment:
@@ -75,7 +75,7 @@ services:
   # This is an external databases
 
   postgres-taxi:
-    image: postgres:16
+    image: postgres:16.15
     ports:
       - '127.0.0.1:5433:5432'
     environment:
@@ -86,7 +86,7 @@ services:
       - './init-taxi.sql:/docker-entrypoint-initdb.d/init.sql'
 
   postgres-5434:
-    image: postgres:16
+    image: postgres:16.15
     ports:
       - '127.0.0.1:5434:5432'
     environment:
@@ -97,7 +97,7 @@ services:
       - './init-5434.sql:/docker-entrypoint-initdb.d/init.sql'
 
   postgres-5435:
-    image: postgres:16
+    image: postgres:16.15
     ports:
       - '127.0.0.1:5435:5432'
     environment:

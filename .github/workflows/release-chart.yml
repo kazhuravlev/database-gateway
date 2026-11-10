@@ -29,9 +29,6 @@ on:
         description: "Application version recorded in the chart, for example v1.2.3"
         required: false
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 permissions:
   contents: read
   packages: write
@@ -54,13 +51,13 @@ jobs:
       OCI_REPOSITORY: oci://ghcr.io/${{ github.repository_owner }}/charts
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set chart version
         run: echo "CHART_VERSION=${RAW_CHART_VERSION#v}" >> "$GITHUB_ENV"
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Lint chart
         run: helm lint "${CHART_DIR}"
@@ -74,7 +71,7 @@ jobs:
             --app-version "${APP_VERSION}"
 
       - name: Upload packaged chart artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: database-gateway-chart-${{ env.CHART_VERSION }}
           path: ${{ env.CHART_DIST_DIR }}/*.tgz
