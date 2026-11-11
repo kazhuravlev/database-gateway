@@ -30,6 +30,7 @@ type UpdateVec struct { //nolint:recvcheck
 	Target    []string
 	Filter    []string
 	Returning []string
+	Read      []string
 }
 
 func (s *UpdateVec) Columns() []string {
@@ -116,7 +117,7 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclo
 
 	rel := req.GetRelation()
 	tables := NewTables("public")
-	fqTableName, err := tables.Put(rel.GetCatalogname(), rel.GetSchemaname(), rel.GetRelname(), rel.GetAlias().GetAliasname())
+	_, err := tables.Put(rel.GetCatalogname(), rel.GetSchemaname(), rel.GetRelname(), rel.GetAlias().GetAliasname())
 	if err != nil {
 		return nil, fmt.Errorf("failed to add table: %w", err)
 	}
@@ -124,65 +125,12 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclo
 		return nil, fmt.Errorf("failed to finalize tables: %w", err)
 	}
 
-	var targetCols Columns
-	for _, node := range req.GetTargetList() {
-		switch node := node.GetNode().(type) {
-		default:
-			return nil, fmt.Errorf("col type (%T): %w", node, ErrNotImplemented)
-		case *pg.Node_IndexElem:
-			idx := node.IndexElem
-			if idx.GetExpr() != nil ||
-				idx.GetIndexcolname() != "" ||
-				idx.Collation != nil ||
-				idx.Opclass != nil ||
-				idx.Opclassopts != nil ||
-				idx.GetOrdering() != pg.SortByDir_SORTBY_DEFAULT ||
-				idx.GetNullsOrdering() != pg.SortByNulls_SORTBY_NULLS_DEFAULT {
-				return nil, fmt.Errorf("unknown index elem: %w", ErrNotImplemented)
-			}
-
-			col := Column{
-				table:  []string{fqTableName},
-				column: idx.GetName(),
-			}
-			targetCols = append(targetCols, col)
-		case *pg.Node_ResTarget:
-			resTarget := node.ResTarget
-			if resTarget.Indirection != nil {
-				return nil, fmt.Errorf("resTarget field: %w", ErrNotImplemented)
-			}
-
-			// Column name
-			targetCols = append(targetCols, Column{
-				table:  []string{fqTableName},
-				column: resTarget.GetName(),
-			})
-
-			// Column value
-			switch node := resTarget.GetVal().GetNode().(type) {
-			default:
-				return nil, fmt.Errorf("resTarget type (%T): %w", node, ErrNotImplemented)
-			case *pg.Node_AConst:
-			case *pg.Node_SetToDefault:
-			case *pg.Node_AExpr:
-				cols, err := parseAexpr(node)
-				if err != nil {
-					return nil, fmt.Errorf("resTarget expr: %w", err)
-				}
-
-				targetCols = append(targetCols, cols...)
-			case *pg.Node_ColumnRef:
-				column, err := pNodeColumnRef(node)
-				if err != nil {
-					return nil, fmt.Errorf("parse column: %w", err)
-				}
-
-				targetCols = append(targetCols, column)
-			}
-		}
+	targetCols, readCols, err := parseAssignments(req.GetTargetList())
+	if err != nil {
+		return nil, err
 	}
 
-	retCols, err := pNodes2Columns(req.GetReturningList(), fqTableName)
+	retCols, err := parseReturning(req.GetReturningList())
 	if err != nil {
 		return nil, fmt.Errorf("parse returning columns: %w", err)
 	}
@@ -210,6 +158,10 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclo
 		return nil, err
 	}
 
+	var readNames []string
+	for _, col := range readCols {
+		readNames = append(readNames, col.column)
+	}
 	vectors := make([]Vector, 0, len(allTables))
 	for _, tbl := range allTables {
 		vectors = append(vectors, UpdateVec{
@@ -217,6 +169,7 @@ func handleUpdate(req *pg.UpdateStmt) ([]Vector, error) { //nolint:gocyclo,cyclo
 			Target:    table2target[tbl].ListNames(),
 			Filter:    table2filter[tbl].ListNames(),
 			Returning: table2returning[tbl].ListNames(),
+			Read:      readNames,
 		})
 	}
 

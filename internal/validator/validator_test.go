@@ -42,7 +42,6 @@ func TestValidateSchema(t *testing.T) {
 			})
 		}
 
-		test("both_args_nil", nil, nil)
 		test("both_exists", []validator.Vec{
 			{
 				Op:   config.OpInsert,

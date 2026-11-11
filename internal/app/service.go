@@ -590,50 +590,22 @@ func (s *Service) runQuery(
 ) (*structs.QTable, error) {
 	tracer := new(trace.Trace)
 
-	stop := tracer.Start("parse_query")
-
-	vectors, err := validator.MakeVectors(query)
+	stop := tracer.Start("authorize_query")
+	subjects := userSubjects(user)
+	haveAccess := func(vec validator.Vec) bool {
+		return s.opts.authorizer.AllowQuery(subjects, srv.ID.S(), vec.Op.S(), vec.Tbl)
+	}
+	authorized, err := validator.Authorize(schema, haveAccess, query)
 	if err != nil {
 		log.Error("err", err.Error())
 
-		return nil, fmt.Errorf("preflight check: make vectors: %w", err)
+		return nil, formatPreflightCheckError("authorize", err)
 	}
-
-	stop()
-
-	stop = tracer.Start("validate_schema")
-
-	if err := validator.ValidateSchema(vectors, schema); err != nil {
-		log.Error("err", err.Error())
-
-		return nil, formatPreflightCheckError("validate schema", err)
-	}
-
-	stop()
-
-	stop = tracer.Start("validate_access")
-
-	subjects := userSubjects(user)
-	haveAccess := func(vec validator.Vec) bool {
-		return s.opts.authorizer.AllowQuery(
-			subjects,
-			srv.ID.S(),
-			vec.Op.S(),
-			schema.CanonicalTable(vec.Tbl),
-		)
-	}
-
-	if err := validator.ValidateAccess(vectors, haveAccess); err != nil {
-		log.Error("err", err.Error())
-
-		return nil, formatPreflightCheckError("validate access", err)
-	}
-
 	stop()
 
 	stop = tracer.Start("run_query")
 
-	qTable, err := s.execQuery(ctx, srv, query)
+	qTable, err := s.execQuery(ctx, srv, authorized)
 	if err != nil {
 		return nil, fmt.Errorf("execute query: %w", err)
 	}
@@ -645,7 +617,7 @@ func (s *Service) runQuery(
 			Trace:        *tracer,
 			RowsCount:    len(qTable.Rows),
 			ColumnsCount: len(qTable.Headers),
-			VectorsCount: len(vectors),
+			VectorsCount: authorized.VectorsCount(),
 		},
 	})
 	if err != nil {
@@ -666,13 +638,16 @@ func (s *Service) runQuery(
 	return qTable, nil
 }
 
-func (s *Service) execQuery(ctx context.Context, srv *config.Target, query string) (*structs.QTable, error) {
+func (s *Service) execQuery(ctx context.Context, srv *config.Target, query validator.AuthorizedQuery) (*structs.QTable, error) {
+	if query.SQL() == "" {
+		return nil, fmt.Errorf("missing authorized SQL: %w", ErrForbidden)
+	}
 	conn, err := s.getConnection(ctx, *srv)
 	if err != nil {
 		return nil, fmt.Errorf("get connection by id: %w", err)
 	}
 
-	res, err := conn.Query(ctx, query)
+	res, err := conn.Query(ctx, query.SQL())
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}

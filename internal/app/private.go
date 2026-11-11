@@ -57,7 +57,16 @@ func (s *Service) getConnection(ctx context.Context, target config.Target) (*pgx
 		}.Encode(),
 	}
 
-	dbpool, err := pgxpool.New(ctx, connURL.String())
+	poolConfig, err := pgxpool.ParseConfig(connURL.String())
+	if err != nil {
+		return nil, connErr(fmt.Errorf("parse db config: %w", err))
+	}
+	// Match libpg_query's lexer and keep implicit operator/function resolution
+	// out of user-writable schemas. Relations in authorized SQL are qualified.
+	poolConfig.ConnConfig.RuntimeParams["search_path"] = "pg_catalog, pg_temp"
+	poolConfig.ConnConfig.RuntimeParams["standard_conforming_strings"] = "on"
+	poolConfig.ConnConfig.RuntimeParams["client_encoding"] = "UTF8"
+	dbpool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, connErr(fmt.Errorf("create db pool: %w", err))
 	}

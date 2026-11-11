@@ -18,6 +18,7 @@ package parser
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/kazhuravlev/just"
 	pg "github.com/pganalyze/pg_query_go/v6"
@@ -27,6 +28,7 @@ type InsertVec struct { //nolint:recvcheck
 	Tbl       string
 	Target    []string
 	Returning []string
+	Read      []string
 }
 
 func (s *InsertVec) Columns() []string {
@@ -45,7 +47,7 @@ func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 
 	rel := req.GetRelation()
 	tables := NewTables("public")
-	fqTableName, err := tables.Put(rel.GetCatalogname(), rel.GetSchemaname(), rel.GetRelname(), rel.GetAlias().GetAliasname())
+	_, err := tables.Put(rel.GetCatalogname(), rel.GetSchemaname(), rel.GetRelname(), rel.GetAlias().GetAliasname())
 	if err != nil {
 		return nil, fmt.Errorf("failed to add table: %w", err)
 	}
@@ -53,7 +55,7 @@ func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		return nil, fmt.Errorf("failed to finalize tables: %w", err)
 	}
 
-	targetCols, err := pNodes2Columns(req.GetCols(), fqTableName)
+	targetCols, err := parseInsertColumns(req.GetCols())
 	if err != nil {
 		return nil, fmt.Errorf("parse target columns: %w", err)
 	}
@@ -111,11 +113,13 @@ func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 	case nil: // This is `insert into t1 default values`
 	}
 
-	retCols, err := pNodes2Columns(req.GetReturningList(), fqTableName)
+	retCols, err := parseReturning(req.GetReturningList())
 	if err != nil {
 		return nil, fmt.Errorf("parse returning columns: %w", err)
 	}
 
+	var conflictUpdate bool
+	var updateCols, readCols Columns
 	if confl := req.GetOnConflictClause(); confl != nil {
 		switch confl.GetAction() { //nolint:exhaustive
 		default:
@@ -129,18 +133,21 @@ func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 			return nil, fmt.Errorf("unknown on-conflict clause: %w", ErrNotImplemented)
 		}
 
-		conflictCols, err := pNodes2Columns(confl.GetInfer().GetIndexElems(), fqTableName)
+		conflictCols, err := parseConflictColumns(confl.GetInfer().GetIndexElems())
 		if err != nil {
 			return nil, fmt.Errorf("parse conflict columns: %w", err)
 		}
 
-		conflictTargetCols, err := pNodes2Columns(confl.GetTargetList(), fqTableName)
+		conflictTargetCols, conflictReads, err := parseAssignments(confl.GetTargetList())
 		if err != nil {
 			return nil, fmt.Errorf("parse target columns: %w", err)
 		}
 
 		targetCols = append(targetCols, conflictCols...)
 		targetCols = append(targetCols, conflictTargetCols...)
+		conflictUpdate = confl.GetAction() == pg.OnConflictAction_ONCONFLICT_UPDATE
+		updateCols = conflictTargetCols
+		readCols = slices.Concat(conflictCols, conflictReads)
 	}
 
 	allTables, err := tables.GetAll()
@@ -157,71 +164,23 @@ func handleInsert(req *pg.InsertStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 		return nil, err
 	}
 
+	var readNames []string
+	for _, col := range readCols {
+		readNames = append(readNames, col.column)
+	}
 	vectors := make([]Vector, 0, len(allTables))
 	for _, tbl := range allTables {
 		vectors = append(vectors, InsertVec{
 			Tbl:       tbl,
 			Target:    table2target[tbl].ListNames(),
 			Returning: table2returning[tbl].ListNames(),
+			Read:      readNames,
 		})
 	}
 
-	return vectors, nil
-}
-
-func pNodes2Columns(nodes []*pg.Node, defaultTable string) (Columns, error) { //nolint:cyclop
-	var allColumns Columns
-
-	for _, ret := range nodes {
-		switch node := ret.GetNode().(type) {
-		default:
-			return nil, fmt.Errorf("col type (%T): %w", ret.GetNode(), ErrNotImplemented)
-		case *pg.Node_IndexElem:
-			idx := node.IndexElem
-			if idx.GetExpr() != nil ||
-				idx.GetIndexcolname() != "" ||
-				idx.Collation != nil ||
-				idx.Opclass != nil ||
-				idx.Opclassopts != nil ||
-				idx.GetOrdering() != pg.SortByDir_SORTBY_DEFAULT ||
-				idx.GetNullsOrdering() != pg.SortByNulls_SORTBY_NULLS_DEFAULT {
-				return nil, fmt.Errorf("unknown index elem: %w", ErrNotImplemented)
-			}
-
-			col := Column{
-				table:  []string{defaultTable},
-				column: idx.GetName(),
-			}
-			allColumns = append(allColumns, col)
-		case *pg.Node_ResTarget:
-			resTarget := node.ResTarget
-			if resTarget.Indirection != nil {
-				return nil, fmt.Errorf("resTarget field: %w", ErrNotImplemented)
-			}
-
-			if resTarget.GetName() != "" {
-				col := Column{
-					table:  []string{defaultTable},
-					column: resTarget.GetName(),
-				}
-				allColumns = append(allColumns, col)
-
-				continue
-			}
-
-			switch node := resTarget.GetVal().GetNode().(type) {
-			default:
-				return nil, fmt.Errorf("resTarget type (%T): %w", resTarget.GetVal().GetNode(), ErrNotImplemented)
-			case *pg.Node_ColumnRef:
-				column, err := pNodeColumnRef(node)
-				if err != nil {
-					return nil, fmt.Errorf("parse column: %w", err)
-				}
-
-				allColumns = append(allColumns, column)
-			}
-		}
+	if conflictUpdate {
+		vectors = append(vectors, UpdateVec{Tbl: allTables[0], Target: updateCols.ListNames(), Filter: nil, Returning: nil, Read: nil})
 	}
 
-	return allColumns, nil
+	return vectors, nil
 }

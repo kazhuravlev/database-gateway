@@ -45,12 +45,12 @@ func handleDelete(req *pg.DeleteStmt) ([]Vector, error) {
 		return nil, fmt.Errorf("unknown clause: %w", ErrNotImplemented)
 	}
 
-	tables, fqTableName, err := deleteTables(req)
+	tables, _, err := deleteTables(req)
 	if err != nil {
 		return nil, err
 	}
 
-	retCols, err := pNodes2Columns(req.GetReturningList(), fqTableName)
+	retCols, err := parseReturning(req.GetReturningList())
 	if err != nil {
 		return nil, fmt.Errorf("parse returning: %w", err)
 	}

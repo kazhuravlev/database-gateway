@@ -179,7 +179,7 @@ func TestSupportedQueries(t *testing.T) {
 			name:  "insert_on_conflict_do_nothing",
 			query: `INSERT INTO clients (id) VALUES (1) ON CONFLICT (id) DO NOTHING`,
 			want: []parser.Vector{
-				parser.InsertVec{Tbl: "clients", Target: []string{"id", "id"}, Returning: []string{}},
+				parser.InsertVec{Tbl: "clients", Target: []string{"id", "id"}, Returning: []string{}, Read: []string{"id"}},
 			},
 		},
 		// UPDATE.
@@ -226,6 +226,11 @@ func TestSupportedQueries(t *testing.T) {
 			sortVectors(tc.want)
 
 			require.Equal(t, tc.want, got)
+
+			// Every supported form must survive the checked execution builder,
+			// including semantic AST equality after deparse/reparse.
+			_, _, err = parser.Compile(tc.query, "public")
+			require.NoError(t, err)
 		})
 	}
 }

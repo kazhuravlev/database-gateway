@@ -20,8 +20,39 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kazhuravlev/database-gateway/internal/config"
+	"github.com/kazhuravlev/database-gateway/internal/parser"
 	"github.com/kazhuravlev/just"
 )
+
+// AuthorizedQuery can only contain SQL produced and authorized by this package.
+// Its zero value is invalid; raw user SQL cannot be substituted after preflight.
+type AuthorizedQuery struct {
+	sql          string
+	vectorsCount int
+}
+
+func (q AuthorizedQuery) SQL() string       { return q.sql }
+func (q AuthorizedQuery) VectorsCount() int { return q.vectorsCount }
+
+func Authorize(schema *DbSchema, haveAccess func(Vec) bool, query string) (AuthorizedQuery, error) {
+	if schema == nil {
+		return AuthorizedQuery{}, fmt.Errorf("missing schema: %w", ErrAccessDenied)
+	}
+	sql, parsed, err := parser.Compile(query, schema.defaultSchema)
+	vectors, err := convertVectors(parsed, err)
+	if err != nil {
+		return AuthorizedQuery{}, fmt.Errorf("make vectors: %w", err)
+	}
+	if err := ValidateSchema(vectors, schema); err != nil {
+		return AuthorizedQuery{}, fmt.Errorf("validate schema: %w", err)
+	}
+	if err := ValidateAccess(vectors, haveAccess); err != nil {
+		return AuthorizedQuery{}, fmt.Errorf("validate access: %w", err)
+	}
+
+	return AuthorizedQuery{sql: sql, vectorsCount: len(vectors)}, nil
+}
 
 var (
 	ErrBadQuery         = errors.New("bad query")
@@ -33,25 +64,20 @@ var (
 
 // IsAllowed will tokenize query, validate schema and check access after all.
 func IsAllowed(schema *DbSchema, haveAccess func(Vec) bool, query string) error {
-	vectors, err := MakeVectors(query)
-	if err != nil {
-		return fmt.Errorf("make vectors: %w", err)
-	}
+	_, err := Authorize(schema, haveAccess, query)
 
-	if err := ValidateSchema(vectors, schema); err != nil {
-		return fmt.Errorf("validate schema: %w", err)
-	}
-
-	if err := ValidateAccess(vectors, haveAccess); err != nil {
-		return fmt.Errorf("validate access: %w", err)
-	}
-
-	return nil
+	return err
 }
 
 // ValidateSchema will check that request contains only allowed(known) columns.
 func ValidateSchema(vectors []Vec, schema *DbSchema) error {
+	if schema == nil || len(vectors) == 0 {
+		return fmt.Errorf("empty schema or requirements: %w", ErrAccessDenied)
+	}
 	for _, vec := range vectors {
+		if !validVector(vec) {
+			return fmt.Errorf("invalid requirement: %w", ErrAccessDenied)
+		}
 		tbl, ok := schema.GetTable(vec.Tbl)
 		if !ok {
 			return fmt.Errorf("not known table: %w", errors.Join(ErrUnknownTable, ErrAccessDenied))
@@ -71,9 +97,29 @@ func ValidateSchema(vectors []Vec, schema *DbSchema) error {
 
 // ValidateAccess check that all vectors is allowed to run.
 func ValidateAccess(vectors []Vec, haveAccess func(Vec) bool) error {
+	if len(vectors) == 0 || haveAccess == nil {
+		return fmt.Errorf("missing requirements or authorizer: %w", ErrAccessDenied)
+	}
+	for _, vec := range vectors {
+		if !validVector(vec) {
+			return fmt.Errorf("invalid requirement: %w", ErrAccessDenied)
+		}
+	}
 	if !just.SliceAll(vectors, haveAccess) {
 		return fmt.Errorf("denied operation: %w", ErrAccessDenied)
 	}
 
 	return nil
+}
+
+func validVector(vec Vec) bool {
+	if vec.Tbl == "" {
+		return false
+	}
+	switch vec.Op {
+	case config.OpSelect, config.OpInsert, config.OpUpdate, config.OpDelete:
+		return true
+	default:
+		return false
+	}
 }

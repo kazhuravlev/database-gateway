@@ -58,21 +58,21 @@ func TestMakeVectors(t *testing.T) {
 				Op:   config.OpInsert,
 				Tbl:  "clients",
 				Cols: []string{"f1", "f2", "f3", "f4", "f5", "f6"},
-			}})
+			}, {Op: config.OpUpdate, Tbl: "clients", Cols: []string{"f5"}}, {Op: config.OpSelect, Tbl: "clients", Cols: []string{"f3", "f4", "f6"}}})
 		test("update_complex",
 			`update clients set f1=1 where f2=2 returning f3`,
 			[]validator.Vec{{
 				Op:   config.OpUpdate,
 				Tbl:  "clients",
 				Cols: []string{"f1", "f2", "f3"},
-			}})
+			}, {Op: config.OpSelect, Tbl: "clients", Cols: []string{"f2", "f3"}}})
 		test("delete_complex",
 			`delete from clients where f1=1 returning f2`,
 			[]validator.Vec{{
 				Op:   config.OpDelete,
 				Tbl:  "clients",
 				Cols: []string{"f1", "f2"},
-			}})
+			}, {Op: config.OpSelect, Tbl: "clients", Cols: []string{"f1", "f2"}}})
 	})
 
 	t.Run("join_queries", func(t *testing.T) {
