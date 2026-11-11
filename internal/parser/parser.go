@@ -17,25 +17,36 @@
 package parser
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	pg "github.com/pganalyze/pg_query_go/v6"
 )
 
 var (
-	ErrNotImplemented      = errors.New("not implemented")
-	ErrRelationEmpty       = errors.New("relation cannot be empty")
-	ErrInvalidTableMapping = errors.New("invalid table mapping")
+	ErrNotImplemented = errors.New("not implemented")
+	ErrRelationEmpty  = errors.New("relation cannot be empty")
 )
 
 type Vector interface {
 	isVector()
 }
 
-func Parse(query string) ([]Vector, error) { //nolint:cyclop // this is not so complicated
+func Parse(query string) ([]Vector, error) {
+	result, err := parseTree(query)
+	if err != nil {
+		return nil, err
+	}
+
+	return checkedVectors(result)
+}
+
+func parseTree(query string) (*pg.ParseResult, error) {
+	if err := scanInput(query); err != nil {
+		return nil, err
+	}
 	result, err := pg.Parse(query)
 	if err != nil {
 		return nil, fmt.Errorf("parse error: %w", err)
@@ -44,7 +55,14 @@ func Parse(query string) ([]Vector, error) { //nolint:cyclop // this is not so c
 	if len(result.GetStmts()) != 1 {
 		return nil, errors.New("expected 1 statement") //nolint:err113
 	}
+	if err := validateAST(result); err != nil {
+		return nil, err
+	}
 
+	return result, nil
+}
+
+func extractVectors(result *pg.ParseResult) ([]Vector, error) {
 	root := result.GetStmts()[0]
 
 	switch node := root.GetStmt().GetNode().(type) {
@@ -83,6 +101,7 @@ func Parse(query string) ([]Vector, error) { //nolint:cyclop // this is not so c
 
 type Tables struct {
 	m             map[string]string
+	relations     map[string]struct{}
 	defaultSchema string
 	sources       int
 }
@@ -90,40 +109,45 @@ type Tables struct {
 func NewTables(defaultSchema string) *Tables {
 	return &Tables{
 		m:             make(map[string]string),
+		relations:     make(map[string]struct{}),
 		defaultSchema: defaultSchema,
 		sources:       0,
 	}
 }
 
+//nolint:cyclop // Validate each identifier and binding before mutating the symbol table.
 func (t *Tables) Put(catalog, schema, relation, alias string) (string, error) {
 	if relation == "" {
 		return "", ErrRelationEmpty
 	}
 
-	fqtnBuf := bytes.NewBuffer(nil)
-	if catalog != "" {
-		fqtnBuf.WriteString(catalog)
-		fqtnBuf.WriteString(".")
+	if catalog != "" || !validIdentifier(relation) || (schema != "" && !validIdentifier(schema)) ||
+		(alias != "" && !validIdentifier(alias)) {
+		return "", fmt.Errorf("unsupported relation identifier: %w", ErrNotImplemented)
 	}
-
+	fqtn := relation
 	if schema != "" {
-		fqtnBuf.WriteString(schema)
-		fqtnBuf.WriteString(".")
+		fqtn = schema + "." + relation
 	}
-
-	fqtnBuf.WriteString(relation)
-
-	fqtn := fqtnBuf.String()
-	t.sources++
-
-	t.m[relation] = fqtn
-	t.m[fqtn] = fqtn
+	keys := []string{relation, fqtn}
 	if schema == "" && t.defaultSchema != "" {
-		t.m[t.defaultSchema+"."+relation] = fqtn
+		keys = append(keys, t.defaultSchema+"."+relation)
 	}
 	if alias != "" {
-		t.m[alias] = fqtn
+		keys = []string{alias}
 	}
+	// Bind names directly to immutable relation identities. An alias is never
+	// followed as another alias, and can never remove a source from the ACL.
+	for _, key := range keys {
+		if _, exists := t.m[key]; exists {
+			return "", fmt.Errorf("duplicate or ambiguous table binding %q: %w", key, ErrNotImplemented)
+		}
+	}
+	for _, key := range keys {
+		t.m[key] = fqtn
+	}
+	t.relations[fqtn] = struct{}{}
+	t.sources++
 
 	return fqtn, nil
 }
@@ -134,27 +158,8 @@ func (t *Tables) SourcesCount() int {
 
 func (t *Tables) Get(name string) (string, bool) {
 	res, ok := t.m[name]
-	if !ok {
-		return "", false
-	}
 
-	if res == name {
-		return res, true
-	}
-
-	return t.Get(res)
-}
-
-// HasMapping returns true if a direct mapping exists for the given name (for testing).
-func (t *Tables) HasMapping(name string) bool {
-	_, exists := t.m[name]
-
-	return exists
-}
-
-// SetMapping sets a direct mapping for testing purposes.
-func (t *Tables) SetMapping(name, target string) {
-	t.m[name] = target
+	return res, ok
 }
 
 // Finalize will check the collected tables and in case of only one source table exists - creates a new Empty mapping.
@@ -181,12 +186,8 @@ func (t *Tables) Len() (int, error) {
 
 func (t *Tables) GetAll() ([]string, error) {
 	final := make(map[string]struct{})
-	for k := range t.m {
-		res, ok := t.Get(k)
-		if !ok {
-			return nil, fmt.Errorf("%w for key %q", ErrInvalidTableMapping, k)
-		}
-		final[res] = struct{}{}
+	for relation := range t.relations {
+		final[relation] = struct{}{}
 	}
 
 	keys := make([]string, len(final))
@@ -195,6 +196,8 @@ func (t *Tables) GetAll() ([]string, error) {
 		keys[i] = k
 		i++
 	}
+
+	slices.Sort(keys)
 
 	return keys, nil
 }
@@ -212,9 +215,14 @@ func ParseColumn(tokens ...string) (Column, error) {
 	if len(tokens) == 0 || len(tokens) > 4 {
 		return Column{}, errors.New("expected 1-4 tokens") //nolint:err113
 	}
+	for _, token := range tokens {
+		if !validIdentifier(token) {
+			return Column{}, fmt.Errorf("unsupported column identifier: %w", ErrNotImplemented)
+		}
+	}
 
 	return Column{
-		table:  tokens[:len(tokens)-1],
+		table:  slices.Clone(tokens[:len(tokens)-1]),
 		column: tokens[len(tokens)-1],
 	}, nil
 }

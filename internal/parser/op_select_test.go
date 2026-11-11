@@ -78,7 +78,6 @@ func TestParseSelectValid(t *testing.T) {
 
 	fValid(`SELECT lower(id) from clients`)
 	fValid(`SELECT count(*) from clients`)
-	fValid(`SELECT count(c.*) from clients AS c`)
 	fValid(`SELECT sum(total_sales) from sales_olap_42`)
 }
 

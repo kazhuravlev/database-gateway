@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/kazhuravlev/just"
 	pg "github.com/pganalyze/pg_query_go/v6"
@@ -73,18 +72,6 @@ func pNodeColumnRef(node *pg.Node_ColumnRef) (Column, error) {
 	}
 
 	return column, nil
-}
-
-func isFunctionStarArg(node *pg.Node_ColumnRef) bool {
-	fields := node.ColumnRef.GetFields()
-	if len(fields) == 0 {
-		return false
-	}
-
-	last := fields[len(fields)-1].GetNode()
-	_, ok := last.(*pg.Node_AStar)
-
-	return ok
 }
 
 func addRangeVar(tables *Tables, tbl *pg.RangeVar) error {
@@ -244,21 +231,31 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 					return nil, fmt.Errorf("window functions (%T): %w", funcCall.GetOver(), ErrNotImplemented)
 				}
 
-				if len(funcCall.GetFuncname()) != 1 {
+				names := funcCall.GetFuncname()
+				if len(names) == 2 && names[0].GetString_().GetSval() == "pg_catalog" {
+					names = names[1:]
+				}
+				if len(names) != 1 {
 					return nil, fmt.Errorf("only one function call support for one target: %w", ErrNotImplemented)
 				}
 
-				switch node := funcCall.GetFuncname()[0].GetNode().(type) {
+				var functionName string
+				switch node := names[0].GetNode().(type) {
 				default:
 					return nil, fmt.Errorf("unknown function name type (%T): %w", node, ErrNotImplemented)
 				case *pg.Node_String_:
-					name := strings.ToLower(node.String_.GetSval())
+					name := node.String_.GetSval()
+					functionName = name
 					if _, ok := allowedSelectFunctions[name]; !ok {
 						return nil, fmt.Errorf("unknown function name (%s): %w", name, ErrNotImplemented)
 					}
 				}
 
-				if len(funcCall.GetArgs()) > 1 {
+				if funcCall.GetAggStar() {
+					if functionName != "count" || len(funcCall.GetArgs()) != 0 || funcCall.GetAggDistinct() {
+						return nil, fmt.Errorf("only count(*) supports an aggregate star: %w", ErrNotImplemented)
+					}
+				} else if len(funcCall.GetArgs()) != 1 {
 					return nil, fmt.Errorf("function arguments: %w", ErrNotImplemented)
 				}
 
@@ -267,10 +264,6 @@ func handleSelect(sel *pg.SelectStmt) ([]Vector, error) { //nolint:gocyclo,gocog
 					default:
 						return nil, fmt.Errorf("unknown function argument type (%T)", node) //nolint:err113
 					case *pg.Node_ColumnRef:
-						if isFunctionStarArg(node) {
-							continue
-						}
-
 						column, err := pNodeColumnRef(node)
 						if err != nil {
 							return nil, fmt.Errorf("parse column: %w", err)

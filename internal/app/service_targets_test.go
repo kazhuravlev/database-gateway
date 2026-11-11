@@ -460,12 +460,12 @@ func TestRunQueryReturnsForbiddenWhenQueryPreflightDeniesAccess(t *testing.T) {
 		{
 			name:      "query policy denies known table",
 			query:     "select id from clients",
-			wantError: "preflight check: validate access: forbidden",
+			wantError: "preflight check: authorize: forbidden",
 		},
 		{
 			name:      "schema validation hides unknown table",
 			query:     "select id from unknown_table",
-			wantError: "preflight check: validate schema: forbidden",
+			wantError: "preflight check: authorize: forbidden",
 		},
 	}
 

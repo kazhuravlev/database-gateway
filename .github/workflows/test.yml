@@ -27,6 +27,22 @@ jobs:
   build:
     name: Build and test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16.15
+        env:
+          POSTGRES_PASSWORD: integration
+          POSTGRES_DB: dbgw_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dbgw_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DBGW_TEST_POSTGRES_DSN: postgres://postgres:integration@localhost:5432/dbgw_test?sslmode=disable
 
     steps:
       - name: Checkout
@@ -61,7 +77,12 @@ jobs:
           go build -v -o /dev/null ./cmd/gateway
 
       - name: Test
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+        run: go test -v -race -timeout 5m -coverprofile=coverage.txt -covermode=atomic ./...
+
+      - name: Fuzz SQL invariants
+        run: |
+          go test ./internal/parser -run '^$' -fuzz '^FuzzParseAndCompile$' -fuzztime 30s -fuzzminimizetime 1s -parallel 2
+          go test ./internal/validator -run '^$' -fuzz '^FuzzAuthorizationCannotDropColumns$' -fuzztime 30s -fuzzminimizetime 1s -parallel 2
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7

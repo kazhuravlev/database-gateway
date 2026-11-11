@@ -269,6 +269,11 @@ For a complete working config, see [example/config.json](example/config.json).
 
 ## Security Considerations
 
+SQL authorization uses a bounded, fail-closed AST allowlist and executes SQL
+rebuilt from the authorized tree. See the [SQL security contract](docs/sql-security.md)
+for invariants, regression coverage, supported syntax, policy compatibility
+changes, and the database-side trust boundary.
+
 - **SQL Injection Protection**: All queries are parsed and validated before execution
 - **No Direct Database Access**: Remote databases are only accessible through the gateway
 - **Column-Level Restrictions**: schema validation limits which fields users can query
